@@ -105,7 +105,7 @@ const FloatingMenu = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const menuItems = [
-    { label: 'AI-made Goals', icon: <AI width={24} height={24} />, onPress: () => navigation.navigate('AiGoalsScreen') },
+    { label: 'AI-made Goals', icon: <AI width={24} height={24} />, onPress: () => navigation.navigate('AiGenetratingScreen') },
     { label: 'Pre-made Goals', icon: <PreMade width={24} height={24} />, onPress: () => {} },
     { label: 'Self-made Goals', icon: <SelfMade width={24} height={24} />, onPress: () => {} },
   ];

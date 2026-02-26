@@ -3,6 +3,7 @@ import { Modal, View, Text, StyleSheet } from 'react-native';
 import { palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Starts from '../assets/svgs/starts';
+import Textt from './Textt';
 
 export interface LoadingModalProps {
   visible: boolean;
@@ -15,7 +16,7 @@ export default function LoadingModal({ visible, text = 'Generating plan...' }: L
       <View style={styles.overlay}>
         <View style={styles.box}>
           <Starts width={56} height={56} fill={palette.orange} />
-          <Text style={styles.text}>{text}</Text>
+          <Textt i18nKey="generatePlanning" style={styles.text} />
         </View>
       </View>
     </Modal>

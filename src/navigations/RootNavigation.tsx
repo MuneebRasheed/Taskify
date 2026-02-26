@@ -6,20 +6,41 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SignInScreen from '../screens/SignInScreen';
 import HomeScreen from '../screens/HomeScreen';
-import AiGoalsScreen from '../screens/AiGoalsScreen';
+import AiGenetratingScreen from '../screens/AiGenetratingScreen';
 import LanguageTestScreen from '../screens/LanguageTestScreen';
+import AiMade from '../screens/AiMade';
+import AddTaskScreen from '../screens/AddTaskScreen';
+import GoalPlanner from '../screens/GoalPlanner';
+import SelectCoverImageScreen from '../screens/SelectCoverImageScreen';
+import type { TrackerCardItem } from '../components/TrackerCard';
 
 /** Root stack route names and params. Use this type for useNavigation<> in screens. */
 export type RootStackParamList = {
   SplashScreen: undefined;
   ThemeTest: undefined;
   LanguageTestScreen: undefined;
-  Onboarding:undefined;
-  WelcomeScreen:undefined;
-  SignUpScreen:undefined;
-  SignInScreen:undefined;
-  HomeScreen:undefined;
-  AiGoalsScreen:undefined;
+  Onboarding: undefined;
+  WelcomeScreen: undefined;
+  SignUpScreen: undefined;
+  SignInScreen: undefined;
+  HomeScreen: undefined;
+  AiGenetratingScreen: undefined;
+  AiMade: {
+    prompt?: string;
+    addedHabit?: TrackerCardItem;
+    addedTask?: TrackerCardItem;
+    updatedHabit?: { index: number; item: TrackerCardItem };
+    updatedTask?: { index: number; item: TrackerCardItem };
+  };
+  AddTaskScreen: {
+    mode: 'habit' | 'task';
+    prompt?: string;
+    editHabitIndex?: number;
+    editTaskIndex?: number;
+    initialItem?: TrackerCardItem;
+  };
+  GoalPlanner: { goalTitle?: string; selectedCoverIndex?: number };
+  SelectCoverImage: { selectedIndex?: number };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -74,8 +95,28 @@ function RootNavigation() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="AiGoalsScreen"
-        component={AiGoalsScreen}
+        name="AiGenetratingScreen"
+        component={AiGenetratingScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AiMade"
+        component={AiMade}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AddTaskScreen"
+        component={AddTaskScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="GoalPlanner"
+        component={GoalPlanner}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SelectCoverImage"
+        component={SelectCoverImageScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

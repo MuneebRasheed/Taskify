@@ -33,6 +33,7 @@ export const palette = {
 
     background: "#FFFFFF",
     textButtonOrange: '#FE7A36',
+    inputBackground: "#fafafa",
     text: "#292D32",
     subText: '#616161',
     textSecondary: palette.gray600,
@@ -47,6 +48,7 @@ export const palette = {
   export const darkColors = {
     background: "#1D1D1D",
     textButtonOrange: '#FE7A36',
+    inputBackground: "#fafafa",
     text: palette.white,
     subText: '#616161',
     textSecondary: palette.gray400,
@@ -68,6 +70,7 @@ export const palette = {
     primary: string;
     exclamatoryBg: string;
     subText: string;
+    inputBackground: string;
   };
   
   /** Returns semantic colors for the current theme. Use in components with isDark from useThemeStore. */

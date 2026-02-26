@@ -1,7 +1,7 @@
 import * as React from "react"
 import Svg, { Path } from "react-native-svg"
 
-function SvgComponent(props) {
+function ActiveExplore(props) {
   return (
     <Svg
       width={24}
@@ -21,4 +21,4 @@ function SvgComponent(props) {
   )
 }
 
-export default SvgComponent
+export default ActiveExplore

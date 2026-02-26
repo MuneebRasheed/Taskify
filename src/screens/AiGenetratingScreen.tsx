@@ -12,7 +12,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import { lightColors, palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
@@ -22,7 +21,7 @@ import LoadingModal from '../components/LoadingModal';
 import Starts from '../assets/svgs/starts';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 
-const AiGoalsScreen = () => {
+const AiGenetratingScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [goal, setGoal] = useState('');
@@ -33,6 +32,7 @@ const AiGoalsScreen = () => {
     setGenerating(true);
     setTimeout(() => {
       setGenerating(false);
+      navigation.navigate('AiMade', { prompt: goal.trim() || undefined });
     }, 2500);
   };
 
@@ -48,8 +48,8 @@ const AiGoalsScreen = () => {
           <View style={styles.content}>
             <View style={styles.header}>
               <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                style={styles.backBtn}
+            onPress={() => navigation.navigate('HomeScreen')}
+            style={styles.backBtn}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
                 <BackArrowIcon width={24} height={24} />
@@ -63,7 +63,7 @@ const AiGoalsScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Type in your goal and we'll prepare a plan for you..."
-                placeholderTextColor={palette.gray500}
+                placeholderTextColor={lightColors.subText}
                 value={goal}
                 onChangeText={setGoal}
                 multiline
@@ -78,15 +78,23 @@ const AiGoalsScreen = () => {
         </TouchableWithoutFeedback>
 
         <View style={styles.footer}>
-              <Button
-                title="Generate"
-                variant="primary"
-                onPress={handleGenerate}
-                textColor={palette.white}
-                borderRadius={24}
-                style={styles.generateBtn}
-              />
-            </View>
+  <Button
+    title="Generate"
+    variant="primary"
+    onPress={handleGenerate}
+    textColor={palette.white}
+    borderRadius={24}
+    disabled={!goal.trim()}
+    style={StyleSheet.flatten([
+      styles.generateBtn,
+      {
+        backgroundColor: goal.trim()
+          ? palette.orange   // when user types
+          : '#CB622B',       // default color
+      },
+    ])}
+  />
+</View>
       </KeyboardAvoidingView>
 
       <LoadingModal visible={generating} text="Generating plan..." />
@@ -94,7 +102,7 @@ const AiGoalsScreen = () => {
   );
 };
 
-export default AiGoalsScreen;
+export default AiGenetratingScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -105,7 +113,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    // paddingHorizontal: 24,
   },
   header: {
     flexDirection: 'row',
@@ -125,38 +133,27 @@ const styles = StyleSheet.create({
     width: 32,
   },
   main: {
-    // marginTop: 170,
+    marginTop: 200,
+    paddingHorizontal: 15,
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-
-  },
-  hint: {
-    fontFamily: fontFamilies.urbanist,
-    fontSize: 16,
-    color: palette.gray600,
-    textAlign: 'center',
-    marginTop: 24,
-    paddingHorizontal: 16,
+    gap: 32,
   },
   input: {
     width: '100%',
-    minHeight: 120,
-    marginTop: 24,
-    paddingHorizontal: 20,
+    textAlign: 'center',
     paddingVertical: 16,
     backgroundColor: lightColors.background,
-    borderRadius: 16,
-    fontFamily: fontFamilies.urbanist,
-    fontSize: 16,
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 24,
     color: lightColors.text,
   },
   footer: {
     paddingVertical: 24,
     paddingBottom: 32,
     paddingHorizontal: 24,
-      // width: "100%",
-      borderWidth: 1,
+      borderTopWidth: 1,
       borderColor: lightColors.border,
   },
   generateBtn: {

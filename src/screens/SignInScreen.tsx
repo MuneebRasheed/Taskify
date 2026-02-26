@@ -258,7 +258,7 @@ import {
       alignItems: "center",
     },
     checkboxChecked: {
-      borderColor: lightColors.textButtonOrange,
+      backgroundColor: lightColors.textButtonOrange,
     },
     termsText: {
       flexShrink: 1,
