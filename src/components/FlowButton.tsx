@@ -19,7 +19,7 @@ import { lightColors } from '../../utils/colors';
 
 const { width, height } = Dimensions.get('window');
 
-const BOTTOM_NAV_HEIGHT = 60;
+const BOTTOM_NAV_HEIGHT = 0;
 
 const OVERLAY_COLOR = 'rgba(3, 2, 2, 0.52)';
 
@@ -126,7 +126,7 @@ const FloatingMenu = () => {
         <Pressable style={StyleSheet.absoluteFill} onPress={toggleMenu} />
       </Animated.View>
 
-      <View style={[styles.fabContainer, { bottom: BOTTOM_NAV_HEIGHT + insets.bottom + 24 }]}>
+      <View style={[styles.fabContainer, { bottom: BOTTOM_NAV_HEIGHT + insets.bottom + 0 }]}>
         <Animated.View style={[styles.menuTooltipWrap, menuAnimatedStyle]}>
           <View style={styles.menuTooltip}>
             {menuItems.map((item, index) => (

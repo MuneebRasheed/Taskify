@@ -13,7 +13,6 @@ import TaskCalendar from '../components/taskCalendar';
 import { fontFamilies } from '../theme/typography';
 import SpashLogo from '../assets/svgs/SpashLogo';
 import Header from '../components/Header';
-import BottomNavigation from '../navigations/BottomNavigation';
 import FlowButton from '../components/FlowButton';
 import { useGoals } from '../context/GoalsContext';
 import type { SavedGoal, GoalItem } from '../context/GoalsContext';
@@ -154,9 +153,6 @@ const HomeScreen = () => {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomContainer}>
-        <BottomNavigation activeTab="Home" />
-      </View>
       <FlowButton />
     </View>
   );
@@ -345,11 +341,5 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanist,
     fontSize: 12,
     color: lightColors.subText,
-  },
-  bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
 });

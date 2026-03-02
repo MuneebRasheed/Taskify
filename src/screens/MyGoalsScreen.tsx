@@ -13,7 +13,6 @@ import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import Header from '../components/Header';
-import BottomNavigation from '../navigations/BottomNavigation';
 import { useGoals } from '../context/GoalsContext';
 import { useTranslation } from '../i18n';
 import type { SavedGoal } from '../context/GoalsContext';
@@ -22,7 +21,7 @@ import Textt from '../components/Textt';
 import SpashLogo from '../assets/svgs/SpashLogo';
 import GoalCard from '../components/GoalCard';
 
-const BOTTOM_NAV_HEIGHT = 60;
+const BOTTOM_NAV_HEIGHT = 0;
 const FAB_SIZE = 56;
 
 const MyGoalsScreen = () => {
@@ -118,11 +117,6 @@ const MyGoalsScreen = () => {
       >
         <Ionicons name="add" size={28} color={lightColors.secondaryBackground} />
       </TouchableOpacity>
-
-      {/* Part 4: Fixed bottom navigation */}
-      <View style={styles.bottomNavWrap}>
-        <BottomNavigation activeTab="My Goals" />
-      </View>
     </View>
   );
 };
@@ -198,11 +192,5 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bottomNavWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
 });
