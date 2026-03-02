@@ -52,7 +52,15 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     addGoalsTitle:"Add a Goals Title",
     noDueDate:"No due date",
     setReminder:"Set reminder",
-    addYourNote:"Add your note...",
+    setUpGoals:"Set up Goals",
+    preMadeGoals:"Pre-made Goals",
+    addGoals:"Add Goals",
+    myGoals:"My Goals",
+    ongoing:"Ongoing",
+    achieved:"Achieved",
+    noOngoingGoals:"No ongoing goals yet.",
+    noAchievedGoals:"No achieved goals yet.",
+    
   },
   ar: {
     languageTestTitle: 'اختبار اللغة',

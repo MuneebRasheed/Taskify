@@ -28,6 +28,7 @@ import ImageIcon from '../assets/svgs/ImageIcon';
 import Textt from '../components/Textt';
 import { t, useTranslation } from '../i18n';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useGoals } from '../context/GoalsContext';
 
 
 type GoalPlannerRouteProp = RouteProp<RootStackParamList, 'GoalPlanner'>;
@@ -51,6 +52,7 @@ const GoalPlannerScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<GoalPlannerNavProp>();
   const route = useRoute<GoalPlannerRouteProp>();
+  const { addGoal } = useGoals();
 
   const goalTitle = route.params?.goalTitle ?? '';
   const returnedCoverIndex = route.params?.selectedCoverIndex;
@@ -113,9 +115,19 @@ const GoalPlannerScreen = () => {
       : '';
 
   const handleSaveGoal = () => {
-    // TODO: persist goal and navigate
-    navigation.goBack();
-    
+    addGoal({
+      title: goalTitleText.trim() || t('goalsTitle'),
+      coverIndex,
+      source: fromSelfMade ? 'selfMade' : 'aiMade',
+      habitsTotal: 0,
+      habitsDone: 0,
+      tasksTotal: 0,
+      tasksDone: 0,
+      dueDate,
+      achieved: false,
+      items: [],
+    });
+    navigation.navigate('MyGoalsScreen');
   };
   const { t } = useTranslation();
 

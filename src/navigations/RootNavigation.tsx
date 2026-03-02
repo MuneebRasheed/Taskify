@@ -12,6 +12,10 @@ import AiMade from '../screens/AiMade';
 import AddTaskScreen from '../screens/AddTaskScreen';
 import GoalPlanner from '../screens/GoalPlanner';
 import SelectCoverImageScreen from '../screens/SelectCoverImageScreen';
+import PreMadeGoalsScreen from '../screens/PreMadeGoalsScreen';
+import PreMadeGoalDetailScreen from '../screens/PreMadeGoalDetailScreen';
+import MyGoalsScreen from '../screens/MyGoalsScreen';
+import { GoalsProvider } from '../context/GoalsContext';
 import type { TrackerCardItem } from '../components/TrackerCard';
 
 /** Root stack route names and params. Use this type for useNavigation<> in screens. */
@@ -44,12 +48,16 @@ export type RootStackParamList = {
   };
   GoalPlanner: { goalTitle?: string; selectedCoverIndex?: number; fromSelfMade?: boolean };
   SelectCoverImage: { selectedIndex?: number; returnToScreen?: 'AiMade'; prompt?: string };
+  PreMadeGoals: undefined;
+  PreMadeGoalDetail: { goalId: string };
+  MyGoalsScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigation() {
   return (
+    <GoalsProvider>
     <Stack.Navigator
       id="RootStack"
       screenOptions={{
@@ -122,7 +130,23 @@ function RootNavigation() {
         component={SelectCoverImageScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="PreMadeGoals"
+        component={PreMadeGoalsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PreMadeGoalDetail"
+        component={PreMadeGoalDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MyGoalsScreen"
+        component={MyGoalsScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
+    </GoalsProvider>
   );
 }
 

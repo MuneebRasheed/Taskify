@@ -27,9 +27,37 @@ import { t, useTranslation } from '../i18n';
 import InfoIcon from '../assets/svgs/InfoIcon';
 import AddIcon from '../assets/svgs/AddIcon';
 import ImageIcon from '../assets/svgs/ImageIcon';
+import CalendarIcon from '../assets/svgs/CalendarIcon';
+import TimeIcon from '../assets/svgs/TimeIcon';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
+import CategoryModal, { type GoalCategory } from '../components/CategoryModal';
+import CalendarModal from '../components/CalendarModal';
+import TimePickerModal from '../components/TimePickerModal';
+import SetUpGoalsModal from '../components/SetUpGoalsModal';
+import EditIcon from '../assets/svgs/EditIcon';
 type AiMadeRouteProp = RouteProp<RootStackParamList, 'AiMade'>;
 type AiMadeNavProp = NativeStackNavigationProp<RootStackParamList, 'AiMade'>;
+
+function formatDate(d: Date): string {
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatTime(hours: number, minutes: number, am: boolean): string {
+  const h = am ? (hours === 12 ? 12 : hours) : hours === 12 ? 0 : hours + 12;
+  return `${h.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
+}
+
+function daysUntilDue(d: Date): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(d);
+  due.setHours(0, 0, 0, 0);
+  return Math.ceil((due.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+}
 
 const DEFAULT_HABITS: TrackerCardItem[] = [
   {
@@ -85,6 +113,29 @@ const AiMadeScreen = () => {
   const [note, setNote] = useState(isSelfMade ? '' : DEFAULT_NOTE);
   const [goalTitle, setGoalTitle] = useState(isSelfMade ? '' : '');
   const [coverIndex, setCoverIndex] = useState(0);
+  const [category, setCategory] = useState<GoalCategory | null>(null);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [reminderDate, setReminderDate] = useState<Date | null>(null);
+  const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(null);
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
+  const [reminderDateModalVisible, setReminderDateModalVisible] = useState(false);
+  const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
+  const [setUpGoalsModalVisible, setSetUpGoalsModalVisible] = useState(false);
+
+  const reminderDisplay =
+    reminderDate && reminderTime
+      ? `${formatDate(reminderDate)} - ${formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)}`
+      : '';
+  const reminderTimeOnly =
+    reminderTime
+      ? formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)
+      : '';
+  const dueDateDaysLabel = dueDate
+    ? daysUntilDue(dueDate) >= 0
+      ? `D-${daysUntilDue(dueDate)} days`
+      : 'Overdue'
+    : null;
 
   useEffect(() => {
     if (isSelfMade && route.params?.selectedCoverIndex !== undefined) {
@@ -199,11 +250,11 @@ const AiMadeScreen = () => {
           <>
             <View style={[styles.headerBar, { paddingTop: insets.top + 16, paddingBottom: 16 }]}>
               <TouchableOpacity
-                onPress={() => navigation.goBack()}
+                onPress={() => navigation.navigate('HomeScreen')}
                 style={styles.backBtn}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <BackArrowIcon width={24} height={24} />
+                <BackArrowIcon width={24} height={24} onPress={() => navigation.navigate('HomeScreen')}/>
               </TouchableOpacity>
               <Text style={styles.headerTitle}>{t('aiMadeGoals')}</Text>
               <View style={styles.headerRight} />
@@ -216,162 +267,281 @@ const AiMadeScreen = () => {
 
         {isSelfMade ? (
           <>
-            {/* Self-made: Cover image placeholder on grey background */}
-            <View style={styles.coverWrap}>
+            {/* Full screen scrollable: cover (with back + title overlaid) + Add a Goals Title + habits + tasks + note + Create Goals */}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <ScrollView
+                style={styles.selfMadeScroll}
+                contentContainerStyle={[styles.selfMadeScrollContent, { paddingBottom: insets.bottom + 100 }]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Cover image with back button and title overlaid on top (under/inside cover like image) */}
+                <View style={styles.coverWrap}>
+                  {coverSource ? (
+                    <Image source={coverSource} style={styles.coverImage} resizeMode="cover" />
+                  ) : (
+                    <View style={styles.coverPlaceholder}>
+                      <Text style={styles.coverPlaceholderText}>{t('coverImage')}</Text>
+                      <Text style={styles.coverPlaceholderHint}>{t('tapCameraToSelect')}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.coverOverlay, { paddingTop: insets.top}]}>
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('HomeScreen')}
+                      style={styles.coverBackBtn}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    >
+                      <View style={styles.coverBackBtnCircle}>
+                        <BackArrowIcon width={24} height={24} fill={lightColors.text} />
+                      </View>
+                    </TouchableOpacity>
+                    <Text style={styles.coverTitleText}>{t('selfMadeGoals')}</Text>
+                    <View style={styles.coverHeaderSpacer} />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.changeCoverBtn}
+                    onPress={openSelectCover}
+                    activeOpacity={0.8}
+                  >
+                    <ImageIcon width={43} height={43} />
+                  </TouchableOpacity>
+                </View>
 
+                {/* Add a Goals Title section – display only; edit via Edit icon → Set up Goals modal */}
+                <View style={styles.addGoalsSection}>
+                  <View style={styles.goalTitleDisplayRow}>
+                    <Text style={styles.goalTitleDisplayText} numberOfLines={1}>
+                      {goalTitle || t('addGoalsTitle')}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setSetUpGoalsModalVisible(true)}
+                      style={styles.goalTitleEditCircle}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <EditIcon width={18} height={18}/>
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.metadataRowPills}
+                    style={styles.metadataRowPillsScroll}
+                  >
+                    <View style={styles.metadataPillCategory}>
+                      <Text style={styles.metadataPillTextDark} numberOfLines={1}>
+                        {category ?? t('category')}
+                      </Text>
+                    </View>
+                    <View style={styles.metadataPillWithIcon}>
+                      <CalendarIcon width={18} height={18} />
+                      {dueDate ? (
+                        <View style={styles.dueDateTextWrap}>
+                          <Text style={styles.metadataPillTextDark} numberOfLines={1}>{dueDateDaysLabel}</Text>
+                          <Text style={styles.metadataPillTextDark} numberOfLines={1}>{formatDate(dueDate)}</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.metadataPillTextDark} numberOfLines={1}>{t('noDueDate')}</Text>
+                      )}
+                    </View>
+                    <View style={styles.metadataPillWithIcon}>
+                      <TimeIcon width={18} height={18} />
+                      <Text style={styles.metadataPillTextDark} numberOfLines={1}>
+                        {reminderDisplay || reminderTimeOnly || t('setReminder')}
+                      </Text>
+                    </View>
+                  </ScrollView>
+                </View>
 
-            
+                <SetUpGoalsModal
+                  visible={setUpGoalsModalVisible}
+                  goalTitle={goalTitle}
+                  category={category}
+                  dueDate={dueDate}
+                  reminderDate={reminderDate}
+                  reminderTime={reminderTime}
+                  onCancel={() => setSetUpGoalsModalVisible(false)}
+                  onConfirm={(data) => {
+                    setGoalTitle(data.goalTitle);
+                    setCategory(data.category);
+                    setDueDate(data.dueDate);
+                    setReminderDate(data.reminderDate);
+                    setReminderTime(data.reminderTime);
+                    setSetUpGoalsModalVisible(false);
+                  }}
+                  t={t}
+                />
+
+                {/* Habits section – unchanged */}
+                <View style={styles.section}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>{`${t("habit")} (${habits.length})`}</Text>
+                    <InfoIcon width={20} height={20} />
+                  </View>
+                  {habits.map((item, index) => (
+                    <TrackerCard
+                      key={`habit-${index}`}
+                      item={{ ...item, variant: 'habit' }}
+                      onPress={() => openAddHabit(index)}
+                    />
+                  ))}
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => openAddHabit()}
+                    activeOpacity={0.7}
+                  >
+                    <AddIcon width={15} height={15} />
+                    <Textt i18nKey="addHabit" style={styles.addButtonText} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Tasks section – unchanged */}
+                <View style={styles.section}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>{`${t("task")} (${tasks.length})`}</Text>
+                    <InfoIcon width={20} height={20} />
+                  </View>
+                  {tasks.map((item, index) => (
+                    <TrackerCard
+                      key={`task-${index}`}
+                      item={{ ...item, variant: 'task' }}
+                      onPress={() => openAddTask(index)}
+                    />
+                  ))}
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => openAddTask()}
+                    activeOpacity={0.7}
+                  >
+                    <AddIcon width={15} height={15} />
+                    <Textt i18nKey="addTask" style={styles.addButtonText} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Note section – unchanged */}
+                <View style={styles.section}>
+                  <Textt i18nKey="note" style={styles.sectionTitle} />
+                  <TextInput
+                    style={styles.noteInput}
+                    value={note}
+                    onChangeText={setNote}
+                    placeholder={t('addYourNote')}
+                    placeholderTextColor={lightColors.placeholderText}
+                    multiline
+                    textAlignVertical="top"
+                  />
+                </View>
+
+               
+              </ScrollView>
 
               
-              {coverSource ? (
-                <Image source={coverSource} style={styles.coverImage} resizeMode="cover" />
-              ) : (
-                <View style={styles.coverPlaceholder}>
-                  <View style={styles.backBtnCircle}>
-                    <BackArrowIcon width={24} height={24} />
-                  </View>
-                  <Text style={styles.coverPlaceholderText}>{t('coverImage')}</Text>
-                  <Text style={styles.coverPlaceholderHint}>{t('tapCameraToSelect')}</Text>
+            </TouchableWithoutFeedback>
+
+             {/* Create Goals button – inside scroll */}
+             <View style={[styles.selfMadeActionsWrap, { paddingBottom: insets.bottom + 16}]}>
+                  <Button
+                    title={t('createGoals')}
+                    variant="primary"
+                    onPress={handleCreateGoal}
+                    style={styles.createGoalBtn}
+                    backgroundColor={lightColors.accent}
+                    textColor={lightColors.secondaryBackground}
+                  />
                 </View>
-              )}
-              <TouchableOpacity
-                style={styles.changeCoverBtn}
-                onPress={openSelectCover}
-                activeOpacity={0.8}
-              >
-                <ImageIcon width={43} height={43} />
-              </TouchableOpacity>
-            </View>
+
           </>
-        ) : null}
-
-        {/* White sheet/card like Image 2 */}
-        <View style={[styles.contentCard, { backgroundColor: lightColors.secondaryBackground }]}>
-          {isSelfMade && (
-            <View style={[styles.section, styles.selfMadeHeaderSection]}>
-              <View style={styles.goalTitleRow}>
-                <TextInput
-                  style={styles.goalTitleInput}
-                  value={goalTitle}
-                  onChangeText={setGoalTitle}
-                  placeholder={t('addGoalsTitle')}
-                  placeholderTextColor={lightColors.subText}
-                />
-              </View>
-              <View style={styles.metadataRow}>
-                <Text style={styles.metadataTag}>{t('category')}</Text>
-                <Text style={styles.metadataTag}>{t('noDueDate')}</Text>
-                <Text style={styles.metadataTag}>{t('setReminder')}</Text>
-              </View>
-            </View>
-          )}
-
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ScrollView
-              style={styles.scroll}
-              contentContainerStyle={[
-                styles.scrollContent,
-                { paddingBottom: 24 },
-              ]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Habits section */}
-              <View style={styles.section}>
-                <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitle}>{`${t("habit")} (${habits.length})`}</Text>
-                  <InfoIcon width={20} height={20} />
-                </View>
-                {habits.map((item, index) => (
-                  <TrackerCard
-                    key={`habit-${index}`}
-                    item={{ ...item, variant: 'habit' }}
-                    onPress={() => openAddHabit(index)}
-                  />
-                ))}
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => openAddHabit()}
-                  activeOpacity={0.7}
+        ) : (
+          <>
+            {/* White sheet/card for AI-made */}
+            <View style={[styles.contentCard, { backgroundColor: lightColors.secondaryBackground }]}>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <ScrollView
+                  style={styles.scroll}
+                  contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 }]}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
                 >
-                  <AddIcon width={15} height={15} />
-                  <Textt i18nKey="addHabit" style={styles.addButtonText} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Tasks section */}
-              <View style={styles.section}>
-                <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitle}>{`${t("task")} (${tasks.length})`}</Text>
-                  <InfoIcon width={20} height={20} />
+                  <View style={styles.section}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Text style={styles.sectionTitle}>{`${t("habit")} (${habits.length})`}</Text>
+                      <InfoIcon width={20} height={20} />
+                    </View>
+                  {habits.map((item, index) => (
+                    <TrackerCard
+                      key={`habit-${index}`}
+                      item={{ ...item, variant: 'habit' }}
+                      onPress={() => openAddHabit(index)}
+                    />
+                  ))}
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => openAddHabit()}
+                    activeOpacity={0.7}
+                  >
+                    <AddIcon width={15} height={15} />
+                    <Textt i18nKey="addHabit" style={styles.addButtonText} />
+                  </TouchableOpacity>
                 </View>
-                {tasks.map((item, index) => (
-                  <TrackerCard
-                    key={`task-${index}`}
-                    item={{ ...item, variant: 'task' }}
-                    onPress={() => openAddTask(index)}
+
+                <View style={styles.section}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>{`${t("task")} (${tasks.length})`}</Text>
+                    <InfoIcon width={20} height={20} />
+                  </View>
+                  {tasks.map((item, index) => (
+                    <TrackerCard
+                      key={`task-${index}`}
+                      item={{ ...item, variant: 'task' }}
+                      onPress={() => openAddTask(index)}
+                    />
+                  ))}
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => openAddTask()}
+                    activeOpacity={0.7}
+                  >
+                    <AddIcon width={15} height={15} />
+                    <Textt i18nKey="addTask" style={styles.addButtonText} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.section}>
+                  <Textt i18nKey="note" style={styles.sectionTitle} />
+                  <TextInput
+                    style={styles.noteInput}
+                    value={note}
+                    onChangeText={setNote}
+                    placeholder={t('addYourNote')}
+                    placeholderTextColor={lightColors.placeholderText}
+                    multiline
+                    textAlignVertical="top"
                   />
-                ))}
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => openAddTask()}
-                  activeOpacity={0.7}
-                >
-                  <AddIcon width={15} height={15} />
-                  <Textt i18nKey="addTask" style={styles.addButtonText} />
-                </TouchableOpacity>
-              </View>
+                </View>
+              </ScrollView>
+            </TouchableWithoutFeedback>
 
-              {/* Note section */}
-              <View style={styles.section}>
-                <Textt i18nKey="note" style={styles.sectionTitle} />
-                <TextInput
-                  style={styles.noteInput}
-                  value={note}
-                  onChangeText={setNote}
-                  placeholder={t('addYourNote')}
-                  placeholderTextColor={lightColors.placeholderText}
-                  multiline
-                  textAlignVertical="top"
-                />
-              </View>
-            </ScrollView>
-          </TouchableWithoutFeedback>
-
-          {/* Footer: Self-made = single Create Goals; else Regenerate + Continue */}
-          <View style={[styles.actionsRow, { paddingBottom: insets.bottom }]}>
-            {isSelfMade ? (
+            <View style={[styles.actionsRow, { paddingBottom: insets.bottom }]}>
               <Button
-                title={t('createGoals')}
+                title={t("regenerate")}
+                variant="outline"
+                onPress={handleRegenerate}
+                style={styles.regenerateBtn}
+                borderWidth={0}
+                backgroundColor={lightColors.skipbg}
+                textColor={lightColors.background}
+              />
+              <Button
+                title={t("continue")}
                 variant="primary"
-                onPress={handleCreateGoal}
-                style={styles.createGoalBtn}
+                onPress={handleContinue}
+                style={styles.continueBtn}
                 backgroundColor={lightColors.accent}
                 textColor={lightColors.secondaryBackground}
               />
-            ) : (
-              <>
-                <Button
-                  title={t("regenerate")}
-                  variant="outline"
-                  onPress={handleRegenerate}
-                  style={styles.regenerateBtn}
-                  borderWidth={0}
-                  backgroundColor={lightColors.skipbg}
-                  textColor={lightColors.background}
-                />
-                <Button
-                  title={t("continue")}
-                  variant="primary"
-                  onPress={handleContinue}
-                  style={styles.continueBtn}
-                  backgroundColor={lightColors.accent}
-                  textColor={lightColors.secondaryBackground}
-                />
-              </>
-            )}
+            </View>
           </View>
-        </View>
+        </>
+        )}
       </KeyboardAvoidingView>
     </View>
   );
@@ -398,8 +568,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     backgroundColor: lightColors.secondaryBackground,
-    borderWidth: 1,
-    borderColor: 'blue',
+    // borderWidth: 1,
+    // borderColor: 'blue',
   },
   backBtn: {
     padding: 4,
@@ -415,7 +585,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     // borderWidth: 1,
     // borderColor: 'red',
-    // paddingTop: 55,
+    marginTop: 60,
   },
   headerRight: {
     width: 32,
@@ -455,7 +625,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
     paddingVertical: 20,
     borderRadius: 8,
     backgroundColor: lightColors.skipbg,
@@ -593,5 +763,132 @@ height : 300,
     borderTopRightRadius: 24,
     marginTop: 16,
     paddingTop: 8,
+  },
+  /* Self-made: back + title overlaid on cover */
+  coverOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    zIndex: 3,
+  },
+  coverBackBtn: {
+    padding: 4,
+  },
+  coverBackBtnCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverTitleText: {
+    fontFamily: fontFamilies.urbanistBold,
+    fontSize: 24,
+    color: lightColors.text,
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+  },
+  coverHeaderSpacer: {
+    width: 48,
+  },
+  selfMadeScroll: {
+    flex: 1,
+  },
+  selfMadeScrollContent: {
+    paddingBottom: 32,
+    backgroundColor: lightColors.secondaryBackground,
+  },
+  addGoalsSection: {
+    marginHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 20,
+    backgroundColor: lightColors.secondaryBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: lightColors.border,
+  },
+  goalTitleDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 12,
+  },
+  goalTitleDisplayInput: {
+    flex: 1,
+    fontFamily: fontFamilies.urbanistBold,
+    fontSize: 24,
+    color: lightColors.text,
+    paddingVertical: 4,
+  },
+  goalTitleDisplayText: {
+    flex: 1,
+    fontFamily: fontFamilies.urbanistBold,
+    fontSize: 22,
+    color: lightColors.text,
+    paddingVertical: 4,
+  },
+  goalTitleEditCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: lightColors.secondaryBackground,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metadataRowPillsScroll: {
+    flexGrow: 0,
+    marginHorizontal: -24,
+  },
+  metadataRowPills: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 4,
+  },
+  metadataPillCategory: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: lightColors.inputBackground,
+    borderRadius: 100,
+  },
+  metadataPillWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 0,
+    flexShrink: 0,
+  },
+  metadataPillTextDark: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 14,
+    color: lightColors.text,
+  },
+  dueDateTextWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  selfMadeActionsWrap: {
+    borderTopWidth: 1,
+    borderTopColor: lightColors.border,
+    paddingHorizontal: 24,
+    paddingTop: 24,
   },
 });

@@ -107,7 +107,7 @@ const FloatingMenu = () => {
 
   const menuItems = [
     { label: 'AI-made Goals', icon: <AI width={24} height={24} />, onPress: () => navigation.navigate('AiGenetratingScreen') },
-    { label: 'Pre-made Goals', icon: <PreMade width={24} height={24} />, onPress: () => {} },
+    { label: 'Pre-made Goals', icon: <PreMade width={24} height={24} />, onPress: () => navigation.navigate('PreMadeGoals') },
     { label: 'Self-made Goals', icon: <SelfMade width={24} height={24} />, onPress: () => navigation.navigate('AiMade', { source: 'selfMade' }) },
   ];
 
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: lightColors.background,
+    backgroundColor: lightColors.accent,
     elevation: 5,
     shadowColor: lightColors.smallText,
     shadowOffset: { width: 0, height: 2 },

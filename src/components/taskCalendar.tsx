@@ -20,6 +20,10 @@ interface TaskData {
 interface CalendarProps {
   tasks?: Record<string, TaskData>;
   onDateSelect?: (date: string) => void;
+  /** When provided, calendar uses this as the selected date (controlled). */
+  selectedDate?: string | null;
+  /** When provided, used to get completion for each date so circles fill by progress. */
+  getCompletionForDate?: (dateStr: string) => { total: number; completed: number };
 }
 
 interface DayItem {
@@ -32,10 +36,19 @@ const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const TaskCalendar: React.FC<CalendarProps> = ({
   tasks = {},
   onDateSelect,
+  selectedDate: controlledSelectedDate,
+  getCompletionForDate,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [internalSelectedDate, setInternalSelectedDate] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
+
+  const isControlled = controlledSelectedDate !== undefined;
+  const selectedDate = isControlled ? (controlledSelectedDate ?? null) : internalSelectedDate;
+  const setSelectedDate = (dateKey: string) => {
+    onDateSelect?.(dateKey);
+    if (!isControlled) setInternalSelectedDate(dateKey);
+  };
 
   const formatDate = (date: Date) =>
     date.toISOString().split('T')[0];
@@ -121,10 +134,12 @@ const TaskCalendar: React.FC<CalendarProps> = ({
 
   const renderDay = ({ item }: { item: DayItem }) => {
     const dateKey = formatDate(item.date);
-    const taskInfo = tasks[dateKey];
+    const taskInfo = getCompletionForDate
+      ? getCompletionForDate(dateKey)
+      : tasks[dateKey] ?? { total: 0, completed: 0 };
 
     let progress = 0;
-    if (taskInfo && taskInfo.total > 0) {
+    if (taskInfo.total > 0) {
       progress = taskInfo.completed / taskInfo.total;
     }
 
@@ -141,10 +156,7 @@ const TaskCalendar: React.FC<CalendarProps> = ({
       <View style={styles.dayWrapper}>
         <TouchableOpacity
           style={isSelected ? styles.selectedWrapper : null}
-          onPress={() => {
-            setSelectedDate(dateKey);
-            onDateSelect?.(dateKey);
-          }}
+          onPress={() => setSelectedDate(dateKey)}
           activeOpacity={0.8}
         >
           <View style={{ width: size, height: size }}>

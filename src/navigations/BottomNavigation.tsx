@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 import HomeIcon from '../assets/svgs/HomeIcon';
 import Explore from '../assets/svgs/Explore';
@@ -16,21 +17,29 @@ import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 
 const TABS = [
-  { id: 'Home', label: 'Home', Icon: HomeIcon, ActiveIcon: ActiveHomeIcon },
-  { id: 'Explore', label: 'Explore', Icon: Explore, ActiveIcon: ActiveExploreIcon },
-  { id: 'Report', label: 'Report', Icon: Report, ActiveIcon: ActiveReportIcon },
-  { id: 'My Goals', label: 'My Goals', Icon: MyGoals, ActiveIcon: ActiveMyGoalsIcon },
-  { id: 'Account', label: 'Account', Icon: Account, ActiveIcon: ActiveAccountIcon },
+  { id: 'Home', label: 'Home', Icon: HomeIcon, ActiveIcon: ActiveHomeIcon, screen: 'HomeScreen' as const },
+  { id: 'Explore', label: 'Explore', Icon: Explore, ActiveIcon: ActiveExploreIcon, screen: 'HomeScreen' as const },
+  { id: 'Report', label: 'Report', Icon: Report, ActiveIcon: ActiveReportIcon, screen: 'HomeScreen' as const },
+  { id: 'My Goals', label: 'My Goals', Icon: MyGoals, ActiveIcon: ActiveMyGoalsIcon, screen: 'MyGoalsScreen' as const },
+  { id: 'Account', label: 'Account', Icon: Account, ActiveIcon: ActiveAccountIcon, screen: 'HomeScreen' as const },
 ];
 
-const ACTIVE_ORANGE = lightColors.background;
+const ACTIVE_PURPLE = lightColors.accent;
 const INACTIVE_GRAY = lightColors.placeholderText;
 
 const ICON_SIZE = 24;
 
-const BottomNavigation: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('Home');
+interface BottomNavigationProps {
+  activeTab?: string;
+}
+
+const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab = 'Home' }) => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+
+  const handleTabPress = (tab: (typeof TABS)[number]) => {
+    navigation.navigate(tab.screen);
+  };
 
   return (
     <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>
@@ -38,13 +47,13 @@ const BottomNavigation: React.FC = () => {
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           const IconComponent = isActive ? tab.ActiveIcon : tab.Icon;
-          const labelColor = isActive ? ACTIVE_ORANGE : INACTIVE_GRAY;
+          const labelColor = isActive ? ACTIVE_PURPLE : INACTIVE_GRAY;
 
           return (
             <TouchableOpacity
               key={tab.id}
               style={styles.tabItem}
-              onPress={() => setActiveTab(tab.id)}
+              onPress={() => handleTabPress(tab)}
               activeOpacity={0.8}
             >
               <View style={styles.iconWrapper}>
