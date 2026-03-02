@@ -43,7 +43,7 @@ import {
     
         setTimeout(() => {
           setLoading(false);
-          navigation.navigate('HomeScreen');
+          navigation.navigate('MainTabs');
         }, 2000);
       };
     return (

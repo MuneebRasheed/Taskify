@@ -5,7 +5,7 @@ import Onboarding from '../screens/Onboarding';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SignInScreen from '../screens/SignInScreen';
-import HomeScreen from '../screens/HomeScreen';
+import MainTabs from './MainTabs';
 import AiGenetratingScreen from '../screens/AiGenetratingScreen';
 import LanguageTestScreen from '../screens/LanguageTestScreen';
 import AiMade from '../screens/AiMade';
@@ -16,7 +16,17 @@ import PreMadeGoalsScreen from '../screens/PreMadeGoalsScreen';
 import PreMadeGoalDetailScreen from '../screens/PreMadeGoalDetailScreen';
 import MyGoalsScreen from '../screens/MyGoalsScreen';
 import { GoalsProvider } from '../context/GoalsContext';
+import UpgradePlanScreen from '../screens/UpgradePlanScreen';
+
 import type { TrackerCardItem } from '../components/TrackerCard';
+import AccountSecurityScreen from '../screens/AccountSecurityScreen';
+import DataAnalyticsScreen from '../screens/DataAnalyticsScreen';
+import AppAppearanceScreen from '../screens/AppAppearanceScreen';
+import HelpSupportScreen from '../screens/HelpSupportScreen';
+import FAQScreen from '../screens/FAQScreen';
+import ContactSupportScreen from '../screens/ContactSupportScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
 
 /** Root stack route names and params. Use this type for useNavigation<> in screens. */
 export type RootStackParamList = {
@@ -27,7 +37,7 @@ export type RootStackParamList = {
   WelcomeScreen: undefined;
   SignUpScreen: undefined;
   SignInScreen: undefined;
-  HomeScreen: undefined;
+  MainTabs: undefined;
   AiGenetratingScreen: undefined;
   AiMade: {
     source?: 'selfMade';
@@ -51,6 +61,15 @@ export type RootStackParamList = {
   PreMadeGoals: undefined;
   PreMadeGoalDetail: { goalId: string };
   MyGoalsScreen: undefined;
+  UpgradePlanScreen: undefined;
+  AccountSecurityScreen: undefined;
+  DataAnalyticsScreen: undefined;
+  AppAppearanceScreen: undefined;
+  HelpSupportScreen: undefined;
+  FAQScreen: undefined;
+  ContactSupportScreen: undefined;
+  PrivacyPolicyScreen: undefined;
+  TermsOfServiceScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -63,7 +82,7 @@ function RootNavigation() {
       screenOptions={{
         headerShown: false,
       }}
-      initialRouteName="SplashScreen"
+      initialRouteName="MainTabs"
     >
       <Stack.Screen
         name="SplashScreen"
@@ -101,8 +120,8 @@ function RootNavigation() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="HomeScreen"
-        component={HomeScreen}
+        name="MainTabs"
+        component={MainTabs}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -143,6 +162,52 @@ function RootNavigation() {
       <Stack.Screen
         name="MyGoalsScreen"
         component={MyGoalsScreen}
+    
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="UpgradePlanScreen"
+        component={UpgradePlanScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AccountSecurityScreen"
+        component={AccountSecurityScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="DataAnalyticsScreen"
+        component={DataAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AppAppearanceScreen"
+        component={AppAppearanceScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="HelpSupportScreen"
+        component={HelpSupportScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FAQScreen"
+        component={FAQScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ContactSupportScreen"
+        component={ContactSupportScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PrivacyPolicyScreen"
+        component={PrivacyPolicyScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TermsOfServiceScreen"
+        component={TermsOfServiceScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
