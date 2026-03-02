@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { getColors, palette } from '../../utils/colors';
+import { getColors, lightColors, palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from '../components/Button';
 import type { RootStackParamList } from '../navigations/RootNavigation';
@@ -83,7 +83,7 @@ const Onboarding = () => {
         },
       ]}
     >
-      <View style={[styles.topSection, { backgroundColor: palette.orange }]}>
+      <View style={[styles.topSection, { backgroundColor: lightColors.background }]}>
         <Image
           source={ONBOARDING_IMAGES[currentIndex]}
           style={[styles.previewImage, { width: Math.min(400, width - 48), height: 650 }]}
@@ -222,11 +222,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   dotActive: {
-    backgroundColor: palette.accent,
+    backgroundColor: lightColors.background,
     width: 32,
   },
   dotInactive: {
-    backgroundColor: palette.gray300,
+    backgroundColor: lightColors.placeholderText,
   },
   buttons: {
     
@@ -242,7 +242,7 @@ paddingHorizontal: 24,
     flex: 1,
     borderRadius: 100,
     borderWidth: 0,
-    backgroundColor: palette.skipbg,
+    backgroundColor: lightColors.skipbg,
   },
   continueButton: {
     flex: 1.2,
@@ -258,7 +258,7 @@ paddingHorizontal: 24,
   },
   divider: {
     height: 1,
-    backgroundColor: palette.divider,
+    backgroundColor: lightColors.BtnBackground,
     marginVertical: 24,
   },
 });

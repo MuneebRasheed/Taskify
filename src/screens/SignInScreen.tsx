@@ -50,7 +50,7 @@ import {
       <View
         style={[
           styles.container,
-          { paddingTop: insets.top, backgroundColor: lightColors.background },
+          { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground },
         ]}
       >
         <ScrollView
@@ -252,25 +252,25 @@ import {
       height: 24,
       borderRadius: 6,
       borderWidth: 3,
-      borderColor: lightColors.textButtonOrange,
+      borderColor: lightColors.background,
       marginRight: 12,
       justifyContent: "center",
       alignItems: "center",
     },
     checkboxChecked: {
-      backgroundColor: lightColors.textButtonOrange,
+      backgroundColor: lightColors.background,
     },
     termsText: {
       flexShrink: 1,
       fontFamily: fontFamilies.urbanist,
       fontSize: 18,
-      color: palette.arrowLeft,
+      color: lightColors.smallText,
     },
     link: {
       fontFamily: fontFamilies.urbanist,
       fontSize: 18,
      
-      color: lightColors.textButtonOrange,
+      color: lightColors.background,
     },
     
     separatorWrap: {

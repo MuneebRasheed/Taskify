@@ -21,17 +21,23 @@ export const palette = {
     gray900: '#212121',
     primary: '#52976D',
     /** Accent orange for onboarding / CTAs */
-    accent: '#FF6B00',
-    skipbg: '#FFF4EF',
     divider: '#F5F5F5',
     orange: '#FE7A36',
-    arrowLeft: '#212121',
   } as const;
 
   /** Semantic colors for light theme. */
   export const lightColors = {
 
-    background: "#FFFFFF",
+    habitIndicator: '#EA1E61',
+    taskIndicator: '#1A96F0',
+    BtnBackground: '#F5F5F5',
+    disabledButton: '#F78FBE',
+    accent: '#BD51B7',
+    skipbg: '#FCE8F0',
+    smallText: '#212121',
+    placeholderText: '#9E9E9E',
+    background: "#7C1C76",
+    secondaryBackground: "#FFFFFF",
     textButtonOrange: '#FE7A36',
     inputBackground: "#fafafa",
     text: "#292D32",

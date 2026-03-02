@@ -14,13 +14,14 @@ import PreMade from '../assets/svgs/pre-made';
 import SelfMade from '../assets/svgs/self-made';
 import { RootStackParamList } from '../navigations/RootNavigation';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { lightColors } from '../../utils/colors';
 
 
 const { width, height } = Dimensions.get('window');
 
 const BOTTOM_NAV_HEIGHT = 60;
 
-const OVERLAY_COLOR = 'rgba(55, 55, 55, 0.52)';
+const OVERLAY_COLOR = 'rgba(3, 2, 2, 0.52)';
 
 const FloatingMenu = () => {
   const insets = useSafeAreaInsets();
@@ -107,7 +108,7 @@ const FloatingMenu = () => {
   const menuItems = [
     { label: 'AI-made Goals', icon: <AI width={24} height={24} />, onPress: () => navigation.navigate('AiGenetratingScreen') },
     { label: 'Pre-made Goals', icon: <PreMade width={24} height={24} />, onPress: () => {} },
-    { label: 'Self-made Goals', icon: <SelfMade width={24} height={24} />, onPress: () => {} },
+    { label: 'Self-made Goals', icon: <SelfMade width={24} height={24} />, onPress: () => navigation.navigate('AiMade', { source: 'selfMade' }) },
   ];
 
   const handleMenuItemPress = (item: (typeof menuItems)[number]) => {
@@ -188,15 +189,15 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FF6B00',
+    backgroundColor: lightColors.background,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: lightColors.smallText,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   fabIcon: {
-    color: '#FFF',
+    color: lightColors.secondaryBackground,
     fontSize: 32,
     fontWeight: '300',
   },
@@ -205,12 +206,12 @@ const styles = StyleSheet.create({
     marginRight: -10,
   },
   menuTooltip: {
-    backgroundColor: '#FFF',
+    backgroundColor: lightColors.secondaryBackground,
     borderRadius: 12,
     width: 220,
     paddingVertical: 5,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: lightColors.smallText,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: lightColors.smallText,
   },
   separator: {
     position: 'absolute',
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
     left: 15,
     right: 15,
     height: 1,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: lightColors.border,
   },
   tail: {
     position: 'absolute',
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 10,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#FFF',
+    borderTopColor: lightColors.secondaryBackground,
   },
 });
 

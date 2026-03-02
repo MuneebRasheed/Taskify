@@ -13,10 +13,10 @@ const WelcomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   return (
-    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: lightColors.background }]}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground }]}>
 
         <View style={styles.logoContainer}>
-      <SpashLogo fill={palette.accent} width={80} height={80} />
+      <SpashLogo fill={lightColors.background} width={80} height={80} />
     </View>
 
     <View style={styles.heading}>  
@@ -63,8 +63,8 @@ const WelcomeScreen = () => {
         title="Sign In"
         variant="primary"
         borderRadius={24}
-        backgroundColor={palette.skipbg}
-        textColor={palette.orange}
+        backgroundColor={lightColors.skipbg}
+        textColor={lightColors.background}
         onPress={() => {navigation.navigate('SignInScreen' as never as keyof RootStackParamList)}}
       />
 
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
       
     },
     button: {
-      width: '100%',
+      // width: '100%',
     },
     footer: {
         marginTop: 87,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         gap: 12,
-        marginTop: 70,
+        marginTop: 60,
       },
       footerT1: {
         fontFamily: fontFamilies.urbanist,

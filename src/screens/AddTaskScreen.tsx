@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigations/RootNavigation';
-import { lightColors, palette } from '../../utils/colors';
+import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from '../components/Button';
 import TimeIcon from '../assets/svgs/TimeIcon';
@@ -24,6 +24,8 @@ import type { TrackerCardItem } from '../components/TrackerCard';
 import Textt from '../components/Textt';
 import CrossIcon from '../assets/svgs/CrossIcon';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
+import CalendarModal from '../components/CalendarModal';
+import TimePickerModal from '../components/TimePickerModal';
 type AddTaskRouteProp = RouteProp<RootStackParamList, 'AddTaskScreen'>;
 type AddTaskNavProp = NativeStackNavigationProp<RootStackParamList, 'AddTaskScreen'>;
 
@@ -31,30 +33,53 @@ const AddTaskScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<AddTaskNavProp>();
   const route = useRoute<AddTaskRouteProp>();
-  const { mode, prompt, editHabitIndex, editTaskIndex, initialItem } = route.params;
+  const { mode, prompt, source, editHabitIndex, editTaskIndex, initialItem } = route.params;
 
   const isHabit = mode === 'habit';
   const isEdit =
     (isHabit && editHabitIndex !== undefined) || (!isHabit && editTaskIndex !== undefined);
 
   const [title, setTitle] = useState('');
-  const [selectedDays, setSelectedDays] = useState<number[]>([0, 2, 4]);
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [reminderTime, setReminderTime] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [dueDateDate, setDueDateDate] = useState<Date | null>(null);
   const [note, setNote] = useState('');
+
+  const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
+
+  const formatDate = (d: Date): string => {
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (hours: number, minutes: number, am: boolean): string => {
+    const labelHours = hours.toString().padStart(2, '0');
+    const labelMinutes = minutes.toString().padStart(2, '0');
+    return `${labelHours}:${labelMinutes} ${am ? 'AM' : 'PM'}`;
+  };
 
   useEffect(() => {
     if (initialItem) {
       setTitle(initialItem.title);
-      setSelectedDays(initialItem.selectedDays?.length ? initialItem.selectedDays : [0, 2, 4]);
+      setSelectedDays(initialItem.selectedDays?.length ? initialItem.selectedDays : []);
       setReminderTime(initialItem.reminderTime ?? '');
-      setDueDate(initialItem.dueDate ?? '');
+      if (initialItem.dueDate) {
+        setDueDate(initialItem.dueDate);
+      } else {
+        setDueDate('');
+      }
       setNote('');
     } else {
       setTitle(isHabit ? '' : '');
-      setSelectedDays([0, 2, 4]);
+      setSelectedDays(isHabit ? [] : []);
       setReminderTime('');
       setDueDate('');
+      setDueDateDate(null);
       setNote('');
     }
   }, [initialItem, isHabit]);
@@ -66,7 +91,10 @@ const AddTaskScreen = () => {
   };
 
   const clearReminder = () => setReminderTime('');
-  const clearDueDate = () => setDueDate('');
+  const clearDueDate = () => {
+    setDueDate('');
+    setDueDateDate(null);
+  };
 
   const buildItem = (): TrackerCardItem => {
     const base = {
@@ -79,26 +107,23 @@ const AddTaskScreen = () => {
     return { ...base, dueDate: dueDate.trim() || undefined };
   };
 
+  const aiMadeParams = (extra: object) =>
+    source === 'selfMade' ? { source: 'selfMade' as const, prompt: prompt ?? '', ...extra } : { prompt: prompt ?? '', ...extra };
+
   const handleSubmit = () => {
     Keyboard.dismiss();
     const item = buildItem();
     if (isEdit) {
       if (isHabit && editHabitIndex !== undefined) {
-        navigation.navigate('AiMade', {
-          prompt,
-          updatedHabit: { index: editHabitIndex, item },
-        });
+        navigation.navigate('AiMade', aiMadeParams({ updatedHabit: { index: editHabitIndex, item } }));
       } else if (!isHabit && editTaskIndex !== undefined) {
-        navigation.navigate('AiMade', {
-          prompt,
-          updatedTask: { index: editTaskIndex, item },
-        });
+        navigation.navigate('AiMade', aiMadeParams({ updatedTask: { index: editTaskIndex, item } }));
       }
     } else {
       if (isHabit) {
-        navigation.navigate('AiMade', { prompt, addedHabit: item });
+        navigation.navigate('AiMade', aiMadeParams({ addedHabit: item }));
       } else {
-        navigation.navigate('AiMade', { prompt, addedTask: item });
+        navigation.navigate('AiMade', aiMadeParams({ addedTask: item }));
       }
     }
   };
@@ -122,7 +147,7 @@ const AddTaskScreen = () => {
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top, backgroundColor: lightColors.background },
+        { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground },
       ]}
     >
       <KeyboardAvoidingView
@@ -157,7 +182,7 @@ const AddTaskScreen = () => {
                 value={title}
                 onChangeText={setTitle}
                 placeholder={isHabit ? 'Habit title...' : 'Task title...'}
-                placeholderTextColor={palette.gray900}
+                placeholderTextColor={lightColors.placeholderText}
               />
               {title.length > 0 && (
                 <TouchableOpacity
@@ -202,42 +227,62 @@ const AddTaskScreen = () => {
             {!isHabit && (
               <>
                 <Text style={styles.label}>Task Due Date</Text>
-                <View style={styles.inputRow}>
-                  <CalendarIcon width={20} height={20} />
-                  <TextInput
-                    style={styles.inputFlex}
-                    value={dueDate}
-                    onChangeText={setDueDate}
-                    placeholder="Select date"
-                    placeholderTextColor={palette.gray500}
-                  />
-                  {dueDate.length > 0 && (
-                    <TouchableOpacity onPress={clearDueDate} style={styles.clearBtn}>
-                      <CrossIcon width={20} height={20} />
-                    </TouchableOpacity>
-                  )}
-                </View>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setDueDateModalVisible(true)}
+                >
+                  <View style={styles.inputRow}>
+                    <CalendarIcon width={20} height={20} />
+                    <Text
+                      style={styles.inputFlex}
+                      numberOfLines={1}
+                    >
+                      {dueDate || 'Select date'}
+                    </Text>
+                    {dueDate.length > 0 && (
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          clearDueDate();
+                        }}
+                        style={styles.clearBtn}
+                      >
+                        <CrossIcon width={20} height={20} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </TouchableOpacity>
               </>
             )}
 
             <Text style={styles.label}>
               {isHabit ? 'Habit Reminder' : 'Task Reminder'}
             </Text>
-            <View style={styles.inputRow}>
-              <TimeIcon width={20} height={20} />
-              <TextInput
-                style={styles.inputFlex}
-                value={reminderTime}
-                onChangeText={setReminderTime}
-                placeholder="Set time"
-                placeholderTextColor={palette.gray500}
-              />
-              {reminderTime.length > 0 && (
-                <TouchableOpacity onPress={clearReminder} style={styles.clearBtn}>
-                  <CrossIcon width={20} height={20} />
-                </TouchableOpacity>
-              )}
-            </View>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setReminderModalVisible(true)}
+            >
+              <View style={styles.inputRow}>
+                <TimeIcon width={20} height={20} />
+                <Text
+                  style={styles.inputFlex}
+                  numberOfLines={1}
+                >
+                  {reminderTime || 'Set time'}
+                </Text>
+                {reminderTime.length > 0 && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      clearReminder();
+                    }}
+                    style={styles.clearBtn}
+                  >
+                    <CrossIcon width={20} height={20} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </TouchableOpacity>
 
             <Text style={styles.label}>Note</Text>
             <TextInput
@@ -245,7 +290,7 @@ const AddTaskScreen = () => {
               value={note}
               onChangeText={setNote}
               placeholder="Add details or instructions..."
-              placeholderTextColor={palette.gray500}
+              placeholderTextColor={lightColors.placeholderText}
               multiline
               textAlignVertical="top"
             />
@@ -258,11 +303,37 @@ const AddTaskScreen = () => {
             variant="primary"
             onPress={handleSubmit}
             style={styles.submitBtn}
-            backgroundColor={palette.orange}
-            textColor={palette.white}
+            backgroundColor={lightColors.accent}
+            textColor={lightColors.secondaryBackground}
           />
         </View>
       </KeyboardAvoidingView>
+
+      {/* Task Due Date calendar */}
+      {!isHabit && (
+        <CalendarModal
+          visible={dueDateModalVisible}
+          title="Task Due Date"
+          selectedDate={dueDateDate}
+          onSelect={(date) => {
+            setDueDateDate(date);
+            setDueDate(formatDate(date));
+          }}
+          onCancel={() => setDueDateModalVisible(false)}
+          onConfirm={() => setDueDateModalVisible(false)}
+        />
+      )}
+
+      {/* Habit / Task reminder time picker */}
+      <TimePickerModal
+        visible={reminderModalVisible}
+        title={isHabit ? 'Habit Reminder' : 'Task Reminder'}
+        onCancel={() => setReminderModalVisible(false)}
+        onConfirm={(h, m, isAm) => {
+          setReminderTime(formatTime(h, m, isAm));
+          setReminderModalVisible(false);
+        }}
+      />
     </View>
   );
 };
@@ -291,13 +362,13 @@ const styles = StyleSheet.create({
   },
   closeText: {
     fontSize: 20,
-    color: palette.black,
+    color: lightColors.text,
     fontWeight: '600',
   },
   headerTitle: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 24,
-    color: palette.blackText,
+    color: lightColors.text,
   },
   headerRight: {
     width: 32,
@@ -313,7 +384,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 18,
-    color: palette.blackText,
+    color: lightColors.text,
     marginBottom: 8,
   },
   input: {
@@ -323,7 +394,7 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 18,
-    color: palette.blackText,
+    color: lightColors.text,
     marginBottom: 20,
   },
   inputRow: {
@@ -350,7 +421,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 18,
-    color: palette.blackText,
+    color: lightColors.text,
     padding: 0,
   },
   clearBtn: {
@@ -358,7 +429,7 @@ const styles = StyleSheet.create({
   },
   clearText: {
     fontSize: 16,
-    color: palette.gray600,
+    color: lightColors.placeholderText,
 
   },
   daysRow: {
@@ -371,24 +442,24 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: palette.white,
+    backgroundColor: lightColors.secondaryBackground,
     borderWidth: 1,
-    borderColor: palette.gray300,
+    borderColor: lightColors.placeholderText,
     alignItems: 'center',
     justifyContent: 'center',
 
   },
   dayCircleSelected: {
-    backgroundColor: palette.orange,
-    borderColor: palette.orange,
+    backgroundColor: lightColors.background,
+    borderColor: lightColors.background,
   },
   dayText: {
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 14,
-    color: palette.gray800,
+    color: lightColors.placeholderText,
   },
   dayTextSelected: {
-    color: palette.white,
+    color: lightColors.secondaryBackground,
   },
   noteInput: {
     minHeight: 80,

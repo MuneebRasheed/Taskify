@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigations/RootNavigation';
-import { lightColors, palette } from '../../utils/colors';
+import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from '../components/Button';
 import CrossIcon from '../assets/svgs/CrossIcon';
@@ -43,8 +43,19 @@ const SelectCoverImageScreen = () => {
     navigation.goBack();
   };
 
+  const returnToAiMade = route.params?.returnToScreen === 'AiMade';
+  const prompt = route.params?.prompt ?? '';
+
   const handleOK = () => {
-    navigation.navigate('GoalPlanner', { selectedCoverIndex: selectedIndex });
+    if (returnToAiMade) {
+      navigation.navigate('AiMade', {
+        source: 'selfMade',
+        prompt,
+        selectedCoverIndex: selectedIndex,
+      });
+    } else {
+      navigation.navigate('GoalPlanner', { selectedCoverIndex: selectedIndex });
+    }
   };
 
   const numColumns = 2;
@@ -54,7 +65,7 @@ const SelectCoverImageScreen = () => {
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: lightColors.background },
+        { paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: lightColors.secondaryBackground },
       ]}
     >
       <View style={styles.header}>
@@ -106,21 +117,21 @@ const SelectCoverImageScreen = () => {
 
       <View style={styles.footer}>
         <Button
-          title="Cancel"
+          title={t("cancel")}
           variant="outline"
           onPress={handleCancel}
           style={styles.cancelBtn}
           borderWidth={0}
-          backgroundColor={palette.skipbg}
-          textColor={palette.orange}
+          backgroundColor={lightColors.skipbg}
+          textColor={lightColors.accent}
         />
         <Button
           title={t("ok")}
           variant="primary"
           onPress={handleOK}
           style={styles.okBtn}
-          backgroundColor={palette.orange}
-          textColor={palette.white}
+          backgroundColor={lightColors.accent}
+          textColor={lightColors.secondaryBackground}
         />
       </View>
     </View>
@@ -151,7 +162,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 24,
-    color: palette.blackText,
+    color: lightColors.text,
   },
   searchIcon: {
     fontSize: 20,
@@ -173,7 +184,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1.2,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: palette.gray200,
+    backgroundColor: lightColors.inputBackground,
     borderWidth: 2,
     borderColor: 'transparent',
     shadowColor: '#000',
@@ -183,7 +194,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardSelected: {
-    borderColor: palette.orange,
+    borderColor: lightColors.accent,
   },
   cardImage: {
     width: '100%',
@@ -196,7 +207,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: palette.orange,
+    backgroundColor: lightColors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -207,7 +218,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 14,
-    color: palette.gray600,
+    color: lightColors.subText,
     textAlign: 'center',
   },
   footer: {

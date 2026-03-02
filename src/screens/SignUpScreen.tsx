@@ -9,7 +9,6 @@ import {
   Platform,
 } from "react-native";
 import { useState } from "react";
-import { Feather } from "@expo/vector-icons";
 import { lightColors, palette } from "../../utils/colors";
 import { fontFamilies } from "../theme/typography";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -49,7 +48,7 @@ const SignUpScreen = () => {
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top, backgroundColor: lightColors.background },
+        { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground },
       ]}
     >
       <ScrollView
@@ -245,27 +244,26 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 3,
-    borderColor: lightColors.textButtonOrange,
+    borderColor: lightColors.background,
     marginRight: 12,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: lightColors.textButtonOrange,
-    // borderColor: palette.accent,
+    backgroundColor: lightColors.background,
   },
   termsText: {
     flexShrink: 1,
     fontFamily: fontFamilies.urbanist,
     fontSize: 18,
     lineHeight: 24,
-    color: palette.arrowLeft,
+    color: lightColors.smallText,
   },
   link: {
     fontFamily: fontFamilies.urbanist,
     fontSize: 18,
     lineHeight: 24,
-    color: lightColors.textButtonOrange,
+    color: lightColors.background,
   },
   signInRow: {
     flexDirection: "row",
@@ -277,7 +275,7 @@ const styles = StyleSheet.create({
   signInPrompt: {
     fontFamily: fontFamilies.urbanist,
     fontSize: 18,
-    color: palette.arrowLeft,
+    color: lightColors.smallText,
   },
   separatorWrap: {
     flexDirection: "row",

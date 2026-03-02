@@ -7,24 +7,24 @@ import Explore from '../assets/svgs/Explore';
 import Report from '../assets/svgs/Report';
 import MyGoals from '../assets/svgs/MyGoals';
 import Account from '../assets/svgs/Account';
-import ActiveHome from '../assets/svgs/ActiveHome';
-import ActiveExplore from '../assets/svgs/ActiveExplore';
-import ActiveReport from '../assets/svgs/ActiveReport';
-import ActiveMyGoals from '../assets/svgs/ActiveMyGoals';
-import ActiveAccount from '../assets/svgs/ActiveAccount';
-import { lightColors, palette } from '../../utils/colors';
+import ActiveHomeIcon from '../assets/svgs/ActiveHomeIcon';
+import ActiveExploreIcon from '../assets/svgs/ActiveExploreIcon';
+import ActiveReportIcon from '../assets/svgs/ActiveReportIcon';
+import ActiveMyGoalsIcon from '../assets/svgs/ActiveMyGoalsIcone';
+import ActiveAccountIcon from '../assets/svgs/ActiveAccountIcon';
+import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 
 const TABS = [
-  { id: 'Home', label: 'Home', Icon: HomeIcon, ActiveIcon: ActiveHome },
-  { id: 'Explore', label: 'Explore', Icon: Explore, ActiveIcon: ActiveExplore },
-  { id: 'Report', label: 'Report', Icon: Report, ActiveIcon: ActiveReport },
-  { id: 'My Goals', label: 'My Goals', Icon: MyGoals, ActiveIcon: ActiveMyGoals },
-  { id: 'Account', label: 'Account', Icon: Account, ActiveIcon: ActiveAccount },
+  { id: 'Home', label: 'Home', Icon: HomeIcon, ActiveIcon: ActiveHomeIcon },
+  { id: 'Explore', label: 'Explore', Icon: Explore, ActiveIcon: ActiveExploreIcon },
+  { id: 'Report', label: 'Report', Icon: Report, ActiveIcon: ActiveReportIcon },
+  { id: 'My Goals', label: 'My Goals', Icon: MyGoals, ActiveIcon: ActiveMyGoalsIcon },
+  { id: 'Account', label: 'Account', Icon: Account, ActiveIcon: ActiveAccountIcon },
 ];
 
-const ACTIVE_ORANGE = lightColors.textButtonOrange;
-const INACTIVE_GRAY = palette.gray500;
+const ACTIVE_ORANGE = lightColors.background;
+const INACTIVE_GRAY = lightColors.placeholderText;
 
 const ICON_SIZE = 24;
 
@@ -75,9 +75,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: lightColors.background,
+    backgroundColor: lightColors.secondaryBackground,
     borderTopWidth: 1,
-    borderTopColor: palette.gray200,
+    borderTopColor: lightColors.border,
   },
   container: {
     flexDirection: 'row',
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: lightColors.background,
+    backgroundColor: lightColors.secondaryBackground,
   },
   tabItem: {
     flex: 1,

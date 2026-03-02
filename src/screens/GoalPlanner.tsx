@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigations/RootNavigation';
-import { lightColors, palette } from '../../utils/colors';
+import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from '../components/Button';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
@@ -26,8 +26,13 @@ import TimePickerModal from '../components/TimePickerModal';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import ImageIcon from '../assets/svgs/ImageIcon';
 import Textt from '../components/Textt';
+import { t, useTranslation } from '../i18n';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
+
 type GoalPlannerRouteProp = RouteProp<RootStackParamList, 'GoalPlanner'>;
 type GoalPlannerNavProp = NativeStackNavigationProp<RootStackParamList, 'GoalPlanner'>;
+
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', {
@@ -49,6 +54,7 @@ const GoalPlannerScreen = () => {
 
   const goalTitle = route.params?.goalTitle ?? '';
   const returnedCoverIndex = route.params?.selectedCoverIndex;
+  const fromSelfMade = route.params?.fromSelfMade ?? false;
 
   const [goalTitleText, setGoalTitleText] = useState(goalTitle);
   const [coverIndex, setCoverIndex] = useState(0);
@@ -61,6 +67,7 @@ const GoalPlannerScreen = () => {
   const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
   const [reminderDateModalVisible, setReminderDateModalVisible] = useState(false);
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
+  const goalTitleInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (goalTitle) setGoalTitleText(goalTitle);
@@ -86,7 +93,7 @@ const GoalPlannerScreen = () => {
     setCategoryModalVisible(false);
   };
 
-  const handleDueDateConfirm = () => {
+  const handleDueDateConfirm = () => {  
     setDueDateModalVisible(false);
   };
 
@@ -108,19 +115,21 @@ const GoalPlannerScreen = () => {
   const handleSaveGoal = () => {
     // TODO: persist goal and navigate
     navigation.goBack();
+    
   };
+  const { t } = useTranslation();
 
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: lightColors.background },
+        { backgroundColor: lightColors.secondaryBackground },
       ]}
     >
 
 <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => navigation.navigate('AiMade')}
+            onPress={() => navigation.navigate('AiMade', fromSelfMade ? { source: 'selfMade', prompt: goalTitleText } : { prompt: goalTitleText })}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <View style={styles.backBtnCircle}>
@@ -152,15 +161,28 @@ const GoalPlannerScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Part 2: Goals Title */}
+        {/* Part 2: Goals Title (with edit icon when from self-made flow) */}
         <View style={styles.section}>
-          <Textt i18nKey="goalsTitle" style={styles.label} />
+          <View style={styles.labelRow}>
+            <Textt i18nKey="goalsTitle" style={styles.label} />
+            {fromSelfMade && (
+              <TouchableOpacity
+                onPress={() => goalTitleInputRef.current?.focus()}
+                style={styles.editTitleBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="pencil" size={20} color={lightColors.text} />
+              </TouchableOpacity>
+            )}
+          </View>
           <TextInput
+            ref={goalTitleInputRef}
             style={styles.input}
             value={goalTitleText}
             onChangeText={setGoalTitleText}
-            placeholder="Goal title"
+            placeholder={t("goalsTitle")}
             placeholderTextColor={lightColors.subText}
+            editable
           />
         </View>
 
@@ -176,7 +198,7 @@ const GoalPlannerScreen = () => {
               style={[styles.inputRowText, !category && styles.placeholder]}
               numberOfLines={1}
             >
-              {category ?? 'Category'}
+              {category ?? t("category")}
             </Text>
             <Text style={styles.chevron}>⌄</Text>
           </TouchableOpacity>
@@ -195,7 +217,7 @@ const GoalPlannerScreen = () => {
               style={[styles.inputRowTextFlex, !dueDate && styles.placeholder]}
               numberOfLines={1}
             >
-              {dueDate ? formatDate(dueDate) : 'Due date'}
+              {dueDate ? formatDate(dueDate) : t("goalsDueDate")}
             </Text>
             {dueDate && (
               <TouchableOpacity
@@ -224,7 +246,7 @@ const GoalPlannerScreen = () => {
               style={[styles.inputRowTextFlex, !reminderDisplay && styles.placeholder]}
               numberOfLines={1}
             >
-              {reminderDisplay || 'Reminder'}
+              {reminderDisplay || t("goalsReminder")}
             </Text>
             {reminderDisplay && (
               <TouchableOpacity
@@ -245,7 +267,7 @@ const GoalPlannerScreen = () => {
       {/* Part 6: Save Goals button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          title="Save Goals"
+          title={t("saveGoals")}
           variant="primary"
           onPress={handleSaveGoal}
           style={styles.saveBtn}
@@ -262,7 +284,7 @@ const GoalPlannerScreen = () => {
 
       <CalendarModal
         visible={dueDateModalVisible}
-        title="Goals Due Date"
+        title={t("goalsDueDate")}
         selectedDate={dueDate}
         onSelect={setDueDate}
         onCancel={() => setDueDateModalVisible(false)}
@@ -271,7 +293,7 @@ const GoalPlannerScreen = () => {
 
       <CalendarModal
         visible={reminderDateModalVisible}
-        title="Goals Reminder"
+        title={t("goalsReminder")}
         selectedDate={reminderDate}
         onSelect={setReminderDate}
         onCancel={() => setReminderDateModalVisible(false)}
@@ -280,7 +302,7 @@ const GoalPlannerScreen = () => {
 
       <TimePickerModal
         visible={reminderTimeModalVisible}
-        title="Goals Reminder"
+        title={t("goalsReminder")}
         initialTime={
           reminderTime
             ? { hours: reminderTime.hours, minutes: reminderTime.minutes, am: reminderTime.am }
@@ -304,10 +326,11 @@ const styles = StyleSheet.create({
   },
   coverWrap: {
     height: 430,
-    backgroundColor: palette.gray200,
+    backgroundColor: lightColors.inputBackground,
     position: 'relative',
   },
   coverImage: {
+
     width: '100%',
     height: '100%',
   },
@@ -315,17 +338,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: palette.gray200,
+    backgroundColor: lightColors.inputBackground,
   },
   coverPlaceholderText: {
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 16,
-    color: palette.gray600,
+    color: lightColors.subText,
   },
   coverPlaceholderHint: {
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 12,
-    color: palette.gray500,
+    color: lightColors.subText,
     marginTop: 4,
   },
   backBtn: {
@@ -338,11 +361,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: palette.white,
+    backgroundColor: lightColors.secondaryBackground,
     alignItems: 'center',
     justifyContent: 'center',
+    
   },
   changeCoverBtn: {
+    
     position: 'absolute',
     bottom: 24,
     right: 24,
@@ -362,6 +387,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 20,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  editTitleBtn: {
+    padding: 4,
+  },
   input: {
     backgroundColor: lightColors.inputBackground,
     borderRadius: 12,
@@ -369,7 +404,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 16,
-    color: palette.blackText,
+    color: lightColors.text,
   },
   inputRow: {
     flexDirection: 'row',
@@ -384,20 +419,20 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 16,
-    color: palette.blackText,
+    color: lightColors.text,
   },
   inputRowTextFlex: {
     flex: 1,
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 16,
-    color: palette.blackText,
+    color: lightColors.text,
   },
   placeholder: {
-    color: palette.gray500,
+    color: lightColors.placeholderText,
   },
   chevron: {
     fontSize: 18,
-    color: palette.arrowLeft,
+    color: lightColors.text,
   },
   clearBtn: {
     padding: 4,
@@ -409,7 +444,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 24,
     paddingTop: 24,
-    backgroundColor: lightColors.background,
+    backgroundColor: lightColors.secondaryBackground,
     borderTopWidth: 1,
       borderTopColor: lightColors.border,
     },

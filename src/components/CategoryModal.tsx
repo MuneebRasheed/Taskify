@@ -9,7 +9,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { palette } from '../../utils/colors';
+import { lightColors, palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from './Button';
 import CheckIcon from '../assets/svgs/CheckIcon';
@@ -58,7 +58,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
             style={[
               styles.sheet,
               {
-                paddingBottom: insets.bottom + 24,
+                paddingBottom: insets.bottom,
               },
             ]}
             onStartShouldSetResponder={() => true}
@@ -93,15 +93,15 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
                 onPress={onCancel}
                 style={styles.cancelBtn}
                 borderWidth={0}
-                backgroundColor={palette.skipbg}
-                textColor={palette.orange}
+                backgroundColor={lightColors.skipbg}
+                textColor={lightColors.background}
               />
               <Button
                 title="OK"
                 variant="primary"
                 onPress={onConfirm}
                 style={styles.okBtn}
-                backgroundColor={palette.orange}
+                backgroundColor={lightColors.accent}
                 textColor={palette.white}
               />
             </View>
@@ -115,11 +115,11 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: palette.white,
+    backgroundColor: lightColors.secondaryBackground,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 24,
@@ -129,20 +129,20 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: palette.gray300,
+    backgroundColor: lightColors.placeholderText,
     alignSelf: 'center',
     marginBottom: 16,
   },
   title: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 18,
-    color: palette.blackText,
+    color: lightColors.text,
     textAlign: 'center',
     marginBottom: 12,
   },
   divider: {
     height: 1,
-    backgroundColor: palette.divider,
+    backgroundColor: lightColors.border,
     marginBottom: 8,
   },
   list: {
@@ -154,18 +154,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: palette.divider,
+    borderBottomColor: lightColors.border,
   },
   rowText: {
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 16,
-    color: palette.blackText,
+    color: lightColors.text,
   },
   checkWrap: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: palette.orange,
+    backgroundColor: lightColors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -30,18 +30,18 @@ const HomeScreen = () => {
     };
   
     return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: 60 + insets.bottom, backgroundColor: lightColors.background }]}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: 60 + insets.bottom, backgroundColor: lightColors.secondaryBackground }]}>
       <ScrollView>
       <View style={styles.header}>
         {/* Left Logo */}
-        <SpashLogo fill={palette.accent} width={28} height={28} />
+        <SpashLogo fill={lightColors.background} width={28} height={28} />
         {/* Center Title */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Home</Text>
         </View>
         {/* Right Menu Icon */}
         <TouchableOpacity style={styles.menuButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color="#000" />
+          <Ionicons name="ellipsis-vertical" size={24} color={lightColors.smallText} />
         </TouchableOpacity>
       </View>
 
@@ -51,7 +51,7 @@ const HomeScreen = () => {
       />
 
       <View style={styles.goalsList}>
-        <Image source={require('../assets/images/Goals.png')} style={styles.goalsImage} />
+        <Image source={require('../assets/images/Goal.png')} style={styles.goalsImage} />
         <View style={styles.goalsHeading}>
           <Text style={[styles.goalsTitle, { fontFamily: fontFamilies.urbanistBold }]}>You have no goals</Text>
           <Text style={styles.goalsDescription}>Add a goal by clicking the (+) button below.</Text>
@@ -79,7 +79,7 @@ const HomeScreen = () => {
     },
     header: {
         height: 70,
-        backgroundColor: lightColors.background,
+        backgroundColor: lightColors.secondaryBackground,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -101,7 +101,7 @@ const HomeScreen = () => {
       title: {
         fontFamily: fontFamilies.urbanistBold,
         fontSize: 24,
-        color: lightColors.text,
+        color: lightColors.smallText,
       },
     
       menuButton: {
@@ -128,7 +128,7 @@ const HomeScreen = () => {
       goalsTitle: {
         fontSize: 24,
         fontFamily: fontFamilies.urbanistBold,
-        color: palette.black,
+        color: lightColors.smallText,
       },
       goalsDescription: {
         fontSize: 18,

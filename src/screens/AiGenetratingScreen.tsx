@@ -37,7 +37,7 @@ const AiGenetratingScreen = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: lightColors.background }]}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground }]}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -59,7 +59,7 @@ const AiGenetratingScreen = () => {
             </View>
 
             <View style={styles.main}>
-              <Starts width={80} height={80} fill={goal.trim() ? palette.orange : palette.gray400} />
+              <Starts width={80} height={80} fill={goal.trim() ? lightColors.background : lightColors.placeholderText} />
               <TextInput
                 style={styles.input}
                 placeholder="Type in your goal and we'll prepare a plan for you..."
@@ -82,15 +82,15 @@ const AiGenetratingScreen = () => {
     title="Generate"
     variant="primary"
     onPress={handleGenerate}
-    textColor={palette.white}
+    textColor={lightColors.secondaryBackground}
     borderRadius={24}
     disabled={!goal.trim()}
     style={StyleSheet.flatten([
       styles.generateBtn,
       {
         backgroundColor: goal.trim()
-          ? palette.orange   // when user types
-          : '#CB622B',       // default color
+          ? lightColors.accent   // when user types
+          : lightColors.disabledButton,       // default color
       },
     ])}
   />
@@ -144,7 +144,6 @@ const styles = StyleSheet.create({
     width: '100%',
     textAlign: 'center',
     paddingVertical: 16,
-    backgroundColor: lightColors.background,
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 24,
     color: lightColors.text,
@@ -155,6 +154,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
       borderTopWidth: 1,
       borderColor: lightColors.border,
+      backgroundColor: lightColors.BtnBackground,
   },
   generateBtn: {
 

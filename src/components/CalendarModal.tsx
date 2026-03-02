@@ -8,11 +8,13 @@ import {
   Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { palette } from '../../utils/colors';
+import { lightColors, palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from './Button';
 import LeftArrowIcon from '../assets/svgs/LeftArrowIcon';
 import RightArrowIcon from '../assets/svgs/RightArrowIcon';
+import Textt from '../components/Textt';
+
 
 const DAYS_HEADER = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -83,7 +85,7 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <Pressable style={styles.backdrop} onPress={onCancel}>
         <View
-          style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}
+          style={[styles.sheet, { paddingBottom: insets.bottom}]}
           onStartShouldSetResponder={() => true}
         >
           <Text style={styles.title}>{title}</Text>
@@ -151,16 +153,16 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
               onPress={onCancel}
               style={styles.cancelBtn}
               borderWidth={0}
-              backgroundColor={palette.skipbg}
-              textColor={palette.orange}
+              backgroundColor={lightColors.skipbg}
+              textColor={lightColors.background}
             />
             <Button
               title="OK"
               variant="primary"
               onPress={onConfirm}
               style={styles.okBtn}
-              backgroundColor={palette.orange}
-              textColor={palette.white}
+              backgroundColor={lightColors.accent}
+              textColor={lightColors.secondaryBackground}
             />
           </View>
         </View>
@@ -172,11 +174,11 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(4, 3, 3, 0.4)',
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: palette.white,
+    backgroundColor: lightColors.secondaryBackground,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 24,
@@ -184,8 +186,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamilies.urbanistBold,
-    fontSize: 18,
-    color: palette.blackText,
+    fontSize: 24,
+    color: lightColors.text,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -200,13 +202,13 @@ const styles = StyleSheet.create({
   },
   arrow: {
     fontSize: 20,
-    color: palette.gray800,
+    color: lightColors.placeholderText,
     fontWeight: '600',
   },
   monthText: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 20,
-    color: palette.blackText,
+    color: lightColors.text,
   },
   weekRow: {
   
@@ -218,7 +220,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 18,
-    color: palette.blackText,
+    color: lightColors.text,
     textAlign: 'center',
   },
   grid: {
@@ -241,30 +243,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cellSelected: {
-    backgroundColor: palette.orange,
+    backgroundColor: lightColors.background,
   },
   cellText: {
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 16,
-    color: palette.blackText,
+    color: lightColors.text,
   },
   cellTextMuted: {
-    color: palette.gray400,
+    color: lightColors.placeholderText,
   },
   cellTextSelected: {
-    color: palette.white,
+    color: lightColors.secondaryBackground,
   },
   buttons: {
+    borderTopWidth: 1,
+    borderTopColor: lightColors.border,
+    paddingTop: 24,
     flexDirection: 'row',
     gap: 12,
   },
   cancelBtn: {
     flex: 1,
-    borderRadius: 100,
+    borderRadius: 1000,
   },
   okBtn: {
     flex: 1,
-    borderRadius: 100,
+    borderRadius: 1000,
   },
 });
 

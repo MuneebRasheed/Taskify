@@ -8,6 +8,9 @@ import {
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
+import LeftArrowIcon from '../assets/svgs/LeftArrowIcon';
+import RightArrowIcon from '../assets/svgs/RightArrowIcon';
+import { lightColors } from '../../utils/colors';
 
 interface TaskData {
   total: number;
@@ -147,7 +150,7 @@ const TaskCalendar: React.FC<CalendarProps> = ({
           <View style={{ width: size, height: size }}>
             <Svg width={size} height={size}>
               <Circle
-                stroke="#eee"
+                stroke={lightColors.border}
                 fill="none"
                 cx={size / 2}
                 cy={size / 2}
@@ -156,7 +159,7 @@ const TaskCalendar: React.FC<CalendarProps> = ({
               />
               {progress > 0 && (
                 <Circle
-                  stroke="#FF7A00"
+                  stroke={lightColors.background}
                   fill="none"
                   cx={size / 2}
                   cy={size / 2}
@@ -173,7 +176,7 @@ const TaskCalendar: React.FC<CalendarProps> = ({
               <Text
                 style={[
                   styles.dayText,
-                  !item.isCurrentMonth && { color: '#ccc' },
+                  !item.isCurrentMonth && { color: lightColors.placeholderText },
                   isSelected && styles.selectedText,
                 ]}
               >
@@ -197,13 +200,13 @@ const TaskCalendar: React.FC<CalendarProps> = ({
       {isExpanded && (
         <View style={styles.monthHeader}>
           <TouchableOpacity onPress={goToPreviousMonth}>
-            <Text style={styles.arrow}>{'<'}</Text>
+            <LeftArrowIcon width={20} height={20} />
           </TouchableOpacity>
 
           <Text style={styles.monthText}>{monthYearLabel}</Text>
 
           <TouchableOpacity onPress={goToNextMonth}>
-            <Text style={styles.arrow}>{'>'}</Text>
+            <RightArrowIcon width={20} height={20} />
           </TouchableOpacity>
         </View>
       )}
@@ -244,7 +247,7 @@ export default TaskCalendar;
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: lightColors.secondaryBackground,
   },
 
   monthHeader: {
@@ -262,7 +265,7 @@ const styles = StyleSheet.create({
   arrow: {
     fontSize: 20,
     paddingHorizontal: 10,
-    color: '#444',
+    color: lightColors.smallText,
   },
 
   weekRow: {
@@ -274,7 +277,7 @@ const styles = StyleSheet.create({
   weekText: {
     width: 44,
     textAlign: 'center',
-    color: '#777',
+    color: lightColors.smallText,
   },
 
   dayWrapper: {
@@ -284,10 +287,10 @@ const styles = StyleSheet.create({
   },
 
   selectedWrapper: {
-    backgroundColor: 'rgba(255,122,0,0.08)',
+    backgroundColor: lightColors.skipbg,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#FF7A00',
+    borderColor: lightColors.background,
     paddingVertical: 6,
     paddingHorizontal: 4,
   },
@@ -305,7 +308,7 @@ const styles = StyleSheet.create({
   },
 
   selectedText: {
-    color: '#FF7A00',
+    color: lightColors.background,
     fontWeight: '600',
   },
 
@@ -313,7 +316,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FF7A00',
+    backgroundColor: lightColors.background,
     marginTop: 6,
   },
 

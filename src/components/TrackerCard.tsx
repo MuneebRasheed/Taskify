@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { lightColors, palette } from '../../utils/colors';
 import TimeIcon from '../assets/svgs/TimeIcon';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
+import { t, useTranslation } from '../i18n';
 
 /** Mon=0 … Sun=6 */
 export const TRACKER_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
@@ -22,7 +23,7 @@ export interface TrackerCardItem {
   variant?: TrackerCardVariant;
 }
 
-const TASK_INDICATOR_BLUE = '#4FC3F7';
+const TASK_INDICATOR_BLUE = lightColors.taskIndicator;
 
 interface TrackerCardProps {
   item: TrackerCardItem;
@@ -36,16 +37,17 @@ interface TrackerCardProps {
   unselectedDayTextColor?: string;
 }
 
-const CORAL_ORANGE = '#FF8A65';
-const DEFAULT_SELECTED_COLOR = CORAL_ORANGE;
-const DEFAULT_UNSELECTED_BORDER = palette.gray400;
-const DEFAULT_UNSELECTED_TEXT = palette.gray700;
+const CORAL_ORANGE = lightColors.background;
+const DEFAULT_SELECTED_COLOR = lightColors.habitIndicator;
+
+const DEFAULT_UNSELECTED_BORDER = lightColors.placeholderText;
+const DEFAULT_UNSELECTED_TEXT = lightColors.subText;
 
 const TrackerCard: React.FC<TrackerCardProps> = ({
   item,
   onPress,
   indicatorColor,
-  selectedDayColor = DEFAULT_SELECTED_COLOR,
+  selectedDayColor =lightColors.background ,
   unselectedDayBorderColor = DEFAULT_UNSELECTED_BORDER,
   unselectedDayTextColor = DEFAULT_UNSELECTED_TEXT,
 }) => {
@@ -78,7 +80,7 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
               <View style={styles.metaItem}>
                 <TimeIcon width={16} height={16} />
                 <Text style={styles.metaText}>
-                  {hasReminder ? item.reminderTime : 'No reminder'}
+                  {hasReminder ? item.reminderTime : t("noReminder")}
                 </Text>
               </View>
             </View>
@@ -93,7 +95,7 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
                       style={[
                         styles.dayCircle,
                         isSelected
-                          ? { backgroundColor: selectedDayColor }
+                          ? { backgroundColor: selectedDayColor ,}
                           : {
                               backgroundColor: '#FFF',
                               borderWidth: 1,
@@ -118,7 +120,7 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
               <View style={styles.reminderRow}>
                 <TimeIcon width={16} height={16} />
                 <Text style={styles.reminderTime}>
-                  {hasReminder ? (item.reminderTime ?? '') : 'No reminder'}
+                  {hasReminder ? (item.reminderTime ?? '') : t("noReminder")}
                 </Text>
               </View>
             </>
@@ -131,7 +133,7 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: lightColors.background,
+    backgroundColor: lightColors.secondaryBackground,
     borderRadius: 12,
     flexDirection: 'row',
     marginBottom: 12,
@@ -184,7 +186,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   selectedDayText: {
-    color: lightColors.background,
+    color: lightColors.secondaryBackground,
   },
   reminderRow: {
     flexDirection: 'row',

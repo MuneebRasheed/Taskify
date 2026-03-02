@@ -15,6 +15,7 @@ import { lightColors, palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from './Button';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
+import { t, useTranslation } from '../i18n';
 
 const ROW_HEIGHT = 93;
 const VISIBLE_ROWS = 5;
@@ -36,6 +37,7 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
   onCancel,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [hours, setHours] = useState(initialTime.hours);
   const [minutes, setMinutes] = useState(initialTime.minutes);
@@ -183,21 +185,21 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
 
           <View style={styles.buttons}>
             <Button
-              title="Cancel"
+              title={t("cancel")}
               variant="outline"
               onPress={onCancel}
               style={styles.cancelBtn}
               borderWidth={0}
-              backgroundColor={palette.skipbg}
-              textColor={palette.orange}
+              backgroundColor={lightColors.skipbg}
+              textColor={lightColors.background}
             />
             <Button
-              title="OK"
+              title={t("ok")}
               variant="primary"
               onPress={() => onConfirm(hours, minutes, am)}
               style={styles.okBtn}
-              backgroundColor={palette.orange}
-              textColor={palette.white}
+              backgroundColor={lightColors.accent}
+              textColor={lightColors.secondaryBackground}
             />
           </View>
         </Pressable>
@@ -209,11 +211,11 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(2, 2, 2, 0.4)',
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: palette.white,
+    backgroundColor: lightColors.secondaryBackground,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 24,
@@ -234,7 +236,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 24,
-    color: palette.blackText,
+    color: lightColors.text,
     flex: 1,
     textAlign: 'center',
   },
@@ -259,7 +261,7 @@ const styles = StyleSheet.create({
   },
   selectionLine: {
     height: 2,
-    backgroundColor: palette.orange,
+    backgroundColor: lightColors.background,
     marginHorizontal: 0,
   },
   pickerRow: {
@@ -273,7 +275,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   column: {
-    height: PICKER_HEIGHT,
   },
   row: {
     alignItems: 'center',
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
   rowTextSelected: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 48,
-    color: palette.orange,
+    color: lightColors.background,
   },
   colonWrap: {
     paddingHorizontal: 40,
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   colonSelected: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 24,
-    color: palette.orange,
+    color: lightColors.background,
   },
   amPmWrap: {
     paddingHorizontal: 12,
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
   amPmText: {
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 18,
-    color: palette.gray600,
+    color: lightColors.placeholderText,
   },
   buttons: {
     flexDirection: 'row',

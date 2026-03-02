@@ -1,7 +1,7 @@
 import * as React from "react"
 import Svg, { Path } from "react-native-svg"
 
-function ImageIcon(props) {
+function SvgComponent(props) {
   return (
     <Svg
       width={43}
@@ -13,7 +13,7 @@ function ImageIcon(props) {
     >
       <Path
         d="M0 21.5C0 9.626 9.626 0 21.5 0S43 9.626 43 21.5 33.374 43 21.5 43 0 33.374 0 21.5z"
-        fill="#FE7A36"
+        fill="#BD51B7"
       />
       <Path
         fillRule="evenodd"
@@ -25,4 +25,4 @@ function ImageIcon(props) {
   )
 }
 
-export default ImageIcon
+export default SvgComponent

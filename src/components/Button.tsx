@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   TouchableOpacityProps,
 } from 'react-native';
-import { palette } from '../../utils/colors';
+import { lightColors, palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 
 export type ButtonVariant = 'primary' | 'outline';
@@ -70,18 +70,18 @@ const Button = ({
 
   const computedBackground =
     backgroundColor ??
-    (isPrimary ? palette.accent : palette.white);
+    (isPrimary ? lightColors.accent : palette.white);
 
   const computedBorderColor =
     borderColor ??
-    (variant === 'outline' ? palette.accent : 'transparent');
+    (variant === 'outline' ? lightColors.accent : 'transparent');
 
   const computedBorderWidth =
     borderWidth ?? (variant === 'outline' ? 1 : 0);
 
   const computedTextColor =
     textColor ??
-    (isPrimary ? palette.white : palette.accent);
+    (isPrimary ? palette.white : lightColors.accent);
 
   const computedLoadingColor =
     loadingColor ?? computedTextColor;
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   },
 
   disabled: {
-    opacity: 0.5,
+    opacity: 0.9,
   },
 
   row: {
@@ -180,10 +180,10 @@ const styles = StyleSheet.create({
   },
 
   outlineText: {
-    color: palette.accent,
+    color: lightColors.accent,
   },
 
   disabledText: {
-    color: palette.gray500,
+    color: lightColors.secondaryBackground,
   },
 });

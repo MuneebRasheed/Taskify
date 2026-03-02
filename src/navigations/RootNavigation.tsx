@@ -26,7 +26,9 @@ export type RootStackParamList = {
   HomeScreen: undefined;
   AiGenetratingScreen: undefined;
   AiMade: {
+    source?: 'selfMade';
     prompt?: string;
+    selectedCoverIndex?: number;
     addedHabit?: TrackerCardItem;
     addedTask?: TrackerCardItem;
     updatedHabit?: { index: number; item: TrackerCardItem };
@@ -34,13 +36,14 @@ export type RootStackParamList = {
   };
   AddTaskScreen: {
     mode: 'habit' | 'task';
+    source?: 'selfMade';
     prompt?: string;
     editHabitIndex?: number;
     editTaskIndex?: number;
     initialItem?: TrackerCardItem;
   };
-  GoalPlanner: { goalTitle?: string; selectedCoverIndex?: number };
-  SelectCoverImage: { selectedIndex?: number };
+  GoalPlanner: { goalTitle?: string; selectedCoverIndex?: number; fromSelfMade?: boolean };
+  SelectCoverImage: { selectedIndex?: number; returnToScreen?: 'AiMade'; prompt?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
