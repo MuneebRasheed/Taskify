@@ -5,7 +5,7 @@ import Onboarding from '../screens/Onboarding';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SignInScreen from '../screens/SignInScreen';
-import HomeScreen from '../screens/HomeScreen';
+import MainTabs from './MainTabs';
 import AiGenetratingScreen from '../screens/AiGenetratingScreen';
 import LanguageTestScreen from '../screens/LanguageTestScreen';
 import AiMade from '../screens/AiMade';
@@ -23,7 +23,7 @@ export type RootStackParamList = {
   WelcomeScreen: undefined;
   SignUpScreen: undefined;
   SignInScreen: undefined;
-  HomeScreen: undefined;
+  MainTabs: undefined;
   AiGenetratingScreen: undefined;
   AiMade: {
     source?: 'selfMade';
@@ -55,7 +55,7 @@ function RootNavigation() {
       screenOptions={{
         headerShown: false,
       }}
-      initialRouteName="SplashScreen"
+      initialRouteName="MainTabs"
     >
       <Stack.Screen
         name="SplashScreen"
@@ -93,8 +93,8 @@ function RootNavigation() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="HomeScreen"
-        component={HomeScreen}
+        name="MainTabs"
+        component={MainTabs}
         options={{ headerShown: false }}
       />
       <Stack.Screen

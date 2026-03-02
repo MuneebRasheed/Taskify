@@ -14,7 +14,6 @@ import TaskCalendar from '../components/taskCalendar';
 import { fontFamilies } from '../theme/typography';
 import SpashLogo from '../assets/svgs/SpashLogo';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import BottomNavigation from '../navigations/BottomNavigation';
 import FlowButton from '../components/FlowButton';
 
 const HomeScreen = () => {
@@ -62,9 +61,6 @@ const HomeScreen = () => {
       </View>
 </ScrollView>
       <View style={{ flex: 1 }} />
-      <View style={styles.bottomContainer}>
-      <BottomNavigation />
-      </View>
       <FlowButton />
     </View>
   );
@@ -149,12 +145,5 @@ const HomeScreen = () => {
         paddingVertical: 16,
         alignItems: 'center',
         justifyContent: 'center',
-      },
-      bottomContainer: {
-        position: 'absolute',
-        bottom: 0,
-        width: '100%',
-        height: 100,
-        
       },
   });

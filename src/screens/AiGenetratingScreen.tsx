@@ -48,7 +48,7 @@ const AiGenetratingScreen = () => {
           <View style={styles.content}>
             <View style={styles.header}>
               <TouchableOpacity
-            onPress={() => navigation.navigate('HomeScreen')}
+            onPress={() => navigation.navigate('MainTabs')}
             style={styles.backBtn}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >

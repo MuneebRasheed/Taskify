@@ -53,6 +53,16 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     noDueDate:"No due date",
     setReminder:"Set reminder",
     addYourNote:"Add your note...",
+    // Account screen
+    account: 'Account',
+    billingSubscriptions: 'Billing & Subscriptions',
+    accountSecurity: 'Account & Security',
+    appAppearance: 'App Appearance',
+    dataAnalytics: 'Data & Analytics',
+    helpSupport: 'Help & Support',
+    logout: 'Logout',
+    upgradePlanNow: 'Upgrade Plan Now!',
+    upgradePlanSubtitle: 'Enjoy all the benefits and explore more possibilities',
   },
   ar: {
     languageTestTitle: 'اختبار اللغة',
@@ -67,5 +77,15 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     splashScreen: {
       title: 'Taskify',
     },
+    // Account screen
+    account: 'الحساب',
+    billingSubscriptions: 'الفواتير والاشتراكات',
+    accountSecurity: 'الحساب والأمان',
+    appAppearance: 'مظهر التطبيق',
+    dataAnalytics: 'البيانات والتحليلات',
+    helpSupport: 'المساعدة والدعم',
+    logout: 'تسجيل الخروج',
+    upgradePlanNow: 'ترقية الخطة الآن!',
+    upgradePlanSubtitle: 'استمتع بجميع المزايا واستكشف المزيد من الاحتمالات',
   },
 };
