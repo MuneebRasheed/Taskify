@@ -12,7 +12,17 @@ import AiMade from '../screens/AiMade';
 import AddTaskScreen from '../screens/AddTaskScreen';
 import GoalPlanner from '../screens/GoalPlanner';
 import SelectCoverImageScreen from '../screens/SelectCoverImageScreen';
+import UpgradePlanScreen from '../screens/UpgradePlanScreen';
+
 import type { TrackerCardItem } from '../components/TrackerCard';
+import AccountSecurityScreen from '../screens/AccountSecurityScreen';
+import DataAnalyticsScreen from '../screens/DataAnalyticsScreen';
+import AppAppearanceScreen from '../screens/AppAppearanceScreen';
+import HelpSupportScreen from '../screens/HelpSupportScreen';
+import FAQScreen from '../screens/FAQScreen';
+import ContactSupportScreen from '../screens/ContactSupportScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
 
 /** Root stack route names and params. Use this type for useNavigation<> in screens. */
 export type RootStackParamList = {
@@ -44,6 +54,15 @@ export type RootStackParamList = {
   };
   GoalPlanner: { goalTitle?: string; selectedCoverIndex?: number; fromSelfMade?: boolean };
   SelectCoverImage: { selectedIndex?: number; returnToScreen?: 'AiMade'; prompt?: string };
+  UpgradePlanScreen: undefined;
+  AccountSecurityScreen: undefined;
+  DataAnalyticsScreen: undefined;
+  AppAppearanceScreen: undefined;
+  HelpSupportScreen: undefined;
+  FAQScreen: undefined;
+  ContactSupportScreen: undefined;
+  PrivacyPolicyScreen: undefined;
+  TermsOfServiceScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -120,6 +139,51 @@ function RootNavigation() {
       <Stack.Screen
         name="SelectCoverImage"
         component={SelectCoverImageScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="UpgradePlanScreen"
+        component={UpgradePlanScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AccountSecurityScreen"
+        component={AccountSecurityScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="DataAnalyticsScreen"
+        component={DataAnalyticsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AppAppearanceScreen"
+        component={AppAppearanceScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="HelpSupportScreen"
+        component={HelpSupportScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FAQScreen"
+        component={FAQScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ContactSupportScreen"
+        component={ContactSupportScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PrivacyPolicyScreen"
+        component={PrivacyPolicyScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TermsOfServiceScreen"
+        component={TermsOfServiceScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

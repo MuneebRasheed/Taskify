@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { lightColors } from '../../utils/colors';
 import { useTranslation } from '../i18n';
+import { RootStackParamList } from '../navigations/RootNavigation';
 import ScreenHeader from '../components/ScreenHeader';
 import UpgradePlanBanner from '../components/UpgradePlanBanner';
 import UserProfileCard from '../components/UserProfileCard';
@@ -13,13 +16,16 @@ import EyeSetting from '../assets/svgs/EyeSetting';
 import LogoutIcon from '../assets/svgs/LogoutIcon';
 import ShieldSetting from '../assets/svgs/ShieldSetting';
 import ActivitySetting from '../assets/svgs/ActivitySetting';
+import LogoutModal from '../components/LogoutModal';
 
 const AccountScreen = () => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   const handleUpgrade = () => {
-    // Navigate or open upgrade flow
+    navigation.navigate('UpgradePlanScreen');
   };
 
   const handleProfile = () => {
@@ -28,34 +34,34 @@ const AccountScreen = () => {
 
   const settingsItems = [
     {
-      icon: <StarSetting width={22} height={22} color={lightColors.smallText} />,
+      icon: <StarSetting width={24} height={24} color={lightColors.smallText} />,
       label: t('billingSubscriptions'),
-      onPress: () => {},
+      onPress: handleUpgrade,
     },
     {
-      icon: <ShieldSetting width={22} height={22} color={lightColors.smallText} />,
+      icon: <ShieldSetting width={24} height={24} color={lightColors.smallText} />,
       label: t('accountSecurity'),
-      onPress: () => {},
+      onPress: () => navigation.navigate('AccountSecurityScreen'),
     },
     {
-      icon: <EyeSetting width={22} height={22} color={lightColors.smallText} />,
+      icon: <EyeSetting width={24} height={24} color={lightColors.smallText} />,
       label: t('appAppearance'),
-      onPress: () => {},
+      onPress: () => navigation.navigate('AppAppearanceScreen'),
     },
     {
-      icon: <ActivitySetting width={22} height={22} color={lightColors.smallText} />,
+      icon: <ActivitySetting width={24} height={24} color={lightColors.smallText} />,
       label: t('dataAnalytics'),
-      onPress: () => {},
+      onPress: () => navigation.navigate('DataAnalyticsScreen'),
     },
     {
-      icon: <PaperSetting width={22} height={22} color={lightColors.smallText} />,
+      icon: <PaperSetting width={24} height={24} color={lightColors.smallText} />,
       label: t('helpSupport'),
-      onPress: () => {},
+      onPress: () => navigation.navigate('HelpSupportScreen'),
     },
     {
-      icon: <LogoutIcon width={22} height={20} />,
+      icon: <LogoutIcon width={24} height={24} />,
       label: t('logout'),
-      onPress: () => {},
+      onPress: () => setLogoutModalVisible(true),
       accent: true,
     },
   ];
@@ -91,6 +97,15 @@ const AccountScreen = () => {
 
         <AccountSettingsCard items={settingsItems} />
       </ScrollView>
+
+      <LogoutModal
+        visible={logoutModalVisible}
+        onCancel={() => setLogoutModalVisible(false)}
+        onConfirm={() => {
+          setLogoutModalVisible(false);
+          // TODO: perform logout (e.g. clear auth, navigate to SignIn)
+        }}
+      />
     </View>
   );
 };
