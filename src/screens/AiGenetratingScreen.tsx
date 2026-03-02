@@ -18,6 +18,7 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigations/RootNavigation';
 import Button from '../components/Button';
 import LoadingModal from '../components/LoadingModal';
+import Header from '../components/Header';
 import Starts from '../assets/svgs/starts';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 
@@ -46,17 +47,13 @@ const AiGenetratingScreen = () => {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView>
           <View style={styles.content}>
-            <View style={styles.header}>
-              <TouchableOpacity
-            onPress={() => navigation.navigate('HomeScreen')}
-            style={styles.backBtn}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                <BackArrowIcon width={24} height={24} />
-              </TouchableOpacity>
-              <Text style={styles.title}>AI-made Goals</Text>
-              <View style={styles.headerRight} />
-            </View>
+            <Header
+              leftIcon={<BackArrowIcon width={24} height={24} />}
+              onLeftPress={() => navigation.navigate('HomeScreen')}
+              title="AI-made Goals"
+              rightIcon={<View />}
+              style={styles.header}
+            />
 
             <View style={styles.main}>
               <Starts width={80} height={80} fill={goal.trim() ? lightColors.background : lightColors.placeholderText} />
@@ -116,21 +113,7 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 24,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-  },
-  backBtn: {
-    padding: 4,
-  },
-  title: {
-    fontFamily: fontFamilies.urbanistBold,
-    fontSize: 24,
-    color: lightColors.text,
-  },
-  headerRight: {
-    width: 32,
+    paddingVertical: 0,
   },
   main: {
     marginTop: 200,

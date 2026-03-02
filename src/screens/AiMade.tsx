@@ -35,6 +35,7 @@ import CalendarModal from '../components/CalendarModal';
 import TimePickerModal from '../components/TimePickerModal';
 import SetUpGoalsModal from '../components/SetUpGoalsModal';
 import EditIcon from '../assets/svgs/EditIcon';
+import Header from '../components/Header';
 type AiMadeRouteProp = RouteProp<RootStackParamList, 'AiMade'>;
 type AiMadeNavProp = NativeStackNavigationProp<RootStackParamList, 'AiMade'>;
 
@@ -248,16 +249,14 @@ const AiMadeScreen = () => {
         {/* AI-made: Header bar (back + "AI-made Goals" centered) + goal title below */}
         {!isSelfMade && (
           <>
-            <View style={[styles.headerBar, { paddingTop: insets.top + 16, paddingBottom: 16 }]}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('HomeScreen')}
-                style={styles.backBtn}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                <BackArrowIcon width={24} height={24} onPress={() => navigation.navigate('HomeScreen')}/>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>{t('aiMadeGoals')}</Text>
-              <View style={styles.headerRight} />
+          <View style={styles.headerBar}>
+            <Header
+              leftIcon={<BackArrowIcon width={24} height={24} />}
+              onLeftPress={() => navigation.navigate('HomeScreen')}
+              title={t('aiMadeGoals')}
+              rightIcon={<View />}
+              style={StyleSheet.flatten([{ marginTop: insets.top, paddingBottom: 10 }])}
+            />
             </View>
             <Text style={styles.goalTitleBelow} numberOfLines={1}>
               {prompt}
@@ -563,32 +562,13 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    backgroundColor: lightColors.secondaryBackground,
-    // borderWidth: 1,
-    // borderColor: 'blue',
-  },
-  backBtn: {
-    padding: 4,
-    width: 32,
-  },
-  headerTitle: {
-    fontFamily: fontFamilies.urbanistBold,
-    fontSize: 24,
-    color: lightColors.text,
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
     // borderWidth: 1,
     // borderColor: 'red',
-    marginTop: 60,
-  },
-  headerRight: {
-    width: 32,
+    // paddingHorizontal: 24,
+    // backgroundColor: lightColors.secondaryBackground,
+    // backgroundColor:"red",
+    // alignItems:"center",
+    justifyContent:"center",
   },
   goalTitleBelow: {
     fontFamily: fontFamilies.urbanistBold,

@@ -22,6 +22,7 @@ import TimeIcon from '../assets/svgs/TimeIcon';
 import { TRACKER_DAYS } from '../components/TrackerCard';
 import type { TrackerCardItem } from '../components/TrackerCard';
 import Textt from '../components/Textt';
+import Header from '../components/Header';
 import CrossIcon from '../assets/svgs/CrossIcon';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
 import CalendarModal from '../components/CalendarModal';
@@ -155,17 +156,26 @@ const AddTaskScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.closeBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <CrossIcon width={28} height={28} />
-          </TouchableOpacity>
-          <Textt i18nKey={isEdit ? (isHabit ? 'editHabit' : 'editTask') : (isHabit ? 'addHabit' : 'addTask')} style={styles.headerTitle} />
-          <View style={styles.headerRight} />
-        </View>
+        <Header
+          leftIcon={<CrossIcon width={28} height={28} />}
+          onLeftPress={() => navigation.goBack()}
+          title={
+            <Textt
+              i18nKey={
+                isEdit
+                  ? isHabit
+                    ? 'editHabit'
+                    : 'editTask'
+                  : isHabit
+                    ? 'addHabit'
+                    : 'addTask'
+              }
+              style={styles.headerTitle}
+            />
+          }
+          rightIcon={<View />}
+          style={styles.header}
+        />
 
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
@@ -348,17 +358,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: 16,
     paddingHorizontal: 24,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   closeText: {
     fontSize: 20,
@@ -369,9 +370,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 24,
     color: lightColors.text,
-  },
-  headerRight: {
-    width: 32,
   },
   scroll: {
     flex: 1,

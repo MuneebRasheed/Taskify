@@ -19,6 +19,7 @@ import CrossIcon from '../assets/svgs/CrossIcon';
 import CheckIcon from '../assets/svgs/CheckIcon';
 import SearchIcon from '../assets/svgs/SearchIcon';
 import Textt from '../components/Textt';
+import Header from '../components/Header';
 import { useTranslation } from '../i18n';
 type SelectCoverRouteProp = RouteProp<RootStackParamList, 'SelectCoverImage'>;
 type SelectCoverNavProp = NativeStackNavigationProp<RootStackParamList, 'SelectCoverImage'>;
@@ -68,19 +69,13 @@ const SelectCoverImageScreen = () => {
         { paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: lightColors.secondaryBackground },
       ]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleCancel}
-          style={styles.iconBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <CrossIcon width={28} height={28} />
-        </TouchableOpacity>
-        <Textt i18nKey="selectCoverImage" style={styles.title} />
-        <TouchableOpacity style={styles.iconBtn}>
-          <SearchIcon width={28} height={28} />
-        </TouchableOpacity>
-      </View>
+      <Header
+        leftIcon={<CrossIcon width={28} height={28} />}
+        onLeftPress={handleCancel}
+        title={<Textt i18nKey="selectCoverImage" style={styles.headerTitle} />}
+        rightIcon={<SearchIcon width={28} height={28} />}
+        style={styles.header}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -145,21 +140,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: lightColors.border,
   },
-  iconBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
+  headerTitle: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 24,
     color: lightColors.text,

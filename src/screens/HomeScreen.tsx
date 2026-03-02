@@ -12,6 +12,7 @@ import { lightColors, palette } from '../../utils/colors';
 import TaskCalendar from '../components/taskCalendar';
 import { fontFamilies } from '../theme/typography';
 import SpashLogo from '../assets/svgs/SpashLogo';
+import Header from '../components/Header';
 import BottomNavigation from '../navigations/BottomNavigation';
 import FlowButton from '../components/FlowButton';
 import { useGoals } from '../context/GoalsContext';
@@ -83,19 +84,17 @@ const HomeScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <SpashLogo fill={lightColors.background} width={28} height={28} />
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>Home</Text>
-          </View>
-          <TouchableOpacity style={styles.menuButton}>
+        <Header
+          leftIcon={<SpashLogo fill={lightColors.background} width={28} height={28} />}
+          title="Home"
+          rightIcon={
             <Ionicons
               name="ellipsis-vertical"
               size={24}
               color={lightColors.smallText}
             />
-          </TouchableOpacity>
-        </View>
+          }
+        />
 
         {/* Task Calendar – controlled selectedDate, circles fill by completion */}
         <TaskCalendar
@@ -232,28 +231,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 24,
-  },
-  header: {
-    height: 70,
-    backgroundColor: lightColors.secondaryBackground,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  titleContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  title: {
-    fontFamily: fontFamilies.urbanistBold,
-    fontSize: 24,
-    color: lightColors.smallText,
-  },
-  menuButton: {
-    padding: 6,
   },
   summaryRow: {
     paddingHorizontal: 20,

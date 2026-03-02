@@ -15,6 +15,7 @@ import { fontFamilies } from '../theme/typography';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import SearchIcon from '../assets/svgs/SearchIcon';
 import AddIcon from '../assets/svgs/AddIcon';
+import Header from '../components/Header';
 import { GOAL_CATEGORIES } from '../components/CategoryModal';
 import type { GoalCategory } from '../components/CategoryModal';
 import { PREMADE_GOALS, type PreMadeGoalItem } from '../data/preMadeGoals';
@@ -53,19 +54,13 @@ const PreMadeGoalsScreen = () => {
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* Part 1: Header – back, title, search */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('HomeScreen')}
-          style={styles.headerBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <BackArrowIcon width={24} height={24} />
-        </TouchableOpacity>
-        <Textt i18nKey="preMadeGoals" style={styles.headerTitle} />
-        <TouchableOpacity style={styles.headerBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <SearchIcon width={24} height={24} />
-        </TouchableOpacity>
-      </View>
+      <Header
+        leftIcon={<BackArrowIcon width={24} height={24} />}
+        onLeftPress={() => navigation.navigate('HomeScreen')}
+        title={<Textt i18nKey="preMadeGoals" style={styles.headerTitle} />}
+        rightIcon={<SearchIcon width={24} height={24} />}
+        style={styles.header}
+      />
 
       {/* Part 2: Slideable category row – Popular + all categories from CategoryModal */}
       <ScrollView
@@ -146,16 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.secondaryBackground,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerBtn: {
-    width: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   headerTitle: {
     fontFamily: fontFamilies.urbanistBold,

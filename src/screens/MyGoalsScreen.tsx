@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,24 +12,18 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
+import Header from '../components/Header';
 import BottomNavigation from '../navigations/BottomNavigation';
 import { useGoals } from '../context/GoalsContext';
 import { useTranslation } from '../i18n';
 import type { SavedGoal } from '../context/GoalsContext';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import Textt from '../components/Textt';
+import SpashLogo from '../assets/svgs/SpashLogo';
+import GoalCard from '../components/GoalCard';
 
-const CARD_IMAGE_SIZE = 96;
 const BOTTOM_NAV_HEIGHT = 60;
 const FAB_SIZE = 56;
-
-function daysUntilDue(d: Date): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(d);
-  due.setHours(0, 0, 0, 0);
-  return Math.ceil((due.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-}
 
 const MyGoalsScreen = () => {
   const insets = useSafeAreaInsets();
@@ -58,19 +51,14 @@ const MyGoalsScreen = () => {
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: BOTTOM_NAV_HEIGHT + insets.bottom }]}>
       {/* Part 1: Header – back, title "My Goals", more options */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('HomeScreen' as never)}
-          style={styles.headerBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <BackArrowIcon width={24} height={24} />
-        </TouchableOpacity>
-        <Textt i18nKey="myGoals" style={styles.headerTitle} />
-        <TouchableOpacity style={styles.headerBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+      <Header
+       leftIcon={<SpashLogo fill={lightColors.background} width={28} height={28} />}
+        title={<Textt i18nKey="myGoals" style={styles.headerTitle} />}
+        rightIcon={
           <Ionicons name="ellipsis-vertical" size={24} color={lightColors.text} />
-        </TouchableOpacity>
-      </View>
+        }
+        style={styles.header}
+      />
 
       {/* Part 2: Ongoing / Achieved segment */}
       <View style={styles.segmentWrap}>
@@ -108,38 +96,16 @@ const MyGoalsScreen = () => {
           </View>
         ) : (
           filteredGoals.map((goal) => (
-            <View key={goal.id} style={styles.goalCard}>
-              <Image
-                source={coverSource(goal)}
-                style={styles.goalCardImage}
-                resizeMode="cover"
-              />
-              <View style={styles.goalCardBody}>
-                <Text style={styles.goalCardTitle} numberOfLines={2}>
-                  {goal.title}
-                </Text>
-                <View style={styles.tagsRow}>
-                  <View style={styles.habitTag}>
-                    <Text style={styles.habitTagText}>
-                      Habits {goal.habitsDone}/{goal.habitsTotal}
-                    </Text>
-                  </View>
-                  <View style={styles.taskTag}>
-                    <Text style={styles.taskTagText}>
-                      Tasks {goal.tasksDone}/{goal.tasksTotal}
-                    </Text>
-                  </View>
-                </View>
-                {goal.dueDate && (
-                  <View style={styles.daysRow}>
-                    <Ionicons name="calendar-outline" size={14} color={lightColors.subText} />
-                    <Text style={styles.daysText}>
-                      D-{daysUntilDue(goal.dueDate)} days
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
+            <GoalCard
+              key={goal.id}
+              coverSource={coverSource(goal)}
+              title={goal.title}
+              habitsDone={goal.habitsDone}
+              habitsTotal={goal.habitsTotal}
+              tasksDone={goal.tasksDone}
+              tasksTotal={goal.tasksTotal}
+              dueDate={goal.dueDate}
+            />
           ))
         )}
       </ScrollView>
@@ -169,18 +135,10 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.secondaryBackground,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: lightColors.border,
-  },
-  headerBtn: {
-    width: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerTitle: {
     fontFamily: fontFamilies.urbanistBold,
@@ -229,79 +187,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 16,
-    color: lightColors.subText,
-  },
-  goalCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: lightColors.secondaryBackground,
-    borderRadius: 12,
-    marginBottom: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: lightColors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  goalCardImage: {
-    width: CARD_IMAGE_SIZE,
-    height: CARD_IMAGE_SIZE,
-    borderRadius: 10,
-    backgroundColor: lightColors.inputBackground,
-  },
-  goalCardBody: {
-    flex: 1,
-    marginLeft: 14,
-    justifyContent: 'center',
-    minWidth: 0,
-  },
-  goalCardTitle: {
-    fontFamily: fontFamilies.urbanistBold,
-    fontSize: 16,
-    color: lightColors.text,
-    marginBottom: 8,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  habitTag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: lightColors.habitIndicator,
-  },
-  taskTag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: lightColors.taskIndicator,
-  },
-  habitTagText: {
-    fontFamily: fontFamilies.urbanistSemiBold,
-    fontSize: 12,
-    color: lightColors.habitIndicator,
-  },
-  taskTagText: {
-    fontFamily: fontFamilies.urbanistSemiBold,
-    fontSize: 12,
-    color: lightColors.taskIndicator,
-  },
-  daysRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  daysText: {
-    fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 12,
     color: lightColors.subText,
   },
   fab: {
