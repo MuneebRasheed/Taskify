@@ -77,6 +77,8 @@ export default function App() {
 
   useEffect(() => {
     const applyStoredLanguage = () => {
+      // Always run app in English; override any persisted locale
+      useLanguageStore.getState().setLocale('en');
       const { locale, isRTL } = useLanguageStore.getState();
       I18nManager.forceRTL(!!isRTL);
       I18nManager.allowRTL(true);

@@ -11,7 +11,6 @@ import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
-import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import Header from '../components/Header';
 import { useGoals } from '../context/GoalsContext';
 import { useTranslation } from '../i18n';

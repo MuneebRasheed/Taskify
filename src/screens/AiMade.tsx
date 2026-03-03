@@ -252,7 +252,7 @@ const AiMadeScreen = () => {
           <View style={styles.headerBar}>
             <Header
               leftIcon={<BackArrowIcon width={24} height={24} />}
-              onLeftPress={() => navigation.navigate('HomeScreen')}
+              onLeftPress={() => navigation.navigate('MainTabs')}
               title={t('aiMadeGoals')}
               rightIcon={<View />}
               style={StyleSheet.flatten([{ marginTop: insets.top, paddingBottom: 10 }])}
@@ -286,7 +286,7 @@ const AiMadeScreen = () => {
                   )}
                   <View style={[styles.coverOverlay, { paddingTop: insets.top}]}>
                     <TouchableOpacity
-                      onPress={() => navigation.navigate('HomeScreen')}
+                      onPress={() => navigation.navigate('MainTabs')}
                       style={styles.coverBackBtn}
                       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                     >
