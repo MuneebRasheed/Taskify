@@ -23,7 +23,7 @@ import Button from '../components/Button';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import TrackerCard, { type TrackerCardItem } from '../components/TrackerCard';
 import Textt from '../components/Textt';
-import { t, useTranslation } from '../i18n';
+import {  useTranslation } from '../i18n';
 import InfoIcon from '../assets/svgs/InfoIcon';
 import AddIcon from '../assets/svgs/AddIcon';
 import ImageIcon from '../assets/svgs/ImageIcon';
@@ -36,6 +36,8 @@ import TimePickerModal from '../components/TimePickerModal';
 import SetUpGoalsModal from '../components/SetUpGoalsModal';
 import EditIcon from '../assets/svgs/EditIcon';
 import Header from '../components/Header';
+import type { GoalItem } from '../context/GoalsContext';
+
 type AiMadeRouteProp = RouteProp<RootStackParamList, 'AiMade'>;
 type AiMadeNavProp = NativeStackNavigationProp<RootStackParamList, 'AiMade'>;
 
@@ -102,6 +104,7 @@ const DEFAULT_NOTE =
   "To achieve the goal of becoming a UI/UX Designer, it's essential to follow key steps in the journey. Begin by researching various career paths within the field and identifying areas of specialization that align with personal interests and strengths.";
 
 const AiMadeScreen = () => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<AiMadeNavProp>();
   const route = useRoute<AiMadeRouteProp>();
@@ -209,15 +212,34 @@ const AiMadeScreen = () => {
 
   const handleContinue = () => {
     Keyboard.dismiss();
-    navigation.navigate('GoalPlanner', { goalTitle: prompt });
+    navigation.navigate('GoalPlanner', {
+      goalTitle: isSelfMade ? goalTitle : prompt,
+      fromSelfMade: isSelfMade,
+      initialHabits: habits,
+      initialTasks: tasks,
+      initialNote: note,
+      ...(isSelfMade && {
+        selectedCoverIndex: coverIndex,
+        initialCategory: category ?? undefined,
+        initialDueDate: dueDate?.getTime(),
+        initialReminderDate: reminderDate?.getTime(),
+        initialReminderTime: reminderTime,
+      }),
+    });
   };
 
   const handleCreateGoal = () => {
     Keyboard.dismiss();
-    navigation.navigate('GoalPlanner', {
-      goalTitle: goalTitle.trim() || t('addGoalsTitle'),
-      selectedCoverIndex: coverIndex,
-      fromSelfMade: true,
+    const title = goalTitle.trim() || t('addGoalsTitle');
+    navigation.navigate('PreMadeGoalDetail', {
+      selfMadePayload: {
+        title,
+        coverIndex,
+        dueDate: dueDate ? dueDate.getTime() : null,
+        note,
+        habits: habits.map((h) => ({ title: h.title, reminderTime: h.reminderTime })),
+        tasks: tasks.map((t) => ({ title: t.title, reminderTime: t.reminderTime })),
+      },
     });
   };
 
@@ -249,14 +271,14 @@ const AiMadeScreen = () => {
         {/* AI-made: Header bar (back + "AI-made Goals" centered) + goal title below */}
         {!isSelfMade && (
           <>
-          <View style={styles.headerBar}>
-            <Header
-              leftIcon={<BackArrowIcon width={24} height={24} />}
-              onLeftPress={() => navigation.navigate('MainTabs')}
-              title={t('aiMadeGoals')}
-              rightIcon={<View />}
-              style={StyleSheet.flatten([{ marginTop: insets.top, paddingBottom: 10 }])}
-            />
+            <View style={[styles.headerWrap, { paddingTop: insets.top }]}>
+              <Header
+                leftIcon={<BackArrowIcon width={28} height={28} />}
+                onLeftPress={() => navigation.navigate('MainTabs')}
+                title={t('aiMadeGoals')}
+                rightIcon={<View />}
+                style={styles.header}
+              />
             </View>
             <Text style={styles.goalTitleBelow} numberOfLines={1}>
               {prompt}
@@ -284,18 +306,19 @@ const AiMadeScreen = () => {
                       <Text style={styles.coverPlaceholderHint}>{t('tapCameraToSelect')}</Text>
                     </View>
                   )}
-                  <View style={[styles.coverOverlay, { paddingTop: insets.top}]}>
-                    <TouchableOpacity
-                      onPress={() => navigation.navigate('MainTabs')}
-                      style={styles.coverBackBtn}
-                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                    >
-                      <View style={styles.coverBackBtnCircle}>
-                        <BackArrowIcon width={24} height={24} fill={lightColors.text} />
-                      </View>
-                    </TouchableOpacity>
-                    <Text style={styles.coverTitleText}>{t('selfMadeGoals')}</Text>
-                    <View style={styles.coverHeaderSpacer} />
+                  <View style={[styles.coverOverlay, { paddingTop: insets.top }]}>
+                    <Header
+                      leftIcon={
+                        <View style={styles.coverBackBtnCircle}>
+                          <BackArrowIcon width={28} height={28} />
+                        </View>
+                      }
+                      onLeftPress={() => navigation.goBack()}
+                      title={t('selfMadeGoals')}
+                      rightIcon={<View style={styles.coverHeaderSpacer} />}
+                      style={styles.headerOnCover}
+                      titleStyle={styles.coverHeaderTitleText}
+                    />
                   </View>
                   <TouchableOpacity
                     style={styles.changeCoverBtn}
@@ -326,12 +349,20 @@ const AiMadeScreen = () => {
                     contentContainerStyle={styles.metadataRowPills}
                     style={styles.metadataRowPillsScroll}
                   >
-                    <View style={styles.metadataPillCategory}>
+                    <TouchableOpacity
+                      style={styles.metadataPillCategory}
+                      onPress={() => setSetUpGoalsModalVisible(true)}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.metadataPillTextDark} numberOfLines={1}>
                         {category ?? t('category')}
                       </Text>
-                    </View>
-                    <View style={styles.metadataPillWithIcon}>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.metadataPillWithIcon}
+                      onPress={() => setSetUpGoalsModalVisible(true)}
+                      activeOpacity={0.7}
+                    >
                       <CalendarIcon width={18} height={18} />
                       {dueDate ? (
                         <View style={styles.dueDateTextWrap}>
@@ -341,13 +372,17 @@ const AiMadeScreen = () => {
                       ) : (
                         <Text style={styles.metadataPillTextDark} numberOfLines={1}>{t('noDueDate')}</Text>
                       )}
-                    </View>
-                    <View style={styles.metadataPillWithIcon}>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.metadataPillWithIcon}
+                      onPress={() => setSetUpGoalsModalVisible(true)}
+                      activeOpacity={0.7}
+                    >
                       <TimeIcon width={18} height={18} />
                       <Text style={styles.metadataPillTextDark} numberOfLines={1}>
                         {reminderDisplay || reminderTimeOnly || t('setReminder')}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   </ScrollView>
                 </View>
 
@@ -561,30 +596,32 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 32,
   },
-  headerBar: {
-    // borderWidth: 1,
-    // borderColor: 'red',
-    // paddingHorizontal: 24,
-    // backgroundColor: lightColors.secondaryBackground,
-    // backgroundColor:"red",
-    // alignItems:"center",
-    justifyContent:"center",
+  headerWrap: {
+    // backgroundColor: 'yellow',
+  },
+  header: {
+    // backgroundColor: 'green',
   },
   goalTitleBelow: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 24,
     color: lightColors.text,
     marginHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: lightColors.border,
+    paddingBottom: 20,
+    // backgroundColor: 'red',
     // marginBottom: 8,
     // marginTop: 4,
   },
   section: {
     paddingHorizontal: 24,
     marginBottom: 28,
+    // backgroundColor: 'blue',
   },
   selfMadeHeaderSection: {
     marginTop: 12,
-  },
+    },
   sectionHeaderRow: {
     paddingTop: 20,
     paddingBottom: 16,
@@ -605,7 +642,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
     paddingVertical: 20,
     borderRadius: 8,
     backgroundColor: lightColors.skipbg,
@@ -619,7 +656,7 @@ const styles = StyleSheet.create({
   noteInput: {
     marginTop: 16,
 height : 300,
-    backgroundColor: "#fafafa",
+    backgroundColor: lightColors.inputBackground,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingTop: 18,
@@ -635,6 +672,8 @@ height : 300,
     gap: 12,
     paddingHorizontal: 24,
     paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: lightColors.border,
   },
   regenerateBtn: {
     flex: 1,
@@ -750,20 +789,16 @@ height : 300,
     top: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
     zIndex: 3,
   },
-  coverBackBtn: {
-    padding: 4,
+  headerOnCover: {
+    backgroundColor: 'transparent',
   },
   coverBackBtnCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    width: 48,
+    height: 48,
+    borderRadius: 1000,
+    backgroundColor: lightColors.secondaryBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -772,10 +807,15 @@ height : 300,
     fontSize: 24,
     color: lightColors.text,
     position: 'absolute',
-    top: 70,
+    top: 90,
     left: 0,
     right: 0,
     textAlign: 'center',
+  },
+  coverHeaderTitleText: {
+    fontFamily: fontFamilies.urbanistBold,
+    fontSize: 24,
+    color: lightColors.text,
   },
   coverHeaderSpacer: {
     width: 48,
@@ -834,7 +874,7 @@ height : 300,
     flexDirection: 'row',
     flexWrap: 'nowrap',
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
     paddingHorizontal: 24,
     paddingVertical: 4,
   },
@@ -844,20 +884,21 @@ height : 300,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: lightColors.inputBackground,
-    borderRadius: 100,
+    borderRadius: 4,
+    color: lightColors.text,
   },
   metadataPillWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     paddingVertical: 4,
     paddingHorizontal: 0,
     flexShrink: 0,
   },
   metadataPillTextDark: {
     fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 14,
-    color: lightColors.text,
+    fontSize: 12,
+    color: lightColors.subText,
   },
   dueDateTextWrap: {
     flexDirection: 'row',

@@ -20,6 +20,7 @@ import GoogleIcon from "../assets/svgs/GoogleIcon";
 import AppleIcon from "../assets/svgs/AppleIcon";
 import LoadingModal from "../components/LoadingModal";
 import BackArrowIcon from "../assets/svgs/BackArrowIcon";
+import Header from "../components/Header";
 import EmailIcon from "../assets/svgs/EmailIcon";
 import PasswordIcon from "../assets/svgs/PasswordIcon";
 import CheckIcon from "../assets/svgs/CheckIcon";
@@ -51,6 +52,13 @@ const SignUpScreen = () => {
         { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground },
       ]}
     >
+      <Header
+        leftIcon={<BackArrowIcon width={24} height={24} />}
+        onLeftPress={() => navigation.goBack()}
+        title=""
+        rightIcon={<View />}
+        style={styles.header}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -61,17 +69,6 @@ const SignUpScreen = () => {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardView}
         >
-          {/* Header */}
-         
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-              activeOpacity={0.8}
-            >
-              <BackArrowIcon width={24} height={24} />
-            </TouchableOpacity>
-         
-
           {/* Title */}
           <View style={styles.titleBlock}>
             <Text style={styles.title}>
@@ -109,7 +106,7 @@ const SignUpScreen = () => {
                 activeOpacity={0.8}
               >
                 {agreed && (
-                  <CheckIcon width={12} height={9} />
+                  <CheckIcon width={12} height={9} color={lightColors.secondaryBackground}/>
                 )}
               </TouchableOpacity>
               <Text style={styles.termsText}>
@@ -177,7 +174,7 @@ const SignUpScreen = () => {
                 onPress={handleSignup}
               />
               </View>
-      <LoadingModal visible={loading} text="Sign up..." />
+      <LoadingModal visible={loading} variant="modal" text="Sign up..." />
     </View>
   );
 };
@@ -196,20 +193,9 @@ const styles = StyleSheet.create({
   },
   keyboardView: {
     paddingHorizontal: 24,
-  
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-   
-  },
-  backButton: {
-    paddingVertical: 20,
-  
-    width: 28,
-    height: 28,
-    justifyContent: "center",
-    alignItems: "center",
+    paddingVertical: 0,
   },
   titleBlock: {
     marginTop: 20,

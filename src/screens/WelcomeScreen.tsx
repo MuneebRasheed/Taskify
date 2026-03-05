@@ -32,7 +32,7 @@ const WelcomeScreen = () => {
         backgroundColor={palette.white}
         borderColor={palette.gray300}
         borderWidth={1}
-        borderRadius={24}
+        borderRadius={1000}
         textColor={palette.black}
         leftIcon={<GoogleIcon width={24} height={24} />}
         onPress={() => {}}
@@ -44,7 +44,7 @@ const WelcomeScreen = () => {
         backgroundColor={palette.white}
         borderColor={palette.gray300}
         borderWidth={1}
-        borderRadius={24}
+        borderRadius={1000}
         textColor={palette.black}
         leftIcon={<AppleIcon width={24} height={24} />}
         onPress={() => {}}
@@ -56,13 +56,13 @@ const WelcomeScreen = () => {
         title="Sign Up"
         variant="primary"
         textColor={palette.white}
-        borderRadius={24}
+        borderRadius={1000}
         onPress={() => {navigation.navigate('SignUpScreen' as never as keyof RootStackParamList)}}
       />
       <Button
         title="Sign In"
         variant="primary"
-        borderRadius={24}
+        borderRadius={1000}
         backgroundColor={lightColors.skipbg}
         textColor={lightColors.background}
         onPress={() => {navigation.navigate('SignInScreen' as never as keyof RootStackParamList)}}

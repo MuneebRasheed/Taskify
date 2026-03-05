@@ -24,6 +24,7 @@ import {
   import PasswordIcon from "../assets/svgs/PasswordIcon";
   import CheckIcon from "../assets/svgs/CheckIcon";
   import BackArrowIcon from "../assets/svgs/BackArrowIcon";
+  import Header from "../components/Header";
   
   const SignInScreen = () => {
     const insets = useSafeAreaInsets();
@@ -53,6 +54,13 @@ import {
           { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground },
         ]}
       >
+        <Header
+          leftIcon={<BackArrowIcon width={24} height={24} />}
+          onLeftPress={() => navigation.goBack()}
+          title=""
+          rightIcon={<View />}
+          style={styles.header}
+        />
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -63,17 +71,6 @@ import {
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={styles.keyboardView}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                style={styles.backButton}
-                activeOpacity={0.8}
-              >
-                <BackArrowIcon width={24} height={24} />
-              </TouchableOpacity>
-            </View>
-  
             {/* Title */}
             <View style={styles.titleBlock}>
               <Text style={styles.title}>
@@ -116,7 +113,7 @@ import {
                   activeOpacity={0.8}
                 >
                   {agreed && (
-                    <CheckIcon width={12} height={9} />
+                    <CheckIcon width={12} height={9} color={lightColors.secondaryBackground}/>
                   )}
                 </TouchableOpacity>
                
@@ -185,7 +182,7 @@ import {
                 onPress={handleSignup}
               />
               </View>
-        <LoadingModal visible={loading} text="Sign in..." />
+        <LoadingModal visible={loading} variant="modal" text="Sign in..." />
       </View>
     );
   };
@@ -206,17 +203,7 @@ import {
       paddingHorizontal: 24,
     },
     header: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingTop: 20,
-      // paddingBottom: 16,
-    },
-    backButton: {
-      paddingVertical: 20,
-      width: 28,
-    height: 28,
-    justifyContent: "center",
-    alignItems: "center",
+      paddingVertical: 0,
     },
     titleBlock: {
       marginTop: 20,

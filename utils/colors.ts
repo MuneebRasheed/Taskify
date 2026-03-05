@@ -28,6 +28,9 @@ export const palette = {
   /** Semantic colors for light theme. */
   export const lightColors = {
 
+    
+    blurBackground: '#09101D99',
+    completedGreen: '#12D18E',
     habitIndicator: '#EA1E61',
     taskIndicator: '#1A96F0',
     BtnBackground: '#F5F5F5',

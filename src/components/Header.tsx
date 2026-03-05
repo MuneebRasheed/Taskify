@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, style]} collapsable={false}>
       {renderSide(leftIcon, onLeftPress)}
       <View style={styles.titleContainer}>{titleNode}</View>
       {renderSide(rightIcon, onRightPress)}
@@ -85,10 +85,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: lightColors.secondaryBackground,
+
   },
   sideWrap: {
     width: SIDE_WIDTH,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -100,6 +101,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    
   },
   title: {
     fontFamily: fontFamilies.urbanistBold,

@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { lightColors, palette } from '../../utils/colors';
+import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigations/RootNavigation';
@@ -21,8 +21,10 @@ import LoadingModal from '../components/LoadingModal';
 import Header from '../components/Header';
 import Starts from '../assets/svgs/starts';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
+import { t, useTranslation } from '../i18n';
 
 const AiGenetratingScreen = () => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [goal, setGoal] = useState('');
@@ -48,9 +50,9 @@ const AiGenetratingScreen = () => {
           <ScrollView>
           <View style={styles.content}>
             <Header
-              leftIcon={<BackArrowIcon width={24} height={24} />}
-              onLeftPress={() => navigation.navigate('HomeScreen')}
-              title="AI-made Goals"
+              leftIcon={<BackArrowIcon width={28} height={28} />}
+              onLeftPress={() => navigation.goBack()}
+              title={t('aiMadeGoals')}
               rightIcon={<View />}
               style={styles.header}
             />
@@ -59,7 +61,7 @@ const AiGenetratingScreen = () => {
               <Starts width={80} height={80} fill={goal.trim() ? lightColors.background : lightColors.placeholderText} />
               <TextInput
                 style={styles.input}
-                placeholder="Type in your goal and we'll prepare a plan for you..."
+                placeholder={t('typeInYourGoalAndWeWillPrepareAPlanForYou')}
                 placeholderTextColor={lightColors.subText}
                 value={goal}
                 onChangeText={setGoal}
@@ -76,7 +78,7 @@ const AiGenetratingScreen = () => {
 
         <View style={styles.footer}>
   <Button
-    title="Generate"
+    title={t("generate")}
     variant="primary"
     onPress={handleGenerate}
     textColor={lightColors.secondaryBackground}
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 24,
   },
   header: {
-    paddingVertical: 0,
+    
   },
   main: {
     marginTop: 200,

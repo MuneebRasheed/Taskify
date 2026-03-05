@@ -5,7 +5,7 @@ import Onboarding from '../screens/Onboarding';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SignInScreen from '../screens/SignInScreen';
-import MainTabs from './MainTabs';
+import MainTabs, { type MainTabsParamList } from './MainTabs';
 import AiGenetratingScreen from '../screens/AiGenetratingScreen';
 import LanguageTestScreen from '../screens/LanguageTestScreen';
 import AiMade from '../screens/AiMade';
@@ -14,6 +14,11 @@ import GoalPlanner from '../screens/GoalPlanner';
 import SelectCoverImageScreen from '../screens/SelectCoverImageScreen';
 import PreMadeGoalsScreen from '../screens/PreMadeGoalsScreen';
 import PreMadeGoalDetailScreen from '../screens/PreMadeGoalDetailScreen';
+import HabitDetailScreen from '../screens/HabitDetailScreen';
+import TaskDetailScreen from '../screens/TaskDetailScreen';
+import GoalAchievedScreen from '../screens/GoalAchievedScreen';
+import FinalScreen from '../screens/FinalScreen';
+import ExploreSearchScreen from '../screens/ExploreSearchScreen';
 import MyGoalsScreen from '../screens/MyGoalsScreen';
 import { GoalsProvider } from '../context/GoalsContext';
 import UpgradePlanScreen from '../screens/UpgradePlanScreen';
@@ -37,7 +42,7 @@ export type RootStackParamList = {
   WelcomeScreen: undefined;
   SignUpScreen: undefined;
   SignInScreen: undefined;
-  MainTabs: undefined;
+  MainTabs: undefined | { screen: keyof MainTabsParamList };
   AiGenetratingScreen: undefined;
   AiMade: {
     source?: 'selfMade';
@@ -56,10 +61,48 @@ export type RootStackParamList = {
     editTaskIndex?: number;
     initialItem?: TrackerCardItem;
   };
-  GoalPlanner: { goalTitle?: string; selectedCoverIndex?: number; fromSelfMade?: boolean };
+  GoalPlanner: {
+    goalTitle?: string;
+    selectedCoverIndex?: number;
+    fromSelfMade?: boolean;
+    initialHabits?: TrackerCardItem[];
+    initialTasks?: TrackerCardItem[];
+    initialNote?: string;
+    initialCategory?: string;
+    initialDueDate?: number | null;
+    initialReminderDate?: number | null;
+    initialReminderTime?: { hours: number; minutes: number; am: boolean } | null;
+  };
+  FinalScreen: {
+    goalTitle: string;
+    coverIndex: number;
+    category: string | null;
+    dueDate: number | null;
+    reminderDate: number | null;
+    reminderTime: { hours: number; minutes: number; am: boolean } | null;
+    habits: TrackerCardItem[];
+    tasks: TrackerCardItem[];
+    note: string;
+    fromSelfMade: boolean;
+  };
   SelectCoverImage: { selectedIndex?: number; returnToScreen?: 'AiMade'; prompt?: string };
   PreMadeGoals: undefined;
-  PreMadeGoalDetail: { goalId: string };
+  HabitDetailScreen: { goalId: string; itemId: string };
+  TaskDetailScreen: { goalId: string; itemId: string };
+  GoalAchievedScreen: undefined;
+  PreMadeGoalDetail: {
+    goalId?: string;
+    myGoalId?: string;
+    selfMadePayload?: {
+      title: string;
+      coverIndex: number;
+      dueDate: number | null;
+      note: string;
+      habits: { title: string; reminderTime?: string }[];
+      tasks: { title: string; reminderTime?: string }[];
+    };
+  };
+  ExploreSearch: undefined;
   MyGoalsScreen: undefined;
   UpgradePlanScreen: undefined;
   AccountSecurityScreen: undefined;
@@ -82,7 +125,7 @@ function RootNavigation() {
       screenOptions={{
         headerShown: false,
       }}
-      initialRouteName="MainTabs"
+      // initialRouteName="MainTabs"
     >
       <Stack.Screen
         name="SplashScreen"
@@ -160,9 +203,33 @@ function RootNavigation() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        name="HabitDetailScreen"
+        component={HabitDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TaskDetailScreen"
+        component={TaskDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="GoalAchievedScreen"
+        component={GoalAchievedScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FinalScreen"
+        component={FinalScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ExploreSearch"
+        component={ExploreSearchScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="MyGoalsScreen"
         component={MyGoalsScreen}
-    
         options={{ headerShown: false }}
       />
       <Stack.Screen

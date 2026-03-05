@@ -15,7 +15,9 @@ import SelfMade from '../assets/svgs/self-made';
 import { RootStackParamList } from '../navigations/RootNavigation';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { lightColors } from '../../utils/colors';
-
+import { fontFamilies } from '../theme/typography';
+import AddIcon from '../assets/svgs/AddIcon';
+import CrossIcon from '../assets/svgs/CrossIcon';
 
 const { width, height } = Dimensions.get('window');
 
@@ -153,7 +155,11 @@ const FloatingMenu = () => {
             onPress={toggleMenu}
             style={styles.fab}
           >
-            <Text style={styles.fabIcon}>+</Text>
+            {isOpen ? (
+              <CrossIcon width={18} height={18} color={lightColors.secondaryBackground} />
+            ) : (
+              <AddIcon width={21} height={21} color={lightColors.secondaryBackground} />
+            )}
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -199,7 +205,7 @@ const styles = StyleSheet.create({
   fabIcon: {
     color: lightColors.secondaryBackground,
     fontSize: 32,
-    fontWeight: '300',
+    fontFamily: fontFamilies.urbanistBold,
   },
   menuTooltipWrap: {
     marginBottom: 20,
@@ -228,10 +234,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 18,
     color: lightColors.smallText,
-  },
+  },  
   separator: {
     position: 'absolute',
     bottom: 0,
@@ -243,7 +249,7 @@ const styles = StyleSheet.create({
   tail: {
     position: 'absolute',
     bottom: -10,
-    right: 25,
+    right: 30,
     width: 0,
     height: 0,
     borderLeftWidth: 10,

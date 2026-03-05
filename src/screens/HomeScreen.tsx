@@ -5,10 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { lightColors, palette } from '../../utils/colors';
+import { lightColors } from '../../utils/colors';
 import TaskCalendar from '../components/taskCalendar';
 import { fontFamilies } from '../theme/typography';
 import SpashLogo from '../assets/svgs/SpashLogo';
@@ -16,12 +17,16 @@ import Header from '../components/Header';
 import FlowButton from '../components/FlowButton';
 import { useGoals } from '../context/GoalsContext';
 import type { SavedGoal, GoalItem } from '../context/GoalsContext';
+import Textt from '../components/Textt';
+import { t, useTranslation } from '../i18n';
+
 
 function formatDateKey(d: Date): string {
   return d.toISOString().split('T')[0];
 }
 
 const HomeScreen = () => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
   const [selectedDate, setSelectedDate] = useState<string>(todayKey);
@@ -66,26 +71,24 @@ const HomeScreen = () => {
     toggleItemCompletion(itemId, selectedDate);
   };
 
+  const scrollContentPaddingBottom =  insets.bottom;
+
   return (
     <View
       style={[
         styles.container,
         {
           paddingTop: insets.top,
-          paddingBottom: 60 + insets.bottom,
+          // paddingBottom: insets.bottom,
           backgroundColor: lightColors.secondaryBackground,
         },
       ]}
     >
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+     
         {/* Header */}
         <Header
           leftIcon={<SpashLogo fill={lightColors.background} width={28} height={28} />}
-          title="Home"
+          title={t('home')}
           rightIcon={
             <Ionicons
               name="ellipsis-vertical"
@@ -102,40 +105,60 @@ const HomeScreen = () => {
           getCompletionForDate={getCompletionForDate}
         />
 
-        {/* Daily summary: "Today you have X habits, Y tasks" */}
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryText}>
-            Today you have{' '}
-            <Text style={styles.summaryHabit}>{habitCount} habits</Text>,{' '}
-            <Text style={styles.summaryTask}>{taskCount} tasks</Text>
-          </Text>
-        </View>
 
-        {/* Progress bar – fills according to completed tasks/habits */}
-        <View style={styles.progressRow}>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${Math.min(100, progressFraction * 100)}%` },
-              ]}
-            />
+<ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          // { paddingBottom: scrollContentPaddingBottom },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+
+
+        {/* Daily summary: "Today you have X habits, Y tasks" – only show when there are goals */}
+        {goalsWithItems.length > 0 && (
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryText}>
+                <Textt i18nKey="todayYouHave" style={styles.summaryText} />{' '}
+                <Text style={styles.summaryHabit}>{habitCount} habits</Text>,{' '}
+                <Text style={styles.summaryTask}>{taskCount} tasks</Text>
+              </Text>
+            </View>
+
+            {/* Progress bar – fills according to completed tasks/habits */}
+            <View style={styles.progressRow}>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.min(100, progressFraction * 100)}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.progressLabel}>
+                {dayCompleted}/{dayTotal}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.progressLabel}>
-            {dayCompleted}/{dayTotal}
-          </Text>
-        </View>
-
+        )}
         {/* Goals list with items: checkbox, indicator bar, title, time */}
         <View style={styles.goalsList}>
           {goalsWithItems.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>You have no goals</Text>
-              <Text style={styles.emptyDescription}>
-                Add a goal by clicking the (+) button below.
-              </Text>
+              <Image
+                source={require('../assets/images/Goal.png')}
+                style={styles.emptyIllustration}
+                resizeMode="contain"
+              />
+              <Textt i18nKey="youHaveNoGoals" style={styles.emptyTitle} />
+              <Textt i18nKey="addAGoalByClickingThePlusButtonBelow" style={styles.emptyDescription} />
             </View>
           ) : (
+
+
+            
             goalsWithItems.map((goal) => (
               <View key={goal.id} style={styles.goalSection}>
                 <Text style={styles.goalSectionTitle}>{goal.title}</Text>
@@ -153,7 +176,7 @@ const HomeScreen = () => {
         </View>
       </ScrollView>
 
-      <FlowButton />
+  <FlowButton />
     </View>
   );
 };
@@ -186,8 +209,9 @@ function GoalItemRow({
           <Ionicons
             name="checkmark-circle"
             size={24}
-            color={palette.primary}
+            color={lightColors.completedGreen}
           />
+          
         ) : (
           <Ionicons
             name="ellipse-outline"
@@ -226,12 +250,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 24,
+    // paddingBottom: 24,
+  },
+  summaryContainer: {
+    backgroundColor: lightColors.BtnBackground,
   },
   summaryRow: {
     paddingHorizontal: 20,
     marginTop: 8,
     marginBottom: 8,
+    backgroundColor: lightColors.BtnBackground,
   },
   summaryText: {
     fontFamily: fontFamilies.urbanistMedium,
@@ -252,6 +280,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
     gap: 12,
+    backgroundColor: lightColors.BtnBackground,
   },
   progressTrack: {
     flex: 1,
@@ -274,20 +303,30 @@ const styles = StyleSheet.create({
   },
   goalsList: {
     paddingHorizontal: 20,
+    backgroundColor: lightColors.BtnBackground,
   },
   emptyState: {
+    height: 550,
     alignItems: 'center',
     paddingVertical: 48,
+    paddingTop: 5,
+    // marginBottom: 100,
+  },
+  emptyIllustration: {
+    width: 200,
+    height: 315,
+    marginTop: 60,
+    // marginBottom: 24,
   },
   emptyTitle: {
     fontFamily: fontFamilies.urbanistBold,
-    fontSize: 20,
+    fontSize: 24,
     color: lightColors.smallText,
     marginBottom: 8,
   },
   emptyDescription: {
     fontFamily: fontFamilies.urbanist,
-    fontSize: 16,
+    fontSize: 18,
     color: lightColors.subText,
     textAlign: 'center',
   },
@@ -303,17 +342,16 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: lightColors.inputBackground,
-    borderRadius: 12,
-    marginBottom: 10,
-    paddingVertical: 12,
+    backgroundColor: lightColors.secondaryBackground,
+    borderRadius: 6,
+    marginBottom: 16,
+    // paddingVertical: 12,
     paddingRight: 12,
-    minHeight: 56,
-    borderWidth: 1,
-    borderColor: lightColors.border,
+    minHeight: 70,
   },
   itemBar: {
-    width: 4,
+    width: 3,
+    height: 70,
     alignSelf: 'stretch',
     borderTopLeftRadius: 12,
     borderBottomLeftRadius: 12,
@@ -327,15 +365,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   itemTitle: {
-    fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 15,
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 18,
     color: lightColors.text,
   },
   itemTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 4,
+    marginTop: 8,
   },
   itemTime: {
     fontFamily: fontFamilies.urbanist,

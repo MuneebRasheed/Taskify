@@ -8,12 +8,12 @@ import {
   Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { lightColors, palette } from '../../utils/colors';
+import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from './Button';
 import LeftArrowIcon from '../assets/svgs/LeftArrowIcon';
 import RightArrowIcon from '../assets/svgs/RightArrowIcon';
-import Textt from '../components/Textt';
+import { t } from '../i18n';
 
 
 const DAYS_HEADER = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -89,6 +89,7 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
           onStartShouldSetResponder={() => true}
         >
           <Text style={styles.title}>{title}</Text>
+<View style={styles.calendarContainer}>
           <View style={styles.monthRow}>
             <TouchableOpacity onPress={prevMonth} style={styles.arrowBtn}>
               <LeftArrowIcon width={20} height={20} />
@@ -146,9 +147,10 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
               })
             )}
           </View>
+          </View>
           <View style={styles.buttons}>
             <Button
-              title="Cancel"
+              title={t('cancel')}
               variant="outline"
               onPress={onCancel}
               style={styles.cancelBtn}
@@ -157,7 +159,7 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
               textColor={lightColors.background}
             />
             <Button
-              title="OK"
+              title={t('ok')}
               variant="primary"
               onPress={onConfirm}
               style={styles.okBtn}
@@ -174,7 +176,7 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(4, 3, 3, 0.4)',
+    backgroundColor: lightColors.blurBackground,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -189,13 +191,26 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: lightColors.text,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: lightColors.border,
+    paddingBottom: 20,
+  },
+  calendarContainer: {
+    borderWidth: 1,
+    borderColor: lightColors.border,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
   },
   monthRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: lightColors.border,
+    paddingBottom: 12,
   },
   arrowBtn: {
     padding: 8,
@@ -226,7 +241,7 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 24,
+    // marginBottom: 24,
   },
   cell: {
     width: '14.28%',
@@ -236,14 +251,15 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   cellInner: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cellSelected: {
     backgroundColor: lightColors.background,
+    borderRadius: 1000,
   },
   cellText: {
     fontFamily: fontFamilies.urbanistSemiBold,

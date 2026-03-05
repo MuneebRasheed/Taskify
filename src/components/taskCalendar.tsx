@@ -8,10 +8,12 @@ import {
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
+import ArrowUpward from '../assets/svgs/ArrowUpward';
 import LeftArrowIcon from '../assets/svgs/LeftArrowIcon';
 import RightArrowIcon from '../assets/svgs/RightArrowIcon';
 import { lightColors } from '../../utils/colors';
-
+import { fontFamilies } from '../theme/typography';
+import ArrowDown from '../assets/svgs/ArrowDown';
 interface TaskData {
   total: number;
   completed: number;
@@ -132,7 +134,7 @@ const TaskCalendar: React.FC<CalendarProps> = ({
 
   /* ---------------- RENDER DAY ---------------- */
 
-  const renderDay = ({ item }: { item: DayItem }) => {
+  const renderDay = ({ item, index }: { item: DayItem; index: number }) => {
     const dateKey = formatDate(item.date);
     const taskInfo = getCompletionForDate
       ? getCompletionForDate(dateKey)
@@ -144,63 +146,104 @@ const TaskCalendar: React.FC<CalendarProps> = ({
     }
 
     const isSelected = selectedDate === dateKey;
+    const isWeekView = !isExpanded;
+    const dayLabel = weekDays[index];
 
     const size = 44;
     const strokeWidth = 4;
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset =
-      circumference - progress * circumference;
 
-    return (
-      <View style={styles.dayWrapper}>
-        <TouchableOpacity
-          style={isSelected ? styles.selectedWrapper : null}
-          onPress={() => setSelectedDate(dateKey)}
-          activeOpacity={0.8}
-        >
-          <View style={{ width: size, height: size }}>
-            <Svg width={size} height={size}>
+    // Reversed logic: when user has goals, circle is full (background); as they complete, fill reduces
+    const hasGoals = (taskInfo.total ?? 0) > 0;
+    const fillDashArray = hasGoals
+      ? `${(1 - progress) * circumference} ${progress * circumference}`
+      : '0 0';
+
+    const dateContent = (
+      <>
+        <View style={{ width: size, height: size }}>
+          <Svg width={size} height={size}>
+            <Circle
+              stroke={lightColors.border}
+              fill="none"
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              strokeWidth={strokeWidth}
+            />
+            {hasGoals && (
               <Circle
-                stroke={lightColors.border}
+                stroke={lightColors.background}
                 fill="none"
                 cx={size / 2}
                 cy={size / 2}
                 r={radius}
                 strokeWidth={strokeWidth}
+                strokeDasharray={fillDashArray}
+                strokeLinecap="round"
               />
-              {progress > 0 && (
-                <Circle
-                  stroke={lightColors.background}
-                  fill="none"
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                />
-              )}
-            </Svg>
+            )}
+          </Svg>
 
-            <View style={styles.dayTextContainer}>
-              <Text
-                style={[
-                  styles.dayText,
-                  !item.isCurrentMonth && { color: lightColors.placeholderText },
-                  isSelected && styles.selectedText,
-                ]}
-              >
-                {item.date.getDate()}
-              </Text>
-            </View>
+          <View style={styles.dayTextContainer}>
+            <Text
+              style={[
+                styles.dayText,
+                !item.isCurrentMonth && { color: lightColors.placeholderText },
+                isSelected && styles.selectedText,
+              ]}
+            >
+              {item.date.getDate()}
+            </Text>
           </View>
+        </View>
+      </>
+    );
+
+    return (
+      
+      <View style={{paddingBottom: 10,flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',}}>
+      <View style={styles.dayWrapper}>
+        <TouchableOpacity
+          style={[
+            isWeekView && styles.weekViewTouchable,
+            isSelected && styles.selectedWrapper,
+          ]}
+          onPress={() => setSelectedDate(dateKey)}
+          activeOpacity={0.8}
+        >
+          {isWeekView && dayLabel != null && (
+            <Text
+              style={[
+                styles.weekText,
+                styles.weekLabelInColumn,
+                isSelected && styles.selectedDayLabel,
+              ]}
+            >
+              {dayLabel}
+            </Text>
+          )}
+          {dateContent}
         </TouchableOpacity>
 
-        {/* 6x6 Orange Dot (OUTSIDE the container) */}
-        {isSelected && <View style={styles.selectedDot} />}
+       
+{/* <View style={styles.dotContainer} >
+         {isSelected && <View style={styles.selectedDot} />}
+      </View> */}
+        
       </View>
+      {isSelected &&isWeekView?<View style={{backgroundColor: lightColors.background, height: 8,width: 8,borderRadius: 5,
+      marginTop: 5,
+       }}></View>:<View style={{backgroundColor: 'transpraent', height: 10,width: 10,borderRadius: 5,
+        marginTop: 5,
+         }}></View>}
+      </View>
+
+      
+      
     );
   };
 
@@ -223,14 +266,16 @@ const TaskCalendar: React.FC<CalendarProps> = ({
         </View>
       )}
 
-      {/* Week Labels */}
-      <View style={styles.weekRow}>
-        {weekDays.map((d) => (
-          <Text key={d} style={styles.weekText}>
-            {d}
-          </Text>
-        ))}
-      </View>
+      {/* Week Labels (only in month view; in week view day is inside each column) */}
+      {isExpanded && (
+        <View style={styles.weekRow}>
+          {weekDays.map((d) => (
+            <Text key={d} style={styles.weekText}>
+              {d}
+            </Text>
+          ))}
+        </View>
+      )}
 
       {/* Calendar Grid */}
       <FlatList
@@ -241,12 +286,16 @@ const TaskCalendar: React.FC<CalendarProps> = ({
         scrollEnabled={false}
       />
 
-      {/* Expand / Collapse Toggle */}
+      {/* Expand / Collapse Toggle — upward when open, downward when collapsed */}
       <TouchableOpacity
         style={styles.toggleContainer}
         onPress={() => setIsExpanded(!isExpanded)}
       >
-        <BotttomArrowIcon width={15} height={8} />
+        {isExpanded ? (
+          <ArrowUpward width={24} height={24} color={lightColors.text} />
+        ) : (
+          <ArrowDown width={24} height={24}  color={lightColors.text} />
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -258,7 +307,7 @@ export default TaskCalendar;
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    paddingHorizontal: 10,
     backgroundColor: lightColors.secondaryBackground,
   },
 
@@ -266,62 +315,96 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    
   },
 
   monthText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontFamily: fontFamilies.urbanistBold,
+    fontSize: 20,
+    fontWeight: '700',
   },
 
   arrow: {
-    fontSize: 20,
+    fontSize: 24,
     paddingHorizontal: 10,
-    color: lightColors.smallText,
+    color: lightColors.text,
   },
 
   weekRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    alignItems: 'center',
+    height: 22,
+    marginBottom: 4,
   },
 
   weekText: {
-    width: 44,
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 14,
+    width: 50,
     textAlign: 'center',
-    color: lightColors.smallText,
+    color: lightColors.subText,
+  },
+
+  weekLabelInColumn: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 16,
+    paddingBottom: 4,
+    marginBottom: 4,
+    
+  },
+
+  selectedDayLabel: {
+    // color: lightColors.background,
+    // fontWeight: '600',
+    // marginVertical: 4,
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 16,
+    color: lightColors.text,
   },
 
   dayWrapper: {
     flex: 1,
     alignItems: 'center',
-    marginVertical: 8,
+    justifyContent: 'center',
+    // paddingVertical: 5,
+   
+  },
+
+  weekViewTouchable: {
+    // paddingVertical: 6,
+    // paddingHorizontal: 4,
+    alignItems: 'center',
+    alignSelf: 'center',
   },
 
   selectedWrapper: {
     backgroundColor: lightColors.skipbg,
-    borderRadius: 14,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: lightColors.background,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+    paddingVertical: 5,
   },
 
   dayTextContainer: {
     position: 'absolute',
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   dayText: {
-    fontSize: 14,
+    fontSize: 16,
+    fontFamily: fontFamilies.urbanistMedium,
   },
 
   selectedText: {
     color: lightColors.background,
-    fontWeight: '600',
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 16,
+    fontWeight: '500',
   },
 
   selectedDot: {
@@ -334,6 +417,11 @@ const styles = StyleSheet.create({
 
   toggleContainer: {
     alignItems: 'center',
-    marginTop: 4,
+    marginBottom: 10,
+    // marginTop: 20,
+  },
+
+  dotContainer: {
+   
   },
 });

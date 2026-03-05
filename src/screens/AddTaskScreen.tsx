@@ -206,7 +206,7 @@ const AddTaskScreen = () => {
 
             {isHabit && (
               <>
-                <Text style={styles.label}>Repeat Days</Text>
+                <Textt i18nKey="repeatDays" style={styles.label} />
                 <View style={styles.daysRow}>
                   {TRACKER_DAYS.map((day, index) => {
                     const isSelected = selectedDays.includes(index);
@@ -236,7 +236,7 @@ const AddTaskScreen = () => {
 
             {!isHabit && (
               <>
-                <Text style={styles.label}>Task Due Date</Text>
+                <Textt i18nKey="goalsDueDate" style={styles.label} />
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => setDueDateModalVisible(true)}
@@ -266,7 +266,7 @@ const AddTaskScreen = () => {
             )}
 
             <Text style={styles.label}>
-              {isHabit ? 'Habit Reminder' : 'Task Reminder'}
+              {isHabit ? 'habitReminder' : 'taskReminder'}
             </Text>
             <TouchableOpacity
               activeOpacity={0.7}
@@ -294,7 +294,7 @@ const AddTaskScreen = () => {
               </View>
             </TouchableOpacity>
 
-            <Text style={styles.label}>Note</Text>
+            <Textt i18nKey="note" style={styles.label} />
             <TextInput
               style={[styles.input, styles.noteInput]}
               value={note}
@@ -337,7 +337,7 @@ const AddTaskScreen = () => {
       {/* Habit / Task reminder time picker */}
       <TimePickerModal
         visible={reminderModalVisible}
-        title={isHabit ? 'Habit Reminder' : 'Task Reminder'}
+        title={isHabit ? 'habitReminder' : 'taskReminder'}
         onCancel={() => setReminderModalVisible(false)}
         onConfirm={(h, m, isAm) => {
           setReminderTime(formatTime(h, m, isAm));
@@ -362,9 +362,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   closeText: {
-    fontSize: 20,
-    color: lightColors.text,
-    fontWeight: '600',
+    // fontSize: 20,
+    // color: lightColors.text,
+    // fontWeight: '600',
   },
   headerTitle: {
     fontFamily: fontFamilies.urbanistBold,
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   clearText: {
-    fontSize: 16,
+    fontSize: 18,
     color: lightColors.placeholderText,
 
   },
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: lightColors.secondaryBackground,
     borderWidth: 1,
-    borderColor: lightColors.placeholderText,
+    borderColor: lightColors.border,
     alignItems: 'center',
     justifyContent: 'center',
 
@@ -452,9 +452,9 @@ const styles = StyleSheet.create({
     borderColor: lightColors.background,
   },
   dayText: {
-    fontFamily: fontFamilies.urbanistSemiBold,
-    fontSize: 14,
-    color: lightColors.placeholderText,
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 20,
+    color: lightColors.subText,
   },
   dayTextSelected: {
     color: lightColors.secondaryBackground,
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderColor: lightColors.border,
   },

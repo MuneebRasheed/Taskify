@@ -16,24 +16,12 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     splashScreen: {
       title: 'Taskify',
     },
-    generatePlanning:"Generating plan...",
-    aiMadeGoals:"AI-made Goals",
-    addHabit:"Add Habit",
-    addTask:"Add Task",
-    note:"Note",
-    task:"Task",
-    habit:"Habit",
-    editHabit:"Edit Habit",
-    editTask:"Edit Task",
-    updateHabit:"Update Habit",
-    updateTask:"Update Task",
+    
+    
     coverImage:"Cover image",
     tapCameraToSelect:"Tap camera to select",
-    goalsTitle:"Goals Title",
-    category:"Category",
-    goalsDueDate:"Goals Due Date",
-    goalsReminder:"Goals Reminder",
-    saveGoals:"Save Goals",
+    
+   
     selectCoverImage:"Select Cover Image",
     ok:"OK",
     cancel:"Cancel",
@@ -44,24 +32,96 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     thu:"Thu",
     fri:"Fri",
     sat:"Sat",
-    continue:"Continue",
-    regenerate:"Regenerate",
-    noReminder:"No reminder",
+    
     selfMadeGoals:"Self-made Goals",
-    createGoals:"Create Goals",
+    createGoal: 'Create Goal',
     addGoalsTitle:"Add a Goals Title",
     noDueDate:"No due date",
     setReminder:"Set reminder",
     setUpGoals:"Set up Goals",
-    preMadeGoals:"Pre-made Goals",
     addGoals:"Add Goals",
     myGoals:"My Goals",
     ongoing:"Ongoing",
     achieved:"Achieved",
     noOngoingGoals:"No ongoing goals yet.",
     noAchievedGoals:"No achieved goals yet.",
-    
+    current: 'Current',
+    achieveGoals: 'Achieve Goals',
+    unachieveGoal: 'Unachieve Goal',
+    deleteGoals: 'Delete Goals',
+    deleteGoal: 'Delete Goal',
+    deleteGoalConfirm: 'Are you sure you want to delete this goal? This cannot be undone.',
+    deleteHabit: 'Delete Habit',
+    deleteHabitConfirm: 'Are you sure you want to delete this habit?',
+    deleteTask: 'Delete Task',
+    deleteTaskConfirm: 'Are you sure you want to delete this task?',
+    delete: 'Delete',
+    yesDelete: 'Yes, Delete',
+    yesAchieve: 'Yes, Achieve',
+    deleteGoalConfirmShort: 'Are you sure you want to delete this goal?',
+    deleteGoalConfirmLine2: 'This action cannot be undone.',
+    achieveGoalsConfirmMessage: 'You have habits and tasks that have not been completed.',
+    achieveGoalsConfirmQuestion: 'Are you sure you want to achieve this goal?',
     addYourNote:"Add your note...",
+    // Home screen
+    home: 'Home',
+    todayYouHave: 'Today you have',
+    youHaveNoGoals: 'You have no goals',
+    addAGoalByClickingThePlusButtonBelow: 'Add a goal by clicking the (+) button below.',
+    // AiGeneratingScreen and AiMadeScreen
+    typeInYourGoalAndWeWillPrepareAPlanForYou:"Type in your goal and we'll prepare a plan for you...",
+    generate:"Generate",
+    aiMadeGoals:"AI-made Goals",
+    continue:"Continue",
+    regenerate:"Regenerate",
+    note:"Note",
+    addTask:"Add Task",
+    task:"Task",
+    addHabit:"Add Habit",
+    habit:"Habit",
+    // Self Made Goals Screen
+    createGoals:"Create Goals",
+  // AddTaskScreen
+  editHabit:"Edit Habit",
+    editTask:"Edit Task",
+    updateHabit:"Update Habit",
+    updateTask:"Update Task",
+    repeatDays:"Repeat Days",
+    goalsDueDate:"Goals Due Date",
+    habitReminder:"Habit Reminder",
+    taskReminder:"Task Reminder",
+
+    //Tracker Card
+    noReminder:"No reminder",
+    formedOn: 'Formed on',
+
+    // Goal Planner
+    goalsTitle:"Goals Title",
+    goalsReminder:"Goals Reminder",
+    saveGoals:"Save Goals",
+
+    // Category Modal
+    category:"Category",
+    
+
+    // Loading Modal
+    generatePlanning:"Generating plan...",
+
+    // PreMadeGoalDetailScreen and PreMadeGoalsScreen
+    goalNotFound:"Goal not found",
+    goBack:"Go back",
+    preMadeGoals:"Pre-made Goals",
+
+// Explore Search Screen
+    searchGoals:"Search goals...",
+    recentSearches:"Recent Searches",
+    noGoalsFound:"No Goals Found",
+    pleaseTrySearchingUsingAlternativeKeywords:"Please try searching using alternative keywords.",
+// Explore Screen
+    explore:"Explore",    
+    // Goal Achieved Screen
+    okSure: 'OK, Sure!',
+
     // Account screen
     account: 'Account',
     billingSubscriptions: 'Billing & Subscriptions',
@@ -232,6 +292,8 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     splashScreen: {
       title: 'Taskify',
     },
+    noReminder: 'بدون تذكير',
+    formedOn: 'تم إنشاؤه في',
     // Account screen
     account: 'الحساب',
     billingSubscriptions: 'الفواتير والاشتراكات',

@@ -26,9 +26,10 @@ import TimePickerModal from '../components/TimePickerModal';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import ImageIcon from '../assets/svgs/ImageIcon';
 import Textt from '../components/Textt';
-import { t, useTranslation } from '../i18n';
+import {  useTranslation } from '../i18n';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useGoals } from '../context/GoalsContext';
+import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
+import type { TrackerCardItem } from '../components/TrackerCard';
 
 
 type GoalPlannerRouteProp = RouteProp<RootStackParamList, 'GoalPlanner'>;
@@ -52,18 +53,35 @@ const GoalPlannerScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<GoalPlannerNavProp>();
   const route = useRoute<GoalPlannerRouteProp>();
-  const { addGoal } = useGoals();
 
   const goalTitle = route.params?.goalTitle ?? '';
   const returnedCoverIndex = route.params?.selectedCoverIndex;
   const fromSelfMade = route.params?.fromSelfMade ?? false;
+  const initialHabits = route.params?.initialHabits ?? [];
+  const initialTasks = route.params?.initialTasks ?? [];
+  const initialNote = route.params?.initialNote ?? '';
+  const initialCategory = route.params?.initialCategory;
+  const initialDueDateStamp = route.params?.initialDueDate;
+  const initialReminderDateStamp = route.params?.initialReminderDate;
+  const initialReminderTime = route.params?.initialReminderTime;
 
   const [goalTitleText, setGoalTitleText] = useState(goalTitle);
-  const [coverIndex, setCoverIndex] = useState(0);
-  const [category, setCategory] = useState<GoalCategory | null>(null);
-  const [dueDate, setDueDate] = useState<Date | null>(null);
-  const [reminderDate, setReminderDate] = useState<Date | null>(null);
-  const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(null);
+  const [coverIndex, setCoverIndex] = useState(route.params?.selectedCoverIndex ?? 0);
+  const [category, setCategory] = useState<GoalCategory | null>(
+    initialCategory != null ? (initialCategory as GoalCategory) : null
+  );
+  const [dueDate, setDueDate] = useState<Date | null>(
+    initialDueDateStamp != null ? new Date(initialDueDateStamp) : null
+  );
+  const [reminderDate, setReminderDate] = useState<Date | null>(
+    initialReminderDateStamp != null ? new Date(initialReminderDateStamp) : null
+  );
+  const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(
+    initialReminderTime ?? null
+  );
+  const [habits] = useState<TrackerCardItem[]>(initialHabits);
+  const [tasks] = useState<TrackerCardItem[]>(initialTasks);
+  const [note] = useState(initialNote);
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
@@ -115,22 +133,21 @@ const GoalPlannerScreen = () => {
       : '';
 
   const handleSaveGoal = () => {
-    addGoal({
-      title: goalTitleText.trim() || t('goalsTitle'),
+    navigation.navigate('FinalScreen', {
+      goalTitle: goalTitleText.trim() || t('goalsTitle'),
       coverIndex,
-      source: fromSelfMade ? 'selfMade' : 'aiMade',
-      habitsTotal: 0,
-      habitsDone: 0,
-      tasksTotal: 0,
-      tasksDone: 0,
-      dueDate,
-      achieved: false,
-      items: [],
+      category,
+      dueDate: dueDate != null ? dueDate.getTime() : null,
+      reminderDate: reminderDate != null ? reminderDate.getTime() : null,
+      reminderTime,
+      habits,
+      tasks,
+      note,
+      fromSelfMade,
     });
-    navigation.navigate('MyGoalsScreen');
   };
   const { t } = useTranslation();
-
+  // const [showPicker, setShowPicker] = useState(false);
   return (
     <View
       style={[
@@ -139,8 +156,16 @@ const GoalPlannerScreen = () => {
       ]}
     >
 
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+
+
 <TouchableOpacity
-            style={styles.backBtn}
+            style={[styles.backBtn, {  left: 16, top: insets.top }]}
             onPress={() => navigation.navigate('AiMade', fromSelfMade ? { source: 'selfMade', prompt: goalTitleText } : { prompt: goalTitleText })}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
@@ -148,11 +173,6 @@ const GoalPlannerScreen = () => {
               <BackArrowIcon width={24} height={24} />
             </View>
           </TouchableOpacity>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
-        showsVerticalScrollIndicator={false}
-      >
         {/* Part 1: Cover image + back arrow + change cover icon */}
         <View style={styles.coverWrap}>
           {coverSource ? (
@@ -212,7 +232,7 @@ const GoalPlannerScreen = () => {
             >
               {category ?? t("category")}
             </Text>
-            <Text style={styles.chevron}>⌄</Text>
+            <BotttomArrowIcon width={12} height={8} />
           </TouchableOpacity>
         </View>
 
@@ -293,6 +313,16 @@ const GoalPlannerScreen = () => {
         onCancel={() => setCategoryModalVisible(false)}
         onConfirm={handleCategoryConfirm}
       />
+     
+
+{/* <TimePickerModal
+  visible={showPicker}
+  onClose={() => setShowPicker(false)}
+  onConfirm={(time) => {
+    console.log(time);
+    setShowPicker(false);
+  }}
+/> */}
 
       <CalendarModal
         visible={dueDateModalVisible}
@@ -364,15 +394,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   backBtn: {
+
     position: 'absolute',
-    top: 56,
-    left: 24,
+    left: 16,
     zIndex: 2,
   },
   backBtnCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 1000,
     backgroundColor: lightColors.secondaryBackground,
     alignItems: 'center',
     justifyContent: 'center',
@@ -390,14 +420,14 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 24,
-    marginTop: 20,
+    // marginTop: 20,
   },
   label: {
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 18,
     color: lightColors.text,
     marginBottom: 8,
-    marginTop: 20,
+    marginTop: 22,
   },
   labelRow: {
     flexDirection: 'row',
@@ -414,29 +444,30 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 16,
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 18,
     color: lightColors.text,
   },
   inputRow: {
+    height: 65,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: lightColors.inputBackground,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 10,
   },
   inputRowText: {
     flex: 1,
-    fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 16,
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 18,
     color: lightColors.text,
   },
   inputRowTextFlex: {
     flex: 1,
-    fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 16,
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 18,
     color: lightColors.text,
   },
   placeholder: {

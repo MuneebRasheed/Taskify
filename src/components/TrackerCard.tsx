@@ -3,7 +3,11 @@ import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { lightColors, palette } from '../../utils/colors';
 import TimeIcon from '../assets/svgs/TimeIcon';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
+import CheckIcon from '../assets/svgs/CheckIcon';
 import { t, useTranslation } from '../i18n';
+import { fontFamilies } from '../theme/typography';
+import Ionicons from '@expo/vector-icons/build/Ionicons';
+import GreenCheckIcon from '../assets/svgs/GreenCheckIcon';
 
 /** Mon=0 … Sun=6 */
 export const TRACKER_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
@@ -28,6 +32,10 @@ const TASK_INDICATOR_BLUE = lightColors.taskIndicator;
 interface TrackerCardProps {
   item: TrackerCardItem;
   onPress?: () => void;
+  /** When true, show green check and "formed/finished" layout (title + "Formed on date", no days/time) */
+  completed?: boolean;
+  /** When completed, show "Formed on {formedOnDate}" in the footer. Optional. */
+  formedOnDate?: string | null;
   /** Left bar color; default orange for habit, blue for task */
   indicatorColor?: string;
   /** Selected day circle background (default: orange for habit) */
@@ -46,14 +54,18 @@ const DEFAULT_UNSELECTED_TEXT = lightColors.subText;
 const TrackerCard: React.FC<TrackerCardProps> = ({
   item,
   onPress,
+  completed = false,
+  formedOnDate,
   indicatorColor,
-  selectedDayColor =lightColors.background ,
+  selectedDayColor = lightColors.background,
   unselectedDayBorderColor = DEFAULT_UNSELECTED_BORDER,
-  unselectedDayTextColor = DEFAULT_UNSELECTED_TEXT,
 }) => {
   const isTask = item.variant === 'task';
   const barColor = indicatorColor ?? (isTask ? TASK_INDICATOR_BLUE : DEFAULT_SELECTED_COLOR);
   const hasReminder = item.reminderTime != null && item.reminderTime.trim() !== '';
+
+  /** When completed/formed/finished: show Image 2 layout — title + "Formed on date" + green check, no days/time */
+  const showFormedLayout = completed;
 
   return (
     <TouchableOpacity
@@ -64,12 +76,25 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
     >
       <View style={[styles.indicator, { backgroundColor: barColor }]} />
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>
-          {item.title}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={1}>
+            {item.title}
+          </Text>
+          {completed && (
+            <View style={styles.completedBadge}>
+              <GreenCheckIcon width={24} height={24} />
+            </View>
+          )}
+        </View>
 
         <View style={styles.footer}>
-          {isTask ? (
+          {showFormedLayout ? (
+            formedOnDate != null && formedOnDate.trim() !== '' ? (
+              <Text style={styles.formedOnText} numberOfLines={1}>
+                {t('formedOn')} {formedOnDate}
+              </Text>
+            ) : null
+          ) : isTask ? (
             <View style={styles.taskMetaRow}>
               {item.dueDate != null && item.dueDate.trim() !== '' && (
                 <View style={styles.metaItem}>
@@ -80,7 +105,7 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
               <View style={styles.metaItem}>
                 <TimeIcon width={16} height={16} />
                 <Text style={styles.metaText}>
-                  {hasReminder ? item.reminderTime : t("noReminder")}
+                  {hasReminder ? item.reminderTime : t('noReminder')}
                 </Text>
               </View>
             </View>
@@ -95,11 +120,11 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
                       style={[
                         styles.dayCircle,
                         isSelected
-                          ? { backgroundColor: selectedDayColor ,}
+                          ? { backgroundColor: selectedDayColor }
                           : {
-                              backgroundColor: '#FFF',
+                              backgroundColor: lightColors.secondaryBackground,
                               borderWidth: 1,
-                              borderColor: unselectedDayBorderColor,
+                              borderColor: lightColors.border,
                             },
                       ]}
                     >
@@ -108,7 +133,7 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
                           styles.dayText,
                           isSelected
                             ? styles.selectedDayText
-                            : { color: unselectedDayTextColor },
+                            : { color: lightColors.subText },
                         ]}
                       >
                         {day}
@@ -120,7 +145,7 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
               <View style={styles.reminderRow}>
                 <TimeIcon width={16} height={16} />
                 <Text style={styles.reminderTime}>
-                  {hasReminder ? (item.reminderTime ?? '') : t("noReminder")}
+                  {hasReminder ? (item.reminderTime ?? '') : t('noReminder')}
                 </Text>
               </View>
             </>
@@ -134,12 +159,12 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: lightColors.secondaryBackground,
-    borderRadius: 12,
+    borderRadius: 6,
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 16,
     minHeight: 90,
     borderWidth: 1,
-    borderColor: lightColors.surfaceBorder,
+    borderColor: lightColors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -148,19 +173,30 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   indicator: {
-    width: 5,
-    height: '100%',
+    width: 3,
+    height: 90,
   },
   content: {
     flex: 1,
     padding: 15,
-    justifyContent: 'center',
+        justifyContent: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 16,
+    flex: 1,
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 18,
     fontWeight: '600',
     color: lightColors.text,
-    marginBottom: 12,
+  },
+  completedBadge: {
+  //  marginTop: 10,
   },
   footer: {
     flexDirection: 'row',
@@ -173,17 +209,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    // backgroundColor: 'blue',
   },
   dayCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 1000,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: lightColors.border,
   },
   dayText: {
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 12,
+    color: lightColors.subText,
   },
   selectedDayText: {
     color: lightColors.secondaryBackground,
@@ -192,11 +232,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    // marginRight: 45,
+    // backgroundColor: 'red',
   },
   reminderTime: {
-    fontSize: 12,
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 14,
     color: lightColors.subText,
-    fontWeight: '500',
+    fontWeight: '400',
   },
   taskMetaRow: {
     flexDirection: 'row',
@@ -213,9 +256,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   metaText: {
-    fontSize: 12,
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 14,
     color: lightColors.subText,
-    fontWeight: '500',
+    fontWeight: '400',
+  },
+  formedOnText: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 14,
+    color: lightColors.subText,
+    fontWeight: '400',
   },
 });
 

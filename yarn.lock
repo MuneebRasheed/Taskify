@@ -1403,7 +1403,7 @@
 
 "@react-navigation/bottom-tabs@^7.15.3":
   version "7.15.3"
-  resolved "https://registry.yarnpkg.com/@react-navigation/bottom-tabs/-/bottom-tabs-7.15.3.tgz#6be569f9cb1a65d4a11fb16b4898470ab7586681"
+  resolved "https://registry.npmjs.org/@react-navigation/bottom-tabs/-/bottom-tabs-7.15.3.tgz"
   integrity sha512-CIaHk5TuLeYlDgR1eij38kEbrQU5dAQxQZCC4Xv1wFZ/RRxppBopRMLzv2Il529a7mic6xG33OHcr9aEdOzq+A==
   dependencies:
     "@react-navigation/elements" "^2.9.8"
@@ -2511,6 +2511,11 @@ expo-keep-awake@~15.0.8:
   resolved "https://registry.npmjs.org/expo-keep-awake/-/expo-keep-awake-15.0.8.tgz"
   integrity sha512-YK9M1VrnoH1vLJiQzChZgzDvVimVoriibiDIFLbQMpjYBnvyfUeHJcin/Gx1a+XgupNXy92EQJLgI/9ZuXajYQ==
 
+expo-linear-gradient@^55.0.8:
+  version "55.0.8"
+  resolved "https://registry.npmjs.org/expo-linear-gradient/-/expo-linear-gradient-55.0.8.tgz"
+  integrity sha512-nCMgZXcHesnFslH1TUFMdqlDiE4jYTTTSHb97g1jq1gyGX2xDEOyqBxQJmiIVGrZJ+kTWH6RljJ5tYyva9mrAg==
+
 expo-modules-autolinking@3.0.24:
   version "3.0.24"
   resolved "https://registry.npmjs.org/expo-modules-autolinking/-/expo-modules-autolinking-3.0.24.tgz"
@@ -2722,6 +2727,11 @@ getenv@^2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/getenv/-/getenv-2.0.0.tgz"
   integrity sha512-VilgtJj/ALgGY77fiLam5iD336eSWi96Q15JSAG1zi8NRBysm3LXKdGnHb4m5cuyxvOLQQKWpBZAT6ni4FI2iQ==
+
+gifted-charts-core@0.1.79:
+  version "0.1.79"
+  resolved "https://registry.npmjs.org/gifted-charts-core/-/gifted-charts-core-0.1.79.tgz"
+  integrity sha512-grdBsZDwQuwNf0vWK69ZNcCsgHZ5nt8V/ST9Q8/YYQuH6r5MzRgW6K6o+BXmx8qJnHtuelKWdIt2SZjsKzKmow==
 
 glob@^13.0.0:
   version "13.0.6"
@@ -3973,6 +3983,13 @@ react-native-gesture-handler@~2.28.0:
     hoist-non-react-statics "^3.3.0"
     invariant "^2.2.4"
 
+react-native-gifted-charts@^1.4.75:
+  version "1.4.75"
+  resolved "https://registry.npmjs.org/react-native-gifted-charts/-/react-native-gifted-charts-1.4.75.tgz"
+  integrity sha512-pNvMMlabvr2cMlHXzrREzuusLAlTgbsaa6zDQBDm2IJWfUAvbcIqQpn5ePjF40z+dGJuVre4oqgoAXO8axs5qw==
+  dependencies:
+    gifted-charts-core "0.1.79"
+
 react-native-is-edge-to-edge@^1.2.1:
   version "1.2.1"
   resolved "https://registry.npmjs.org/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz"
@@ -4023,6 +4040,11 @@ react-native-wheel-pick@^1.2.8:
   integrity sha512-QzyUn37W5+s+Jes6xqQ8vq5EI+OjGYfp0axLFwJvImPE5j3a+m5E9NmzZ9IYSVKMG4tlUhjTpAmBYSXsjt5Vfg==
   dependencies:
     moment "^2.19.1"
+
+react-native-wheel-picker-expo@^0.5.4:
+  version "0.5.4"
+  resolved "https://registry.yarnpkg.com/react-native-wheel-picker-expo/-/react-native-wheel-picker-expo-0.5.4.tgz#6a22785d919ee45d0f998833dc74000d4b5f21eb"
+  integrity sha512-mTA35pqAGioi7gie+nLF4EcwCj7zU36zzlYZVRS/bZul84zvvoMFKJu6Sm84WuWQiUJ40J1EgYxQ3Ui1pIMJZg==
 
 react-native-worklets@^0.5.2:
   version "0.5.2"

@@ -13,6 +13,8 @@ import { lightColors, palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from './Button';
 import CheckIcon from '../assets/svgs/CheckIcon';
+import { useTranslation } from '../i18n';
+import Textt from './Textt';
 
 export const GOAL_CATEGORIES = [
   'General',
@@ -44,7 +46,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
   onConfirm,
 }) => {
   const insets = useSafeAreaInsets();
-
+  const { t } = useTranslation();
   return (
     <Modal
       visible={visible}
@@ -64,7 +66,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
             onStartShouldSetResponder={() => true}
           >
             <View style={styles.handle} />
-            <Text style={styles.title}>Category</Text>
+            <Textt i18nKey="category" style={styles.title} />
             <View style={styles.divider} />
             <View style={styles.list}>
               {GOAL_CATEGORIES.map((cat) => {
@@ -79,7 +81,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
                     <Text style={styles.rowText}>{cat}</Text>
                     {isSelected && (
                       <View style={styles.checkWrap}>
-                        <CheckIcon width={14} height={10} />
+                        <CheckIcon width={22} height={22} fill={lightColors.background}/>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -88,7 +90,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
             </View>
             <View style={styles.buttons}>
               <Button
-                title="Cancel"
+                title={t('cancel')}
                 variant="outline"
                 onPress={onCancel}
                 style={styles.cancelBtn}
@@ -97,7 +99,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
                 textColor={lightColors.background}
               />
               <Button
-                title="OK"
+                title={t('ok')}
                 variant="primary"
                 onPress={onConfirm}
                 style={styles.okBtn}
@@ -115,7 +117,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: lightColors.blurBackground,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -135,15 +137,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamilies.urbanistBold,
-    fontSize: 18,
+    fontSize: 24,
     color: lightColors.text,
     textAlign: 'center',
-    marginBottom: 12,
+    // marginBottom: 12,
+    marginBottom: 20,
   },
   divider: {
     height: 1,
     backgroundColor: lightColors.border,
-    marginBottom: 8,
+    // marginBottom: 8,
   },
   list: {
     marginBottom: 24,
@@ -152,20 +155,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: lightColors.border,
   },
   rowText: {
     fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 16,
+    fontSize: 20,
     color: lightColors.text,
   },
   checkWrap: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: lightColors.background,
+    backgroundColor: lightColors.secondaryBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },

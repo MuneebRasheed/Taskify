@@ -21,6 +21,7 @@ import { setI18nLocale } from '../i18n';
 import { t } from '../i18n';
 import Button from '../components/Button';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
+import Header from '../components/Header';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -76,14 +77,13 @@ export default function LanguageTestScreen() {
         { paddingTop: insets.top, backgroundColor: lightColors.background },
       ]}
     >
-      <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        style={[styles.backButton, I18nManager.isRTL && styles.backButtonRTL]}
-        activeOpacity={0.8}
-      >
-        <BackArrowIcon width={24} height={24} />
-      </TouchableOpacity>
-
+      <Header
+        leftIcon={<BackArrowIcon width={24} height={24} />}
+        onLeftPress={() => navigation.goBack()}
+        title={t('languageTestTitle')}
+        rightIcon={<View />}
+        style={styles.header}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -141,23 +141,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  backButton: {
-    position: 'absolute',
-    top: 56,
-    left: 20,
-    zIndex: 10,
-    padding: 8,
-  },
-  backButtonRTL: {
-    left: undefined,
-    right: 20,
+  header: {
+    paddingVertical: 0,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 100,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   title: {

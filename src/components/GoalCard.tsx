@@ -11,8 +11,10 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
+import AddIcon from '../assets/svgs/AddIcon';
+import UserIcon from '../assets/svgs/UserIcon';
 
-const CARD_IMAGE_SIZE = 96;
+const CARD_IMAGE_HEIGHT = 96;
 
 function daysUntilDue(d: Date): number {
   const today = new Date();
@@ -23,17 +25,25 @@ function daysUntilDue(d: Date): number {
 }
 
 export interface GoalCardProps {
-  /** Cover image source (e.g. from COVER_IMAGE_SOURCES[goal.coverIndex]) */
+  /** Cover image source (e.g. from COVER_IMAGE_SOURCES[goal.coverIndex] or goal.coverImage) */
   coverSource: ImageSourcePropType;
   title: string;
-  habitsDone: number;
-  habitsTotal: number;
-  tasksDone: number;
-  tasksTotal: number;
-  /** Optional due date; when set, shows "D-X days" row */
+  /** Pre-made style: show "Habits N", "Tasks N". Pass same as habitsTotal/tasksTotal if no progress. */
+  habitsCount?: number;
+  tasksCount?: number;
+  /** My-goals style: show "Habits done/total", "Tasks done/total". Overrides count when set. */
+  habitsDone?: number;
+  habitsTotal?: number;
+  tasksDone?: number;
+  tasksTotal?: number;
+  /** Optional user count line (e.g. "+15.2K users") with people icon */
+  userCount?: string;
+  /** Optional due date; when set, shows "D-X days" row (for my goals) */
   dueDate?: Date | null;
   /** When provided, the card is pressable */
   onPress?: () => void;
+  /** When provided, shows circular add button on the right (pre-made goals) */
+  onAddPress?: (e?: any) => void;
   /** Optional container style override */
   style?: ViewStyle;
 }
@@ -41,53 +51,81 @@ export interface GoalCardProps {
 const GoalCard: React.FC<GoalCardProps> = ({
   coverSource,
   title,
+  habitsCount = 0,
+  tasksCount = 0,
   habitsDone,
   habitsTotal,
   tasksDone,
   tasksTotal,
+  userCount,
   dueDate,
   onPress,
+  onAddPress,
   style,
 }) => {
+  const showProgress = habitsDone !== undefined && habitsTotal !== undefined && tasksDone !== undefined && tasksTotal !== undefined;
+  const habitsLabel = showProgress ? `Habits ${habitsDone}/${habitsTotal}` : `Habits ${habitsCount}`;
+  const tasksLabel = showProgress ? `Tasks ${tasksDone}/${tasksTotal}` : `Tasks ${tasksCount}`;
+
   const content = (
     <>
-      <Image
-        source={coverSource}
-        style={styles.goalCardImage}
-        resizeMode="cover"
-      />
-      <View style={styles.goalCardBody}>
-        <Text style={styles.goalCardTitle} numberOfLines={2}>
+      {/* Left: illustration area with pale background */}
+      <View style={styles.imageWrap}>
+        <Image
+          source={coverSource}
+          style={styles.goalCardImage}
+          resizeMode="cover"
+        />
+      </View>
+
+      {/* Right: title, tags, user count / due, optional add button */}
+      <View style={styles.bodyWrap}>
+        <Text style={styles.goalCardTitle} numberOfLines={1}>
           {title}
         </Text>
         <View style={styles.tagsRow}>
           <View style={styles.habitTag}>
-            <Text style={styles.habitTagText}>
-              Habits {habitsDone}/{habitsTotal}
-            </Text>
+            <Text style={styles.habitTagText}>{habitsLabel}</Text>
           </View>
           <View style={styles.taskTag}>
-            <Text style={styles.taskTagText}>
-              Tasks {tasksDone}/{tasksTotal}
-            </Text>
+            <Text style={styles.taskTagText}>{tasksLabel}</Text>
           </View>
         </View>
-        {dueDate != null && (
+        {userCount != null && userCount !== '' && (
+          <View style={styles.userCountRow}>
+            <UserIcon width={16} height={16} />
+            <Text style={styles.userCountText}>{userCount}</Text>
+          </View>
+        )}
+        {userCount == null && dueDate != null && (
           <View style={styles.daysRow}>
             <Ionicons name="calendar-outline" size={14} color={lightColors.subText} />
-            <Text style={styles.daysText}>
-              D-{daysUntilDue(dueDate)} days
-            </Text>
+            <Text style={styles.daysText}>D-{daysUntilDue(dueDate)} days</Text>
           </View>
         )}
       </View>
+
+      {onAddPress != null && (
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={(e) => {
+            e?.stopPropagation?.();
+            onAddPress(e);
+          }}
+          activeOpacity={0.8}
+        >
+          <AddIcon width={20} height={20} />
+        </TouchableOpacity>
+      )}
     </>
   );
+
+  const cardStyle = [styles.goalCard, style];
 
   if (onPress) {
     return (
       <TouchableOpacity
-        style={[styles.goalCard, style]}
+        style={cardStyle}
         onPress={onPress}
         activeOpacity={0.7}
       >
@@ -96,7 +134,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
     );
   }
 
-  return <View style={[styles.goalCard, style]}>{content}</View>;
+  return <View style={cardStyle}>{content}</View>;
 };
 
 export default GoalCard;
@@ -106,24 +144,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: lightColors.secondaryBackground,
-    borderRadius: 12,
+    // borderRadius: 14,
     marginBottom: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: lightColors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    gap: 16,
+    minHeight: 120,
+    borderBottomWidth: 1,
+    borderBottomColor: lightColors.border,
+    // paddingTop: 24,
+    paddingBottom: 16,
+    // paddingHorizontal: 16,
+  },
+  imageWrap: {
+    width: '38%',
+    minWidth: 120,
+    maxWidth: 120,
+    height: CARD_IMAGE_HEIGHT,
+    borderRadius: 6,
+    backgroundColor: '#FAF8F5',
+    overflow: 'hidden',
   },
   goalCardImage: {
-    width: CARD_IMAGE_SIZE,
-    height: CARD_IMAGE_SIZE,
-    borderRadius: 10,
-    backgroundColor: lightColors.inputBackground,
+    width: '100%',
+    height: '100%',
   },
-  goalCardBody: {
+  bodyWrap: {
     flex: 1,
     marginLeft: 14,
     justifyContent: 'center',
@@ -131,39 +175,51 @@ const styles = StyleSheet.create({
   },
   goalCardTitle: {
     fontFamily: fontFamilies.urbanistBold,
-    fontSize: 16,
+    fontSize: 20,
     color: lightColors.text,
     marginBottom: 8,
   },
   tagsRow: {
+    marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   habitTag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: lightColors.habitIndicator,
+  },
+  habitTagText: {
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 10,
+    color: lightColors.habitIndicator,
   },
   taskTag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: lightColors.taskIndicator,
   },
-  habitTagText: {
-    fontFamily: fontFamilies.urbanistSemiBold,
-    fontSize: 12,
-    color: lightColors.habitIndicator,
-  },
   taskTagText: {
     fontFamily: fontFamilies.urbanistSemiBold,
-    fontSize: 12,
+    fontSize: 10,
     color: lightColors.taskIndicator,
+  },
+  userCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  userCountText: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 12,
+    color: lightColors.subText,
   },
   daysRow: {
     flexDirection: 'row',
@@ -174,5 +230,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 12,
     color: lightColors.subText,
+  },
+  addBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: lightColors.skipbg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
 });

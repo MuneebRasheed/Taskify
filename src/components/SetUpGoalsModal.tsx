@@ -19,6 +19,7 @@ import TimePickerModal from './TimePickerModal';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
 import TimeIcon from '../assets/svgs/TimeIcon';
 import CrossIcon from '../assets/svgs/CrossIcon';
+import BottomArrowIcon from '../assets/svgs/BotttomArrowIcon';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', {
@@ -110,19 +111,25 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
     });
   };
 
+  const isSubModalOpen =
+    categoryModalVisible ||
+    dueDateModalVisible ||
+    reminderDateModalVisible ||
+    reminderTimeModalVisible;
+
   return (
     <>
       <Modal
-        visible={visible}
+        visible={visible && !isSubModalOpen}
         transparent
         animationType="slide"
         onRequestClose={onCancel}
       >
         <Pressable style={styles.backdrop} onPress={onCancel}>
           <TouchableWithoutFeedback>
-            <View
-              style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}
-              onStartShouldSetResponder={() => true}
+            <Pressable
+              style={[styles.sheet, { paddingBottom: insets.bottom }]}
+              onPress={() => {}}
             >
             <Text style={styles.title}>{t('setUpGoals')}</Text>
 
@@ -147,7 +154,7 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
               >
                 {category ?? t('category')}
               </Text>
-              <Text style={styles.chevron}>⌄</Text>
+              <BottomArrowIcon width={12} height={8} />
             </TouchableOpacity>
 
             <Text style={styles.label}>{t('goalsDueDate')}</Text>
@@ -224,7 +231,7 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
                 textColor={lightColors.secondaryBackground}
               />
             </View>
-            </View>
+            </Pressable>
           </TouchableWithoutFeedback>
         </Pressable>
       </Modal>
@@ -278,7 +285,7 @@ export default SetUpGoalsModal;
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: lightColors.blurBackground,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -290,48 +297,48 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamilies.urbanistBold,
-    fontSize: 20,
+    fontSize: 24,
     color: lightColors.text,
     textAlign: 'center',
     marginBottom: 24,
   },
   label: {
     fontFamily: fontFamilies.urbanistSemiBold,
-    fontSize: 14,
+    fontSize: 18,
     color: lightColors.text,
     marginBottom: 8,
     marginTop: 4,
   },
   input: {
     backgroundColor: lightColors.inputBackground,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 16,
+    fontSize: 18,
     color: lightColors.text,
-    marginBottom: 4,
+    marginBottom: 22,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: lightColors.inputBackground,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 10,
-    marginBottom: 4,
+    marginBottom: 24,
   },
   inputRowText: {
     flex: 1,
     fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 16,
+    fontSize: 18,
     color: lightColors.text,
   },
   inputRowTextFlex: {
     flex: 1,
     fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 16,
+    fontSize: 18,
     color: lightColors.text,
   },
   placeholder: {
@@ -347,14 +354,17 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 28,
+    // marginTop: 28,
+    borderTopWidth: 1,
+    borderTopColor: lightColors.border,
+    paddingTop: 24,
   },
   cancelBtn: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 1000,
   },
   okBtn: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 1000,
   },
 });

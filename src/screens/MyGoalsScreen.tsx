@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
@@ -19,16 +19,30 @@ import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import Textt from '../components/Textt';
 import SpashLogo from '../assets/svgs/SpashLogo';
 import GoalCard from '../components/GoalCard';
+import FlowButton from '../components/FlowButton';
+import type { MainTabsParamList } from '../navigations/MainTabs';
 
 const BOTTOM_NAV_HEIGHT = 0;
 const FAB_SIZE = 56;
 
+type MyGoalsRouteProp = RouteProp<MainTabsParamList, 'My Goals'>;
+
 const MyGoalsScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const route = useRoute<MyGoalsRouteProp>();
   const { t } = useTranslation();
   const { goals } = useGoals();
-  const [filter, setFilter] = useState<'ongoing' | 'achieved'>('ongoing');
+  const [filter, setFilter] = useState<'ongoing' | 'achieved'>(
+    route.params?.initialFilter ?? 'ongoing'
+  );
+
+  useEffect(() => {
+    const initial = route.params?.initialFilter;
+    if (initial === 'achieved' || initial === 'ongoing') {
+      setFilter(initial);
+    }
+  }, [route.params?.initialFilter]);
 
   const filteredGoals = useMemo(() => {
     if (filter === 'ongoing') {
@@ -37,8 +51,14 @@ const MyGoalsScreen = () => {
     return goals.filter((g) => g.achieved);
   }, [goals, filter]);
 
+  const rootNav = navigation.getParent() as { navigate: (name: string, params?: { myGoalId: string }) => void } | undefined;
+
   const handleAddGoal = () => {
     navigation.navigate('AiGenetratingScreen' as never);
+  };
+
+  const handleGoalPress = (goal: SavedGoal) => {
+    rootNav?.navigate('PreMadeGoalDetail', { myGoalId: goal.id });
   };
 
   const coverSource = (goal: SavedGoal) => {
@@ -103,19 +123,14 @@ const MyGoalsScreen = () => {
               tasksDone={goal.tasksDone}
               tasksTotal={goal.tasksTotal}
               dueDate={goal.dueDate}
+              onPress={() => handleGoalPress(goal)}
             />
           ))
         )}
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={[styles.fab, { bottom: BOTTOM_NAV_HEIGHT + insets.bottom + 16 }]}
-        onPress={handleAddGoal}
-        activeOpacity={0.9}
-      >
-        <Ionicons name="add" size={28} color={lightColors.secondaryBackground} />
-      </TouchableOpacity>
+      
+      <FlowButton />
     </View>
   );
 };

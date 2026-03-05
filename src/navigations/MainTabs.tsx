@@ -24,7 +24,7 @@ export type MainTabsParamList = {
   Home: undefined;
   Explore: undefined;
   Report: undefined;
-  'My Goals': undefined;
+  'My Goals': { initialFilter?: 'ongoing' | 'achieved' };
   Account: undefined;
 };
 
