@@ -15,7 +15,7 @@ import { fontFamilies } from '../theme/typography';
 import SpashLogo from '../assets/svgs/SpashLogo';
 import Header from '../components/Header';
 import FlowButton from '../components/FlowButton';
-import { useGoals } from '../context/GoalsContext';
+import { useGoals, getGoalDueDateStr, isItemScheduledForDate } from '../context/GoalsContext';
 import type { SavedGoal, GoalItem } from '../context/GoalsContext';
 import Textt from '../components/Textt';
 import { t, useTranslation } from '../i18n';
@@ -48,17 +48,37 @@ const HomeScreen = () => {
     [goals]
   );
 
+  /** Goals that should appear on the selected date (no due date, or due date = selected date) */
+  const goalsVisibleOnSelectedDate = useMemo(
+    () =>
+      goalsWithItems.filter((g) => {
+        const goalDue = getGoalDueDateStr(g);
+        return goalDue === null || goalDue === selectedDate;
+      }),
+    [goalsWithItems, selectedDate]
+  );
+
+  /** Items to show for a goal on the selected date: if goal has due date and it matches, all items; else item-level schedule */
+  const itemsForSelectedDate = useMemo(
+    () => (goal: SavedGoal) => {
+      const goalDue = getGoalDueDateStr(goal);
+      if (goalDue != null && goalDue === selectedDate) return goal.items ?? [];
+      return (goal.items ?? []).filter((item) => isItemScheduledForDate(item, selectedDate));
+    },
+    [selectedDate]
+  );
+
   const habitCount = useMemo(() => {
-    return goalsWithItems.reduce((sum, g) => {
-      return sum + (g.items?.filter((i) => i.type === 'habit').length ?? 0);
+    return goalsVisibleOnSelectedDate.reduce((sum, g) => {
+      return sum + (itemsForSelectedDate(g).filter((i) => i.type === 'habit').length ?? 0);
     }, 0);
-  }, [goalsWithItems]);
+  }, [goalsVisibleOnSelectedDate, itemsForSelectedDate]);
 
   const taskCount = useMemo(() => {
-    return goalsWithItems.reduce((sum, g) => {
-      return sum + (g.items?.filter((i) => i.type === 'task').length ?? 0);
+    return goalsVisibleOnSelectedDate.reduce((sum, g) => {
+      return sum + (itemsForSelectedDate(g).filter((i) => i.type === 'task').length ?? 0);
     }, 0);
-  }, [goalsWithItems]);
+  }, [goalsVisibleOnSelectedDate, itemsForSelectedDate]);
 
   const progressFraction = dayTotal > 0 ? dayCompleted / dayTotal : 0;
 
@@ -116,8 +136,8 @@ const HomeScreen = () => {
       >
 
 
-        {/* Daily summary: "Today you have X habits, Y tasks" – only show when there are goals */}
-        {goalsWithItems.length > 0 && (
+        {/* Daily summary: "Today you have X habits, Y tasks" – for selected date, only goals scheduled that day */}
+        {goalsVisibleOnSelectedDate.length > 0 && (
           <View style={styles.summaryContainer}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryText}>
@@ -143,7 +163,7 @@ const HomeScreen = () => {
             </View>
           </View>
         )}
-        {/* Goals list with items: checkbox, indicator bar, title, time */}
+        {/* Goals list with items: only goals (and their items) scheduled for the selected date */}
         <View style={styles.goalsList}>
           {goalsWithItems.length === 0 ? (
             <View style={styles.emptyState}>
@@ -156,22 +176,23 @@ const HomeScreen = () => {
               <Textt i18nKey="addAGoalByClickingThePlusButtonBelow" style={styles.emptyDescription} />
             </View>
           ) : (
-
-
-            
-            goalsWithItems.map((goal) => (
-              <View key={goal.id} style={styles.goalSection}>
-                <Text style={styles.goalSectionTitle}>{goal.title}</Text>
-                {(goal.items ?? []).map((item) => (
-                  <GoalItemRow
-                    key={item.id}
-                    item={item}
-                    completed={isItemCompleted(item.id)}
-                    onToggle={() => handleToggleItem(item.id)}
-                  />
-                ))}
-              </View>
-            ))
+            goalsVisibleOnSelectedDate.map((goal) => {
+              const items = itemsForSelectedDate(goal);
+              if (items.length === 0) return null;
+              return (
+                <View key={goal.id} style={styles.goalSection}>
+                  <Text style={styles.goalSectionTitle}>{goal.title}</Text>
+                  {items.map((item) => (
+                    <GoalItemRow
+                      key={item.id}
+                      item={item}
+                      completed={isItemCompleted(item.id)}
+                      onToggle={() => handleToggleItem(item.id)}
+                    />
+                  ))}
+                </View>
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -221,7 +242,10 @@ function GoalItemRow({
         )}
       </TouchableOpacity>
       <View style={styles.itemBody}>
-        <Text style={styles.itemTitle} numberOfLines={2}>
+        <Text
+          style={[styles.itemTitle, completed && styles.itemTitleChecked]}
+          numberOfLines={2}
+        >
           {item.title}
         </Text>
         {item.reminderTime ? (
@@ -229,9 +253,13 @@ function GoalItemRow({
             <Ionicons
               name="time-outline"
               size={14}
-              color={lightColors.subText}
+              color={completed ? lightColors.placeholderText : lightColors.subText}
             />
-            <Text style={styles.itemTime}>{item.reminderTime}</Text>
+            <Text
+              style={[styles.itemTime, completed && styles.itemTimeChecked]}
+            >
+              {item.reminderTime}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -369,6 +397,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: lightColors.text,
   },
+  itemTitleChecked: {
+    color: lightColors.placeholderText,
+  },
   itemTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -379,5 +410,8 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanist,
     fontSize: 12,
     color: lightColors.subText,
+  },
+  itemTimeChecked: {
+    color: lightColors.placeholderText,
   },
 });

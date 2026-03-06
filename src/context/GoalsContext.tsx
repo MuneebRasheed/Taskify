@@ -37,6 +37,75 @@ export interface SavedGoal {
 /** itemId -> list of date strings (YYYY-MM-DD) when that item was completed */
 export type ItemCompletions = Record<string, string[]>;
 
+/** Get weekday index from YYYY-MM-DD: 0 = Monday, 6 = Sunday */
+export function getDayIndexFromDateStr(dateStr: string): number {
+  const d = new Date(dateStr + 'T12:00:00').getDay();
+  return d === 0 ? 6 : d - 1;
+}
+
+/** Parse task dueDate display string to YYYY-MM-DD for comparison, or null if unparseable */
+export function parseTaskDueDateToYYYYMMDD(dueDateStr: string): string | null {
+  if (!dueDateStr || typeof dueDateStr !== 'string') return null;
+  const s = dueDateStr.trim();
+  const isoMatch = /^\d{4}-\d{2}-\d{2}$/.exec(s);
+  if (isoMatch) return s;
+  let toParse = s;
+  const afterComma = s.includes(',') ? s.split(',').pop()?.trim() : null;
+  if (afterComma && /^[A-Za-z]{3}\s+\d{1,2},?\s*\d{4}$/.test(afterComma)) toParse = afterComma;
+  const ddmmy = /^(\d{1,2})\s+([A-Za-z]{3}),?\s*(\d{4})$/.exec(toParse);
+  if (ddmmy) toParse = `${ddmmy[2]} ${ddmmy[1]}, ${ddmmy[3]}`;
+  const t = Date.parse(toParse);
+  if (Number.isNaN(t)) return null;
+  const date = new Date(t);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** True if item should appear on the given date (habit: that weekday; task: due that day) */
+export function isItemScheduledForDate(item: GoalItem, dateStr: string): boolean {
+  if (item.type === 'habit') {
+    const days = item.selectedDays ?? [];
+    if (days.length === 0) return true;
+    const dayIndex = getDayIndexFromDateStr(dateStr);
+    return days.includes(dayIndex);
+  }
+  if (item.type === 'task') {
+    const due = item.dueDate ? parseTaskDueDateToYYYYMMDD(item.dueDate) : null;
+    if (!due) return false;
+    return due === dateStr;
+  }
+  return false;
+}
+
+/** Goal due date as YYYY-MM-DD, or null if goal has no due date */
+export function getGoalDueDateStr(goal: SavedGoal): string | null {
+  const d = goal.dueDate;
+  if (d == null) return null;
+  const date = typeof d === 'number' ? new Date(d) : d;
+  if (Number.isNaN(date.getTime())) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * True if this item should appear on the given date.
+ * When the goal has a due date: item shows only on that exact date.
+ * When the goal has no due date: use item-level schedule (habit weekdays, task due date).
+ */
+export function isItemScheduledForDateWithGoal(
+  goal: SavedGoal,
+  item: GoalItem,
+  dateStr: string
+): boolean {
+  const goalDueStr = getGoalDueDateStr(goal);
+  if (goalDueStr != null) return dateStr === goalDueStr;
+  return isItemScheduledForDate(item, dateStr);
+}
+
 interface GoalsContextValue {
   goals: SavedGoal[];
   /** Per-item completion by date; key = item.id, value = ['2026-02-22', ...] */
@@ -198,6 +267,7 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       let completed = 0;
       goals.forEach((g) => {
         (g.items ?? []).forEach((it) => {
+          if (!isItemScheduledForDateWithGoal(g, it, dateStr)) return;
           total += 1;
           const list = itemCompletions[it.id] ?? [];
           if (list.includes(dateStr)) completed += 1;

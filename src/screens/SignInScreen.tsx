@@ -113,7 +113,7 @@ import {
                   activeOpacity={0.8}
                 >
                   {agreed && (
-                    <CheckIcon width={12} height={9} color={lightColors.secondaryBackground}/>
+                    <CheckIcon width={12} height={9} fill={lightColors.secondaryBackground}/>
                   )}
                 </TouchableOpacity>
                

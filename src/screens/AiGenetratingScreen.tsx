@@ -96,7 +96,7 @@ const AiGenetratingScreen = () => {
 </View>
       </KeyboardAvoidingView>
 
-      <LoadingModal visible={generating} text="Generating plan..." />
+      <LoadingModal visible={generating} variant="generating" text="Generating plan..." />
     </View>
   );
 };

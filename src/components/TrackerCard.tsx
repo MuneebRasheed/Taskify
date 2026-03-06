@@ -77,7 +77,10 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
       <View style={[styles.indicator, { backgroundColor: barColor }]} />
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text
+            style={[styles.title, completed && styles.titleChecked]}
+            numberOfLines={1}
+          >
             {item.title}
           </Text>
           {completed && (
@@ -90,7 +93,10 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
         <View style={styles.footer}>
           {showFormedLayout ? (
             formedOnDate != null && formedOnDate.trim() !== '' ? (
-              <Text style={styles.formedOnText} numberOfLines={1}>
+              <Text
+                style={[styles.formedOnText, completed && styles.subtextChecked]}
+                numberOfLines={1}
+              >
                 {t('formedOn')} {formedOnDate}
               </Text>
             ) : null
@@ -122,10 +128,10 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
                         isSelected
                           ? { backgroundColor: selectedDayColor }
                           : {
-                              backgroundColor: lightColors.secondaryBackground,
-                              borderWidth: 1,
-                              borderColor: lightColors.border,
-                            },
+                            backgroundColor: lightColors.secondaryBackground,
+                            borderWidth: 1,
+                            borderColor: lightColors.border,
+                          },
                       ]}
                     >
                       <Text
@@ -179,7 +185,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 15,
-        justifyContent: 'center',
+    justifyContent: 'center',
   },
   titleRow: {
     flexDirection: 'row',
@@ -195,8 +201,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: lightColors.text,
   },
+  titleChecked: {
+    color: lightColors.placeholderText,
+  },
   completedBadge: {
-  //  marginTop: 10,
+    //  marginTop: 10,
   },
   footer: {
     flexDirection: 'row',
@@ -266,6 +275,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: lightColors.subText,
     fontWeight: '400',
+  },
+  subtextChecked: {
+    color: lightColors.placeholderText,
   },
 });
 

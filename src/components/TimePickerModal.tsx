@@ -1,25 +1,36 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  Pressable,
-  ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import WheelPickerExpo from 'react-native-wheel-picker-expo';
 import { lightColors, palette } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
+import Header from './Header';
 import Button from './Button';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import { useTranslation } from '../i18n';
 
-const ROW_HEIGHT = 93;
-const PICKER_HEIGHT = ROW_HEIGHT * 5;
-const PADDING_TOP = ROW_HEIGHT * 2;
+const PICKER_HEIGHT = 280;
+const WHEEL_WIDTH_HOUR = 72;
+const WHEEL_WIDTH_MINUTE = 72;
+const WHEEL_WIDTH_AMPM = 80;
+
+/** Light purple background for selected AM/PM (matches image). */
+const AM_PM_SELECTED_BG = lightColors.background;
+
+const HOUR_ITEMS = Array.from({ length: 12 }, (_, i) => ({
+  label: (i + 1).toString().padStart(2, '0'),
+  value: i + 1,
+}));
+
+const MINUTE_ITEMS = Array.from({ length: 60 }, (_, i) => ({
+  label: i.toString().padStart(2, '0'),
+  value: i,
+}));
+
+const AM_PM_ITEMS = [
+  { label: 'AM', value: 'AM' },
+  { label: 'PM', value: 'PM' },
+];
 
 interface TimePickerModalProps {
   visible: boolean;
@@ -43,185 +54,188 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
   const [minutes, setMinutes] = useState(initialTime.minutes);
   const [am, setAm] = useState(initialTime.am);
 
-  const hoursScrollRef = useRef<ScrollView>(null);
-  const minutesScrollRef = useRef<ScrollView>(null);
-
-  const hoursList = Array.from({ length: 12 }, (_, i) => i + 1);
-  const minutesList = Array.from({ length: 60 }, (_, i) => i);
-
-  const scrollToHour = useCallback((h: number) => {
-    const y = (h - 1) * ROW_HEIGHT;
-    hoursScrollRef.current?.scrollTo({ y, animated: false });
-  }, []);
-
-  const scrollToMinute = useCallback((m: number) => {
-    const y = m * ROW_HEIGHT;
-    minutesScrollRef.current?.scrollTo({ y, animated: false });
-  }, []);
+  const syncFromInitial = useCallback(() => {
+    setHours(initialTime.hours);
+    setMinutes(initialTime.minutes);
+    setAm(initialTime.am);
+  }, [initialTime.hours, initialTime.minutes, initialTime.am]);
 
   useEffect(() => {
     if (visible) {
-      setHours(initialTime.hours);
-      setMinutes(initialTime.minutes);
-      setAm(initialTime.am);
-
-      requestAnimationFrame(() => {
-        scrollToHour(initialTime.hours);
-        scrollToMinute(initialTime.minutes);
-      });
+      syncFromInitial();
     }
-  }, [visible]);
+  }, [visible, syncFromInitial]);
 
-  const getIndex = (offsetY: number) => Math.round(offsetY / ROW_HEIGHT);
+  const selectedHourLabel = hours.toString().padStart(2, '0');
+  const selectedMinuteLabel = minutes.toString().padStart(2, '0');
+  const selectedAmPmLabel = am ? 'AM' : 'PM';
 
-  const handleHoursScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = e.nativeEvent.contentOffset.y;
-    const index = Math.max(0, Math.min(11, getIndex(y)));
+  const pickerKey = `${initialTime.hours}-${initialTime.minutes}-${initialTime.am}`;
 
-    setHours(index + 1);
-
-    hoursScrollRef.current?.scrollTo({
-      y: index * ROW_HEIGHT,
-      animated: true,
-    });
+  /** Deep purple for selected; unselected grays darker when closer, lighter when further. */
+  const renderWheelItem = (
+    selectedLabel: string,
+    selectedColor: string
+  ) => {
+    return (props: { fontSize: number; label: string; textAlign: string }) => {
+      const isSelected = props.label === selectedLabel;
+      const unselectedGray =
+        props.fontSize >= 40
+          ? lightColors.placeholderText 
+          : props.fontSize >= 28
+            ? lightColors.placeholderText
+            : lightColors.placeholderText;
+      return (
+        <Text
+          style={[
+            styles.wheelItemText,
+            {
+              fontSize: isSelected ? 48 : props.fontSize,
+              color: isSelected ? selectedColor : unselectedGray,
+              fontFamily: isSelected
+                ? fontFamilies.urbanistBold
+                : fontFamilies.urbanistMedium,
+            },
+          ]}
+        >
+          {props.label}
+        </Text>
+      );
+    };
   };
 
-  const handleMinutesScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = e.nativeEvent.contentOffset.y;
-    const index = Math.max(0, Math.min(59, getIndex(y)));
-
-    setMinutes(index);
-
-    minutesScrollRef.current?.scrollTo({
-      y: index * ROW_HEIGHT,
-      animated: true,
-    });
+  /** AM/PM: selected has light purple rounded background, smaller bold font; unselected grays. */
+  const renderAmPmItem = (selectedLabel: string, selectedColor: string) => {
+    return (props: { fontSize: number; label: string; textAlign: string }) => {
+      const isSelected = props.label === selectedLabel;
+      const unselectedGray =
+        props.fontSize >= 40 ? lightColors.placeholderText : props.fontSize >= 28 ? lightColors.placeholderText : lightColors.placeholderText;
+      const textNode = (
+        <Text
+          style={[
+            styles.wheelItemText,
+            {
+              fontSize: isSelected ? 18 : props.fontSize,
+              color: isSelected ? selectedColor : unselectedGray,
+              fontFamily: isSelected
+                ? fontFamilies.urbanistBold
+                : fontFamilies.urbanistMedium,
+            },
+          ]}
+        >
+          {props.label}
+        </Text>
+      );
+      if (isSelected) {
+        return (
+          <View style={styles.amPmSelectedWrap}>
+            {textNode}
+          </View>
+        );
+      }
+      return textNode;
+    };
   };
 
   return (
     <Modal visible={visible} transparent animationType="slide">
       <Pressable style={styles.backdrop} onPress={onCancel}>
         <Pressable
-          style={[styles.sheet, { paddingBottom: insets.bottom }]}
+          style={[styles.sheet, { paddingBottom: insets.bottom}]}
           onPress={() => {}}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onCancel} style={styles.backBtn}>
-              <BackArrowIcon width={24} height={24} />
-            </TouchableOpacity>
-
-            <Text style={styles.title}>{title}</Text>
-
-            <View style={{ width: 32 }} />
+          {/* 1. Header */}
+          <View style={styles.headerContainer}>
+          <Header
+            leftIcon={<BackArrowIcon width={24} height={24} />}
+            title={title}
+            rightIcon={<View style={styles.headerSpacer} />}
+            onLeftPress={onCancel}
+          />
           </View>
 
-          {/* Picker */}
-          <View style={styles.pickerContainer}>
-            <View style={styles.selectionHighlight}>
-              <View style={styles.selectionLine} />
-              <View style={styles.selectionLine} />
-            </View>
-
-            <View style={styles.pickerRow}>
-              {/* HOURS */}
-              <View style={styles.columnWrap}>
-                <ScrollView
-                  ref={hoursScrollRef}
-                  showsVerticalScrollIndicator={false}
-                  snapToInterval={ROW_HEIGHT}
-                  decelerationRate="fast"
-                  onMomentumScrollEnd={handleHoursScroll}
-                  contentContainerStyle={{
-                    paddingTop: PADDING_TOP,
-                    paddingBottom: PADDING_TOP,
+          {/* 2. Time picker wheels with top/bottom selection bars */}
+          <View style={styles.pickerSection}>
+            <View style={styles.wheelsRow}>
+              <View style={styles.wheelWrap}>
+                <WheelPickerExpo
+                  key={`hour-${pickerKey}`}
+                  height={PICKER_HEIGHT}
+                  width={WHEEL_WIDTH_HOUR}
+                  initialSelectedIndex={hours - 1}
+                  items={HOUR_ITEMS}
+                  backgroundColor={lightColors.secondaryBackground}
+                  selectedStyle={{
+                    borderColor: lightColors.background,
+                    borderWidth: 2,
+                   
                   }}
-                >
-                  {hoursList.map((h) => (
-                    <View key={h} style={[styles.row, { height: ROW_HEIGHT }]}>
-                      <Text
-                        style={[
-                          styles.rowTextInactive,
-                          hours === h && styles.rowTextSelected,
-                        ]}
-                      >
-                        {h.toString().padStart(2, '0')}
-                      </Text>
-                    </View>
-                  ))}
-                </ScrollView>
+                  onChange={({ item }) => setHours(Number(item.label))}
+                  renderItem={renderWheelItem(
+                    selectedHourLabel,
+                    lightColors.background,
+                    lightColors.placeholderText
+                  )}
+                />
               </View>
 
-              {/* COLON */}
               <View style={styles.colonWrap}>
-                <Text style={styles.colonSelected}>:</Text>
+                <Text style={styles.colon}>:</Text>
               </View>
 
-              {/* MINUTES */}
-              <View style={styles.columnWrap}>
-                <ScrollView
-                  ref={minutesScrollRef}
-                  showsVerticalScrollIndicator={false}
-                  snapToInterval={ROW_HEIGHT}
-                  decelerationRate="fast"
-                  onMomentumScrollEnd={handleMinutesScroll}
-                  contentContainerStyle={{
-                    paddingTop: PADDING_TOP,
-                    paddingBottom: PADDING_TOP,
+              <View style={styles.wheelWrap}>
+                <WheelPickerExpo
+                  key={`minute-${pickerKey}`}
+                  height={PICKER_HEIGHT}
+                  width={WHEEL_WIDTH_MINUTE}
+                  initialSelectedIndex={minutes}
+                  items={MINUTE_ITEMS}
+                  backgroundColor={lightColors.secondaryBackground}
+                  selectedStyle={{
+                    borderColor: lightColors.background,
+                    borderWidth: 2,
                   }}
-                >
-                  {minutesList.map((m) => (
-                    <View key={m} style={[styles.row, { height: ROW_HEIGHT }]}>
-                      <Text
-                        style={[
-                          styles.rowTextInactive,
-                          minutes === m && styles.rowTextSelected,
-                        ]}
-                      >
-                        {m.toString().padStart(2, '0')}
-                      </Text>
-                    </View>
-                  ))}
-                </ScrollView>
+                  onChange={({ item }) => setMinutes(Number(item.label))}
+                  renderItem={renderWheelItem(
+                    selectedMinuteLabel,
+                    lightColors.background,
+                    lightColors.placeholderText
+                  )}
+                />
               </View>
 
-              {/* AM PM */}
-              <View style={styles.amPmWrap}>
-                <TouchableOpacity onPress={() => setAm(true)}>
-                  <Text
-                    style={[
-                      styles.amPmText,
-                      am && styles.amPmSelected,
-                    ]}
-                  >
-                    AM
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => setAm(false)}>
-                  <Text
-                    style={[
-                      styles.amPmText,
-                      !am && styles.amPmSelected,
-                    ]}
-                  >
-                    PM
-                  </Text>
-                </TouchableOpacity>
+              <View style={styles.wheelWrap}>
+                <WheelPickerExpo
+                  key={`ampm-${pickerKey}`}
+                  height={PICKER_HEIGHT}
+                  width={WHEEL_WIDTH_AMPM}
+                  initialSelectedIndex={am ? 0 : 1}
+                  items={AM_PM_ITEMS}
+                  backgroundColor={lightColors.secondaryBackground}
+                  selectedStyle={{
+                    borderColor: lightColors.background,
+                    borderWidth: 2,
+                  }}
+                  onChange={({ index }) => setAm(index === 0)}
+                  renderItem={renderWheelItem(
+                    selectedAmPmLabel,
+                    lightColors.background,
+                    lightColors.placeholderText
+                  )}
+                />
               </View>
             </View>
           </View>
 
-          {/* Buttons */}
+          {/* 3. Buttons */}
           <View style={styles.buttons}>
             <Button
               title={t('cancel')}
               onPress={onCancel}
               style={styles.cancelBtn}
               backgroundColor={lightColors.skipbg}
-              textColor={lightColors.background}
+              textColor={lightColors.accent}
             />
-
             <Button
               title={t('ok')}
               onPress={() => onConfirm(hours, minutes, am)}
@@ -241,118 +255,60 @@ export default TimePickerModal;
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(2,2,2,0.4)',
+    backgroundColor: lightColors.blurBackground,
     justifyContent: 'flex-end',
   },
-
   sheet: {
     backgroundColor: lightColors.secondaryBackground,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 8,
   },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+  headerContainer: {
     borderBottomWidth: 1,
     borderBottomColor: lightColors.border,
-    paddingBottom: 16,
+    paddingBottom: 8,
   },
-
-  backBtn: {
-    padding: 4,
+  headerSpacer: {
+    width: 40,
+    height: 44,
+   
   },
-
-  title: {
-    fontFamily: fontFamilies.urbanistBold,
-    fontSize: 24,
-    color: lightColors.text,
-    flex: 1,
-    textAlign: 'center',
+  pickerSection: {
+    marginTop: 8,
+    marginBottom: 28,
   },
-
-  pickerContainer: {
-    height: PICKER_HEIGHT,
-    marginBottom: 24,
-  },
-
-  selectionHighlight: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: ROW_HEIGHT * 2,
-    height: ROW_HEIGHT,
-    justifyContent: 'space-between',
-    paddingVertical: 2,
-    zIndex: 1,
-  },
-
-  selectionLine: {
-    height: 2,
-    backgroundColor: lightColors.background,
-  },
-
-  pickerRow: {
+  wheelsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: PICKER_HEIGHT,
   },
-
-  columnWrap: {
-    height: PICKER_HEIGHT,
+  wheelWrap: {
     overflow: 'hidden',
-  },
-
-  row: {
+    height: 300,
     justifyContent: 'center',
-    alignItems: 'center',
   },
-
-  rowTextInactive: {
-    fontFamily: fontFamilies.urbanistSemiBold,
-    fontSize: 32,
-    color: palette.gray500,
+  colonWrap: {
+    paddingHorizontal: 6,
+    height: PICKER_HEIGHT,
+    justifyContent: 'center',
   },
-
-  rowTextSelected: {
+  colon: {
     fontFamily: fontFamilies.urbanistBold,
     fontSize: 48,
     color: lightColors.background,
   },
-
-  colonWrap: {
-    paddingHorizontal: 32,
-    height: PICKER_HEIGHT,
-    justifyContent: 'center',
+  wheelItemText: {
+    textAlign: 'center',
   },
-
-  colonSelected: {
-    fontFamily: fontFamilies.urbanistBold,
-    fontSize: 36,
-    color: lightColors.background,
+  amPmSelectedWrap: {
+    backgroundColor: AM_PM_SELECTED_BG,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignSelf: 'center',
   },
-
-  amPmWrap: {
-    justifyContent: 'center',
-    marginLeft: 10,
-  },
-
-  amPmText: {
-    fontSize: 18,
-    color: palette.gray500,
-    marginVertical: 6,
-  },
-
-  amPmSelected: {
-    color: lightColors.background,
-    fontWeight: 'bold',
-  },
-
   buttons: {
     flexDirection: 'row',
     gap: 12,
@@ -360,206 +316,12 @@ const styles = StyleSheet.create({
     borderTopColor: lightColors.border,
     paddingTop: 24,
   },
-
   cancelBtn: {
     flex: 1,
     borderRadius: 100,
   },
-
   okBtn: {
     flex: 1,
     borderRadius: 100,
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import React, { useState } from "react";
-// import {
-//   Modal,
-//   View,
-//   Text,
-//   StyleSheet,
-//   TouchableOpacity,
-//   Dimensions,
-// } from "react-native";
-// import WheelPickerExpo from "react-native-wheel-picker-expo";
-
-// const { width } = Dimensions.get("window");
-
-// interface Props {
-//   visible: boolean;
-//   onClose: () => void;
-//   onConfirm: (time: string) => void;
-// }
-
-// const hours = Array.from({ length: 12 }, (_, i) =>
-//   String(i + 1).padStart(2, "0")
-// );
-
-// const minutes = Array.from({ length: 60 }, (_, i) =>
-//   String(i).padStart(2, "0")
-// );
-
-// const ampm = ["AM", "PM"];
-
-// export default function TimePickerModal({
-//   visible,
-//   onClose,
-//   onConfirm,
-// }: Props) {
-//   const [hourIndex, setHourIndex] = useState(9);
-//   const [minuteIndex, setMinuteIndex] = useState(0);
-//   const [ampmIndex, setAmpmIndex] = useState(0);
-
-//   const handleConfirm = () => {
-//     const time = `${hours[hourIndex]}:${minutes[minuteIndex]} ${ampm[ampmIndex]}`;
-//     onConfirm(time);
-//   };
-
-//   return (
-//     <Modal visible={visible} transparent animationType="slide">
-//       <View style={styles.overlay}>
-//         <View style={styles.container}>
-          
-//           {/* Header */}
-//           <View style={styles.header}>
-//             <Text style={styles.title}>Goals Reminder</Text>
-//           </View>
-
-//           {/* Picker */}
-//           <View style={styles.pickerRow}>
-            
-//             {/* Hours */}
-//             <WheelPickerExpo
-//               height={200}
-//               width={width / 3}
-//               initialSelectedIndex={hourIndex}
-//               items={hours.map((h) => ({ label: h, value: h }))}
-//               onChange={({ index }) => setHourIndex(index)}
-//             />
-
-//             <Text style={styles.colon}>:</Text>
-
-//             {/* Minutes */}
-//             <WheelPickerExpo
-//               height={200}
-//               width={width / 3}
-//               initialSelectedIndex={minuteIndex}
-//               items={minutes.map((m) => ({ label: m, value: m }))}
-//               onChange={({ index }) => setMinuteIndex(index)}
-//             />
-
-//             {/* AM PM */}
-//             <WheelPickerExpo
-//               height={200}
-//               width={80}
-//               initialSelectedIndex={ampmIndex}
-//               items={ampm.map((a) => ({ label: a, value: a }))}
-//               onChange={({ index }) => setAmpmIndex(index)}
-//             />
-//           </View>
-
-//           {/* Buttons */}
-//           <View style={styles.buttonRow}>
-//             <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-//               <Text style={styles.cancelText}>Cancel</Text>
-//             </TouchableOpacity>
-
-//             <TouchableOpacity style={styles.okBtn} onPress={handleConfirm}>
-//               <Text style={styles.okText}>OK</Text>
-//             </TouchableOpacity>
-//           </View>
-
-//         </View>
-//       </View>
-//     </Modal>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   overlay: {
-//     flex: 1,
-//     justifyContent: "flex-end",
-//     backgroundColor: "rgba(0,0,0,0.3)",
-//   },
-
-//   container: {
-//     backgroundColor: "#fff",
-//     borderTopLeftRadius: 25,
-//     borderTopRightRadius: 25,
-//     paddingVertical: 20,
-//   },
-
-//   header: {
-//     alignItems: "center",
-//     marginBottom: 20,
-//   },
-
-//   title: {
-//     fontSize: 22,
-//     fontWeight: "600",
-//   },
-
-//   pickerRow: {
-//     flexDirection: "row",
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-
-//   colon: {
-//     fontSize: 32,
-//     marginHorizontal: 5,
-//     fontWeight: "600",
-//   },
-
-//   buttonRow: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     marginTop: 20,
-//     paddingHorizontal: 20,
-//   },
-
-//   cancelBtn: {
-//     flex: 1,
-//     marginRight: 10,
-//     padding: 14,
-//     borderRadius: 30,
-//     backgroundColor: "#F2E4ED",
-//     alignItems: "center",
-//   },
-
-//   okBtn: {
-//     flex: 1,
-//     marginLeft: 10,
-//     padding: 14,
-//     borderRadius: 30,
-//     backgroundColor: "#A33EA1",
-//     alignItems: "center",
-//   },
-
-//   cancelText: {
-//     color: "#A33EA1",
-//     fontWeight: "600",
-//   },
-
-//   okText: {
-//     color: "#fff",
-//     fontWeight: "600",
-//   },
-// });

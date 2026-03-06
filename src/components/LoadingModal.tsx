@@ -4,18 +4,19 @@ import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import StarSetting from '../assets/svgs/StarSetting';
+import Starts from '../assets/svgs/starts';
 import Textt from './Textt';
 
 const SPLASH_BG = '#09101D';
 const SPINNER_SIZE = 48;
 const MODAL_SPINNER_SIZE = 56;
 
-export type LoadingVariant = 'splash' | 'modal';
+export type LoadingVariant = 'splash' | 'modal' | 'generating';
 
 export interface LoadingModalProps {
   visible: boolean;
   text?: string;
-  /** 'splash' = full-screen dark purple + white spinner (SplashScreen). 'modal' = white box + purple spinner (SignIn/SignUp). */
+  /** 'splash' = full-screen dark purple + white spinner (SplashScreen). 'modal' = white box + purple spinner (SignIn/SignUp). 'generating' = white box + star icon + text (AiGenerating). */
   variant?: LoadingVariant;
 }
 
@@ -118,6 +119,21 @@ export default function LoadingModal({
     );
   }
 
+  if (variant === 'generating') {
+    return (
+      <Modal transparent visible statusBarTranslucent>
+        <View style={styles.overlay}>
+          <View style={styles.box}>
+            <View style={styles.starWrap}>
+              <Starts width={56} height={56} fill={lightColors.background} />
+            </View>
+            <Text style={styles.text}>{text}</Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <Modal transparent visible statusBarTranslucent>
       <View style={styles.overlay}>
@@ -156,6 +172,9 @@ const styles = StyleSheet.create({
   spinnerWrap: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  starWrap: {
+    marginBottom: 4,
   },
   text: {
     marginTop: 16,

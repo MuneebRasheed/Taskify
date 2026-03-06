@@ -14,46 +14,40 @@ import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Header from '../components/Header';
 import SplashLogo from '../assets/svgs/SpashLogo';
-import { useGoals } from '../context/GoalsContext';
+import { useGoals, isItemScheduledForDateWithGoal } from '../context/GoalsContext';
+import type { GoalItem, SavedGoal } from '../context/GoalsContext';
 
 // const CHART_WIDTH = Dimensions.get('window').width - 48;
 
 type Timeframe = 'Weekly' | 'Monthly' | 'Yearly';
 
-// Mock data for Dec 16–22 (matches design)
-const COMPLETION_DATA = [
-  { value: 45, label: '16' },
-  { value: 65, label: '17' },
-  { value: 30, label: '18' },
-  { value: 80, label: '19' },
-  { value: 55, label: '20' },
-  { value: 90, label: '21' },
-  { value: 40, label: '22' },
-];
+/** Monday as first day; weekOffset 0 = current week */
+function getWeekDateStrings(weekOffset: number): { dateStr: string; dayLabel: string }[] {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const thisMonday = new Date(today);
+  thisMonday.setDate(today.getDate() + mondayOffset + weekOffset * 7);
+  const out: { dateStr: string; dayLabel: string }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(thisMonday);
+    d.setDate(thisMonday.getDate() + i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    out.push({ dateStr: `${y}-${m}-${day}`, dayLabel: day });
+  }
+  return out;
+}
 
-const HABITS_DATA = [
-  { value: 3, label: '16' },
-  { value: 5, label: '17' },
-  { value: 2, label: '18' },
-  { value: 6, label: '19' },
-  { value: 4, label: '20' },
-  { value: 7, label: '21' },
-  { value: 3, label: '22' },
-];
-
-const TASKS_DATA = [
-  { value: 2, label: '16' },
-  { value: 4, label: '17' },
-  { value: 1, label: '18' },
-  { value: 5, label: '19' },
-  { value: 3, label: '20' },
-  { value: 6, label: '21' },
-  { value: 2, label: '22' },
-];
+function formatShort(d: Date) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[d.getMonth()]} ${d.getDate()}`;
+}
 
 const ReportScreen = () => {
   const insets = useSafeAreaInsets();
-  const { goals } = useGoals();
+  const { goals, itemCompletions, getCompletionForDate } = useGoals();
   const [timeframe, setTimeframe] = useState<Timeframe>('Weekly');
   const [weekOffset, setWeekOffset] = useState(0);
   const [chartMode, setChartMode] = useState<{ completion: 'bar' | 'line'; habits: 'bar' | 'line'; tasks: 'bar' | 'line' }>({
@@ -67,37 +61,84 @@ const ReportScreen = () => {
     tasks: 1,
   });
 
+  const weekDays = useMemo(() => getWeekDateStrings(weekOffset), [weekOffset]);
+
   const dateRangeLabel = useMemo(() => {
     if (timeframe === 'Weekly') {
-      const start = new Date(2024, 11, 16 + weekOffset * 7);
-      const end = new Date(2024, 11, 22 + weekOffset * 7);
-      return `${formatShort(start)} - ${formatShort(end)}, 2024`;
+      const start = new Date(weekDays[0].dateStr + 'T12:00:00');
+      const end = new Date(weekDays[6].dateStr + 'T12:00:00');
+      return `${formatShort(start)} - ${formatShort(end)}, ${end.getFullYear()}`;
     }
-    if (timeframe === 'Monthly') return 'Dec 2024';
-    return '2024';
-  }, [timeframe, weekOffset]);
+    if (timeframe === 'Monthly') {
+      const d = new Date();
+      return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getFullYear()}`;
+    }
+    return String(new Date().getFullYear());
+  }, [timeframe, weekDays]);
+
+  const completionChartData = useMemo(() => {
+    return weekDays.map(({ dateStr, dayLabel }) => {
+      const { total, completed } = getCompletionForDate(dateStr);
+      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+      return { value: pct, label: dayLabel };
+    });
+  }, [weekDays, getCompletionForDate]);
+
+  const habitsChartData = useMemo(() => {
+    return weekDays.map(({ dateStr, dayLabel }) => {
+      let count = 0;
+      goals.forEach((g: SavedGoal) => {
+        (g.items ?? []).forEach((it: GoalItem) => {
+          if (it.type === 'habit' && isItemScheduledForDateWithGoal(g, it, dateStr)) {
+            if ((itemCompletions[it.id] ?? []).includes(dateStr)) count += 1;
+          }
+        });
+      });
+      return { value: count, label: dayLabel };
+    });
+  }, [weekDays, goals, itemCompletions]);
+
+  const tasksChartData = useMemo(() => {
+    return weekDays.map(({ dateStr, dayLabel }) => {
+      let count = 0;
+      goals.forEach((g: SavedGoal) => {
+        (g.items ?? []).forEach((it: GoalItem) => {
+          if (it.type === 'task' && isItemScheduledForDateWithGoal(g, it, dateStr)) {
+            if ((itemCompletions[it.id] ?? []).includes(dateStr)) count += 1;
+          }
+        });
+      });
+      return { value: count, label: dayLabel };
+    });
+  }, [weekDays, goals, itemCompletions]);
 
   const stats = useMemo(() => {
     const achieved = goals.filter((g) => g.achieved).length;
-    let habitsTotal = 0;
-    let tasksTotal = 0;
-    goals.forEach((g) => {
-      habitsTotal += g.habitsDone ?? 0;
-      tasksTotal += g.tasksDone ?? 0;
+    let habitsInWeek = 0;
+    let tasksInWeek = 0;
+    weekDays.forEach(({ dateStr }) => {
+      goals.forEach((g: SavedGoal) => {
+        (g.items ?? []).forEach((it: GoalItem) => {
+          if (!isItemScheduledForDateWithGoal(g, it, dateStr)) return;
+          const done = (itemCompletions[it.id] ?? []).includes(dateStr);
+          if (it.type === 'habit' && done) habitsInWeek += 1;
+          if (it.type === 'task' && done) tasksInWeek += 1;
+        });
+      });
     });
     return {
       goalsAchieved: achieved,
-      habitsFormed: Math.min(12, habitsTotal + 4),
-      tasksFinished: Math.min(16, tasksTotal + 6),
+      habitsFormed: habitsInWeek,
+      tasksFinished: tasksInWeek,
     };
-  }, [goals]);
+  }, [goals, itemCompletions, weekDays]);
 
   const setChartType = (key: 'completion' | 'habits' | 'tasks', type: 'bar' | 'line') => {
     setChartMode((prev) => ({ ...prev, [key]: type }));
   };
 
   const buildBarData = (
-    base: typeof COMPLETION_DATA,
+    base: { value: number; label: string }[],
     key: 'completion' | 'habits' | 'tasks',
     accentColor: string,
     dimmedColor: string,
@@ -127,7 +168,7 @@ const ReportScreen = () => {
     });
 
   const completionBarData = buildBarData(
-    COMPLETION_DATA,
+    completionChartData,
     'completion',
     lightColors.background,
     '#EBD0EA',
@@ -135,7 +176,7 @@ const ReportScreen = () => {
   );
 
   const habitsBarData = buildBarData(
-    HABITS_DATA,
+    habitsChartData,
     'habits',
     lightColors.habitIndicator,
     '#FFD3E1',
@@ -143,7 +184,7 @@ const ReportScreen = () => {
   );
 
   const tasksBarData = buildBarData(
-    TASKS_DATA,
+    tasksChartData,
     'tasks',
     lightColors.taskIndicator,
     '#CFE7FF',
@@ -267,7 +308,7 @@ const ReportScreen = () => {
                 stripColor="#F3D4F7"
                 focusedDataPointRadius={7}
                 focusedDataPointColor={lightColors.background}
-                data={COMPLETION_DATA.map((item) => ({
+                data={completionChartData.map((item) => ({
                   ...item,
                   focusedDataPointLabelComponent: () => (
                     <View style={styles.activePointBubbleOuter}>
@@ -321,7 +362,7 @@ const ReportScreen = () => {
               />
             ) : (
               <LineChart
-                data={HABITS_DATA.map((item) => ({
+                data={habitsChartData.map((item) => ({
                   ...item,
                   focusedDataPointLabelComponent: () => (
                     <View style={styles.activePointBubbleOuter}>
@@ -397,7 +438,7 @@ const ReportScreen = () => {
               />
             ) : (
               <LineChart
-                data={TASKS_DATA.map((item) => ({
+                data={tasksChartData.map((item) => ({
                   ...item,
                   focusedDataPointLabelComponent: () => (
                     <View style={styles.activePointBubbleOuter}>
@@ -439,11 +480,6 @@ const ReportScreen = () => {
     </View>
   );
 };
-
-function formatShort(d: Date) {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}`;
-}
 
 export default ReportScreen;
 
