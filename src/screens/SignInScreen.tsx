@@ -26,27 +26,36 @@ import {
   import BackArrowIcon from "../assets/svgs/BackArrowIcon";
   import Header from "../components/Header";
   import { useTranslation } from "../i18n";
+import { useAuth } from "../lib/auth/AuthProvider";
+
   const SignInScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+    const { signIn } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [agreed, setAgreed] = useState(false);
     const [loading, setLoading] = useState(false);
     const { t } = useTranslation();
-    const handleSignup = () => {
-        if (!agreed) {
-          alert("Please accept Remember me");
-          return;
-        }
-    
-        setLoading(true);
-    
-        setTimeout(() => {
-          setLoading(false);
-          navigation.navigate('MainTabs');
-        }, 2000);
-      };
+
+    const handleSignIn = async () => {
+      if (!email.trim() || !password) {
+        alert("Please enter email and password");
+        return;
+      }
+
+      setLoading(true);
+      const { data, error } = await signIn(email.trim(), password);
+      setLoading(false);
+
+      if (error) {
+        alert(error.message ?? "Sign in failed");
+        return;
+      }
+      if (data) {
+        navigation.navigate("MainTabs");
+      }
+    };
     return (
       <View
         style={[
@@ -163,7 +172,7 @@ import {
                 variant="primary"
                 textColor={palette.white}
                 borderRadius={24}
-                onPress={handleSignup}
+                onPress={handleSignIn}
               />
               </View>
         <LoadingModal visible={loading} variant="modal" text={t('signingIn')} />

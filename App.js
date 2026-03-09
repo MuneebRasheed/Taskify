@@ -41,6 +41,7 @@ import { getColors } from './utils/colors';
 import RootNavigation from './src/navigations/RootNavigation';
 import { useLanguageStore } from './store/languageStore';
 import { setI18nLocale } from './src/i18n';
+import { AuthProvider } from './src/lib/auth/AuthProvider';
 const fontMap = {
   Poppins_400Regular,
   Poppins_500Medium,
@@ -103,14 +104,16 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
-          <NavigationContainer>
-            <RootNavigation />
-          </NavigationContainer>
-          <StatusBar style="dark" />
-        </View>
-      </SafeAreaProvider>
+      <AuthProvider>
+        <SafeAreaProvider>
+          <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <NavigationContainer>
+              <RootNavigation />
+            </NavigationContainer>
+            <StatusBar style="dark" />
+          </View>
+        </SafeAreaProvider>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }

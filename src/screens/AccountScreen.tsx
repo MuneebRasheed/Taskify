@@ -17,12 +17,41 @@ import LogoutIcon from '../assets/svgs/LogoutIcon';
 import ShieldSetting from '../assets/svgs/ShieldSetting';
 import ActivitySetting from '../assets/svgs/ActivitySetting';
 import LogoutModal from '../components/LogoutModal';
+import { useAuth } from '../lib/auth/AuthProvider';
+
+function displayNameFromUser(user: { email?: string | null; user_metadata?: Record<string, unknown> } | null): string {
+  if (!user) return '';
+  const meta = user.user_metadata;
+  const fromMeta = (meta?.full_name as string) || (meta?.name as string);
+  if (fromMeta) return fromMeta;
+  if (user.email) return user.email.split('@')[0];
+  return 'User';
+}
 
 const AccountScreen = () => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { user, signOut } = useAuth();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+
+  const profileName = displayNameFromUser(user);
+  const profileEmail = user?.email ?? '';
+  const profileStats = {
+    goalsAchieved: 0,
+    habitsFormed: 0,
+    tasksFinished: 0,
+  };
+
+  const handleLogout = async () => {
+    setLogoutModalVisible(false);
+    const { error } = await signOut();
+    if (error) {
+      alert(error.message ?? t('logout') + ' failed');
+      return;
+    }
+    navigation.reset({ index: 0, routes: [{ name: 'WelcomeScreen' }] });
+  };
 
   const handleUpgrade = () => {
     navigation.navigate('UpgradePlanScreen');
@@ -85,13 +114,10 @@ const AccountScreen = () => {
         />
 
         <UserProfileCard
-          name="Andrew Ainsley"
-          email="andrew.ainsley@yourdomain.com"
-          stats={{
-            goalsAchieved: 25,
-            habitsFormed: 104,
-            tasksFinished: 126,
-          }}
+          name={profileName}
+          email={profileEmail}
+          avatarUri={user?.user_metadata?.avatar_url as string | undefined ?? undefined}
+          stats={profileStats}
           onPress={handleProfile}
         />
 
@@ -101,10 +127,7 @@ const AccountScreen = () => {
       <LogoutModal
         visible={logoutModalVisible}
         onCancel={() => setLogoutModalVisible(false)}
-        onConfirm={() => {
-          setLogoutModalVisible(false);
-          // TODO: perform logout (e.g. clear auth, navigate to SignIn)
-        }}
+        onConfirm={handleLogout}
       />
     </View>
   );

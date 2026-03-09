@@ -25,26 +25,39 @@ import EmailIcon from "../assets/svgs/EmailIcon";
 import PasswordIcon from "../assets/svgs/PasswordIcon";
 import CheckIcon from "../assets/svgs/CheckIcon";
 import { useTranslation } from "../i18n";
+import { useAuth } from "../lib/auth/AuthProvider";
+
 const SignUpScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
-  const handleSignup = () => {
+
+  const handleSignup = async () => {
     if (!agreed) {
       alert("Please accept Terms & Conditions");
       return;
     }
+    if (!email.trim() || !password) {
+      alert("Please enter email and password");
+      return;
+    }
 
     setLoading(true);
+    const { data, error } = await signUp(email.trim(), password);
+    setLoading(false);
 
-    setTimeout(() => {
-      setLoading(false);
+    if (error) {
+      alert(error.message ?? "Sign up failed");
+      return;
+    }
+    if (data) {
       navigation.navigate("MainTabs");
-    }, 2000);
+    }
   };
   return (
     <View
