@@ -8,9 +8,25 @@ export type AuthResult = {
 
 export async function signUp(email: string, password: string): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    return { data: null, error };
+  }
+  // Ensure profile row exists with email (in case DB trigger didn't run)
+  if (data?.user) {
+    await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: data.user.id,
+          email: data.user.email ?? undefined,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+  }
   return {
     data: data?.user && data?.session ? { user: data.user, session: data.session } : null,
-    error: error ?? null,
+    error: null,
   };
 }
 

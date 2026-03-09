@@ -47,7 +47,7 @@ export type RootStackParamList = {
   SignInScreen: undefined;
   ForgotPasswordEmail: undefined;
   ForgotPasswordOTP: { email: string };
-  ForgotPasswordNewPassword: { email: string };
+  ForgotPasswordNewPassword: { email: string; otp: string };
   MainTabs: undefined | { screen: keyof MainTabsParamList };
   AiGenetratingScreen: undefined;
   AiMade: {

@@ -16,35 +16,65 @@ import { fontFamilies } from '../theme/typography';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import InputField from '../components/Login';
+import LoadingModal from '../components/LoadingModal';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import PasswordIcon from '../assets/svgs/PasswordIcon';
 import { useTranslation } from "../i18n";
+import { verifyResetOtpAndSetPassword, INVALID_RESPONSE_MSG } from '../lib/api/forgotPasswordApi';
 
 type Route = RouteProp<RootStackParamList, 'ForgotPasswordNewPassword'>;
+
+function getSetPasswordErrorMessage(err: string | undefined, t: (key: string) => string): string {
+  if (!err) return t('somethingWentWrong');
+  if (err === INVALID_RESPONSE_MSG) return t('invalidServerResponse');
+  const lower = err.toLowerCase();
+  if (lower.includes('invalid') && lower.includes('expired')) return t('invalidOrExpiredCode');
+  if (lower.includes('too many')) return t('tooManyRequests');
+  if (lower.includes('at least 6')) return t('passwordMustBeAtLeast6Characters');
+  return err;
+}
 
 const ForgotPasswordNewPasswordScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
+  const email = route.params?.email ?? '';
+  const otp = route.params?.otp ?? '';
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
-  const handleResetPassword = () => {
+
+  const handleResetPassword = async () => {
     const pwd = password.trim();
     const confirm = confirmPassword.trim();
     if (!pwd) {
-      Alert.alert('Error', t('pleaseEnterAPassword'));
+      Alert.alert(t('newPassword'), t('pleaseEnterAPassword'));
       return;
     }
     if (pwd.length < 6) {
-      Alert.alert('Error', t('passwordMustBeAtLeast6Characters'));
+      Alert.alert(t('newPassword'), t('passwordMustBeAtLeast6Characters'));
       return;
     }
     if (pwd !== confirm) {
-      Alert.alert('Error', t('passwordsDoNotMatch'));
+      Alert.alert(t('newPassword'), t('passwordsDoNotMatch'));
       return;
     }
-    navigation.navigate('SignInScreen');
+    if (!email || !otp) {
+      Alert.alert(t('newPassword'), t('invalidOrExpiredCode'));
+      return;
+    }
+    setLoading(true);
+    const result = await verifyResetOtpAndSetPassword(email, otp, pwd);
+    setLoading(false);
+    if (result.success) {
+      Alert.alert(t('newPassword'), t('resetPasswordSuccess'), [
+        { text: t('ok'), onPress: () => navigation.navigate('SignInScreen') },
+      ]);
+    } else {
+      const err = 'error' in result ? result.error : undefined;
+      Alert.alert(t('newPassword'), getSetPasswordErrorMessage(err, t));
+    }
   };
 
   return (
@@ -100,6 +130,7 @@ const ForgotPasswordNewPasswordScreen = () => {
               title={t('resetPassword')}
               variant="primary"
               onPress={handleResetPassword}
+              disabled={loading}
               style={styles.primaryButton}
               backgroundColor={lightColors.accent}
               textColor={lightColors.secondaryBackground}
@@ -108,6 +139,7 @@ const ForgotPasswordNewPasswordScreen = () => {
           </View>
         </KeyboardAvoidingView>
       </ScrollView>
+      <LoadingModal visible={loading} text={t('updatingPassword')} variant="modal" />
     </View>
   );
 };

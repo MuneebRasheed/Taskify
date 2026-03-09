@@ -7,6 +7,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
@@ -16,10 +17,13 @@ import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Header from '../components/Header';
 import Button from '../components/Button';
+import LoadingModal from '../components/LoadingModal';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import { useTranslation } from "../i18n";
-const OTP_LENGTH = 4;
-const OTP_EXPIRY_SECONDS = 30;
+import { verifyResetOtp, requestForgotPasswordOtp, INVALID_RESPONSE_MSG } from '../lib/api/forgotPasswordApi';
+
+const OTP_LENGTH = 6;
+const OTP_EXPIRY_SECONDS = 15 * 60; // 15 minutes, matches backend
 
 type Route = RouteProp<RootStackParamList, 'ForgotPasswordOTP'>;
 
@@ -36,12 +40,26 @@ const ForgotPasswordOTPScreen = () => {
   const email = route.params?.email ?? '';
   const [otp, setOtp] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(OTP_EXPIRY_SECONDS);
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const { t } = useTranslation();
+
+  // Redirect if email is missing (e.g. direct deep link)
+  useEffect(() => {
+    if (!email || !email.trim()) {
+      Alert.alert(
+        t('verification'),
+        t('invalidOrExpiredCode'),
+        [{ text: t('ok'), onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [email, navigation, t]);
+
   useEffect(() => {
     if (secondsLeft <= 0) return;
-    const t = setInterval(() => setSecondsLeft((s) => (s <= 0 ? 0 : s - 1)), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setSecondsLeft((s) => (s <= 0 ? 0 : s - 1)), 1000);
+    return () => clearInterval(timer);
   }, [secondsLeft]);
 
   const handleOtpChange = (value: string) => {
@@ -49,12 +67,46 @@ const ForgotPasswordOTPScreen = () => {
     setOtp(digits);
   };
 
-  const handleVerify = () => {
-    if (otp.length !== OTP_LENGTH) return;
-    navigation.navigate('ForgotPasswordNewPassword', { email });
+  const handleVerify = async () => {
+    if (otp.length !== OTP_LENGTH || !email) return;
+    setLoading(true);
+    const result = await verifyResetOtp(email, otp);
+    setLoading(false);
+    if (result.success) {
+      navigation.navigate('ForgotPasswordNewPassword', { email, otp });
+    } else {
+      const err = 'error' in result ? result.error : t('invalidOrExpiredCode');
+      const message =
+        err === INVALID_RESPONSE_MSG
+          ? t('invalidServerResponse')
+          : err.toLowerCase().includes('too many')
+            ? t('tooManyRequests')
+            : err;
+      Alert.alert(t('verification'), message);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!email.trim() || resendLoading) return;
+    setResendLoading(true);
+    const result = await requestForgotPasswordOtp(email.trim());
+    setResendLoading(false);
+    if (result.success) {
+      setSecondsLeft(OTP_EXPIRY_SECONDS);
+      setOtp('');
+      Alert.alert(t('verification'), t('newCodeSent'));
+    } else {
+      const err = 'error' in result ? result.error : t('somethingWentWrong');
+      const message = err === INVALID_RESPONSE_MSG ? t('invalidServerResponse') : err;
+      Alert.alert(t('verification'), message);
+    }
   };
 
   const focusInput = () => inputRef.current?.focus();
+
+  if (!email?.trim()) {
+    return null;
+  }
 
   return (
     <View
@@ -81,7 +133,7 @@ const ForgotPasswordOTPScreen = () => {
             <Text style={styles.messageBold}>{email}</Text>
             . {t('enterTheCodeBelowToContinue')}
           </Text>
-          <Text style={styles.label}>{t('enter4DigitCode')}</Text>
+          <Text style={styles.label}>{t('enter6DigitCode')}</Text>
 
           <Pressable style={styles.otpRow} onPress={focusInput}>
             <TextInput
@@ -113,6 +165,16 @@ const ForgotPasswordOTPScreen = () => {
             <Text style={styles.timerLabel}>{t('codeExpiresIn')}: </Text>
             <Text style={styles.timerValue}>{formatTimer(secondsLeft)}</Text>
           </View>
+
+          <Pressable
+            onPress={handleResendCode}
+            disabled={resendLoading}
+            style={({ pressed }) => [styles.resendButton, pressed && styles.resendButtonPressed]}
+          >
+            <Text style={[styles.resendText, resendLoading && styles.resendTextDisabled]}>
+              {resendLoading ? t('sendingCode') : t('resendCode')}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={[styles.footer]}>
@@ -120,7 +182,7 @@ const ForgotPasswordOTPScreen = () => {
             title={t('verify')}
             variant="primary"
             onPress={handleVerify}
-            disabled={otp.length !== OTP_LENGTH}
+            disabled={otp.length !== OTP_LENGTH || loading}
             style={styles.verifyButton}
             backgroundColor={lightColors.accent}
             textColor={lightColors.secondaryBackground}
@@ -128,6 +190,7 @@ const ForgotPasswordOTPScreen = () => {
           />
         </View>
       </KeyboardAvoidingView>
+      <LoadingModal visible={loading || resendLoading} text={loading ? t('verifyingCode') : t('sendingCode')} variant="modal" />
     </View>
   );
 };
@@ -182,7 +245,7 @@ const styles = StyleSheet.create({
     fontSize: 1,
   },
   otpBox: {
-    width: 64,
+    width: 48,
     height: 56,
     backgroundColor: lightColors.secondaryBackground,
     borderRadius: 12,
@@ -218,6 +281,23 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 16,
     color: lightColors.accent,
+  },
+  resendButton: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 16,
+  },
+  resendButtonPressed: {
+    opacity: 0.7,
+  },
+  resendText: {
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 16,
+    color: lightColors.accent,
+  },
+  resendTextDisabled: {
+    color: lightColors.subText,
   },
   footer: {
     // paddingHorizontal: 24,
