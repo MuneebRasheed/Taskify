@@ -10,41 +10,82 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     restartNote: 'Changing to/from RTL may require restarting the app.',
     hello: 'Hello',
     welcome: 'Welcome to Taskify',
+    // Welcome screen
+    letsGetStarted: 'Let\'s Get Started!',
+    letsDiveIn: 'Let\'s dive in into your account',
+    privacyPolicy: 'Privacy Policy',
+    termsOfService: 'Terms of Service',
+    continueWithGoogle: 'Continue with Google',
+    continueWithApple: 'Continue with Apple',
+    signUp: 'Sign Up',
+    signIn: 'Sign In',
+
     // Sign up (sample)
     joinTaskify: 'Join Taskify Today ✨',
     createAccount: 'Create your account and unlock a world of productivity.',
+    iAgreeToTaskify: 'I agree to Taskify',
+    termsAndConditions: 'Terms & Conditions',
+    alreadyHaveAnAccount: 'Already have an account? ',
+    signingUp: 'Signing up...',
     splashScreen: {
       title: 'Taskify',
     },
-    
-    
-    coverImage:"Cover image",
-    tapCameraToSelect:"Tap camera to select",
-    
-   
-    selectCoverImage:"Select Cover Image",
-    ok:"OK",
-    cancel:"Cancel",
-    sun:"Sun",
-    mon:"Mon",
-    tue:"Tue",
-    wed:"Wed",
-    thu:"Thu",
-    fri:"Fri",
-    sat:"Sat",
-    
-    selfMadeGoals:"Self-made Goals",
+    // Sign in screen
+    signingIn: 'Signing in...',
+    welcomeBack: 'Welcome Back! 👋',
+    signInToAccessYourGoals: 'Sign in to access your goals, habits, and progress.',
+    password: 'Password',
+    rememberMe: 'Remember me',
+    or: 'or',
+    forgotPassword: 'Forgot Password',
+
+    // Forgot password email screen
+    enterYourEmail: 'Enter your email',
+    weWillSendYouAOneTimeCodeToResetYourPassword: "We'll send you a one-time code to reset your password.",
+    email: 'Email',
+    sendOTP: 'Send OTP',
+    // Forgot password new password screen
+    pleaseEnterAPassword: 'Please enter a password.',
+    passwordMustBeAtLeast6Characters: 'Password must be at least 6 characters.',
+    passwordsDoNotMatch: 'Passwords do not match.',
+    newPassword: 'New Password',
+    createNewPassword: 'Create new password',
+    enterYourNewPasswordAndConfirmItBelow: 'Enter your new password and confirm it below.',
+    confirmPassword: 'Confirm Password',
+    resetPassword: 'Reset Password',
+    coverImage: "Cover image",
+    tapCameraToSelect: "Tap camera to select",
+    // Forgot password OTP screen
+    verification: 'Verification',
+    weHaveSentAVerificationCodeTo: 'We\'ve sent a verification code to',
+    enter4DigitCode: 'Enter 4-digit code',
+    enterTheCodeBelowToContinue: 'Enter the code below to continue.',
+    codeExpiresIn: 'Code expires in',
+    verify: 'Verify',
+
+
+
+
+
+    selectCoverImage: "Select Cover Image",
+    ok: "OK",
+    cancel: "Cancel",
+    sun: "Sun",
+    mon: "Mon",
+    tue: "Tue",
+    wed: "Wed",
+    thu: "Thu",
+    fri: "Fri",
+    sat: "Sat",
+
+    selfMadeGoals: "Self-made Goals",
     createGoal: 'Create Goal',
-    addGoalsTitle:"Add a Goals Title",
-    noDueDate:"No due date",
-    setReminder:"Set reminder",
-    setUpGoals:"Set up Goals",
-    addGoals:"Add Goals",
-    myGoals:"My Goals",
-    ongoing:"Ongoing",
-    achieved:"Achieved",
-    noOngoingGoals:"No ongoing goals yet.",
-    noAchievedGoals:"No achieved goals yet.",
+    addGoalsTitle: "Add a Goals Title",
+    noDueDate: "No due date",
+    setReminder: "Set reminder",
+    setUpGoals: "Set up Goals",
+    addGoals: "Add Goals",
+    myGoals: "My Goals",
     current: 'Current',
     achieveGoals: 'Achieve Goals',
     unachieveGoal: 'Unachieve Goal',
@@ -62,63 +103,78 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     deleteGoalConfirmLine2: 'This action cannot be undone.',
     achieveGoalsConfirmMessage: 'You have habits and tasks that have not been completed.',
     achieveGoalsConfirmQuestion: 'Are you sure you want to achieve this goal?',
-    addYourNote:"Add your note...",
+    addYourNote: "Add your note...",
     // Home screen
     home: 'Home',
     todayYouHave: 'Today you have',
     youHaveNoGoals: 'You have no goals',
     addAGoalByClickingThePlusButtonBelow: 'Add a goal by clicking the (+) button below.',
     // AiGeneratingScreen and AiMadeScreen
-    typeInYourGoalAndWeWillPrepareAPlanForYou:"Type in your goal and we'll prepare a plan for you...",
-    generate:"Generate",
-    aiMadeGoals:"AI-made Goals",
-    continue:"Continue",
-    regenerate:"Regenerate",
-    note:"Note",
-    addTask:"Add Task",
-    task:"Task",
-    addHabit:"Add Habit",
-    habit:"Habit",
+    typeInYourGoalAndWeWillPrepareAPlanForYou: "Type in your goal and we'll prepare a plan for you...",
+    generate: "Generate",
+    aiMadeGoals: "AI-made Goals",
+    continue: "Continue",
+    regenerate: "Regenerate",
+    note: "Note",
+    addTask: "Add Task",
+    task: "Task",
+    addHabit: "Add Habit",
+    habit: "Habit",
     // Self Made Goals Screen
-    createGoals:"Create Goals",
-  // AddTaskScreen
-  editHabit:"Edit Habit",
-    editTask:"Edit Task",
-    updateHabit:"Update Habit",
-    updateTask:"Update Task",
-    repeatDays:"Repeat Days",
-    goalsDueDate:"Goals Due Date",
-    habitReminder:"Habit Reminder",
-    taskReminder:"Task Reminder",
+    createGoals: "Create Goals",
+    // AddTaskScreen
+    editHabit: "Edit Habit",
+    editTask: "Edit Task",
+    updateHabit: "Update Habit",
+    updateTask: "Update Task",
+    repeatDays: "Repeat Days",
+    goalsDueDate: "Goals Due Date",
+    habitReminder: "Habit Reminder",
+    taskReminder: "Task Reminder",
 
     //Tracker Card
-    noReminder:"No reminder",
+    noReminder: "No reminder",
     formedOn: 'Formed on',
 
     // Goal Planner
-    goalsTitle:"Goals Title",
-    goalsReminder:"Goals Reminder",
-    saveGoals:"Save Goals",
+    goalsTitle: "Goals Title",
+    goalsReminder: "Goals Reminder",
+    saveGoals: "Save Goals",
 
     // Category Modal
-    category:"Category",
-    
+    category: "Category",
+
 
     // Loading Modal
-    generatePlanning:"Generating plan...",
+    generatePlanning: "Generating plan...",
 
     // PreMadeGoalDetailScreen and PreMadeGoalsScreen
-    goalNotFound:"Goal not found",
-    goBack:"Go back",
-    preMadeGoals:"Pre-made Goals",
+    goalNotFound: "Goal not found",
+    goBack: "Go back",
+    preMadeGoals: "Pre-made Goals",
 
-// Explore Search Screen
-    searchGoals:"Search goals...",
-    recentSearches:"Recent Searches",
-    noGoalsFound:"No Goals Found",
-    pleaseTrySearchingUsingAlternativeKeywords:"Please try searching using alternative keywords.",
-// Explore Screen
-    explore:"Explore",    
+    // Explore Search Screen
+    searchGoals: "Search goals...",
+    recentSearches: "Recent Searches",
+    noGoalsFound: "No Goals Found",
+    pleaseTrySearchingUsingAlternativeKeywords: "Please try searching using alternative keywords.",
+    // Explore Screen
+    explore: "Explore",
+
+    // Report Screen
+    report: 'Report',
+    goalsAchieved: 'Goals achieved',
+    formedHabits: 'Formed habits',
+    finishedTasks: 'Finished tasks',
+    completionRate: 'Completion Rate',
+    habitsCompleted: 'Habits Completed',
+    tasksCompleted: 'Tasks Completed',
+
+    // My Goals Screen
+    ongoing: 'Ongoing',
+    achieved: "Achieved",
+    noOngoingGoals: "No ongoing goals yet.",
+    noAchievedGoals: "No achieved goals yet.",
     // Goal Achieved Screen
     okSure: 'OK, Sure!',
 

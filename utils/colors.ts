@@ -49,7 +49,6 @@ export const palette = {
     surface: palette.gray200,
     surfaceBorder: palette.gray300,
     border: '#EEEEEE',
-    primary: palette.primary,
     exclamatoryBg: '#E0F2FE',
   } as const;
   
@@ -64,7 +63,6 @@ export const palette = {
     surface: '#2C2C2E',
     surfaceBorder: palette.gray700,
     border: palette.gray700,
-    primary: palette.primary,
     exclamatoryBg: '#1E3A5F',
   } as const;
   
@@ -76,7 +74,6 @@ export const palette = {
     surface: string;
     surfaceBorder: string;
     border: string;
-    primary: string;
     exclamatoryBg: string;
     subText: string;
     inputBackground: string;

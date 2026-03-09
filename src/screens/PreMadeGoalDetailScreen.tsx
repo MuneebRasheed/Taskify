@@ -239,19 +239,24 @@ const PreMadeGoalDetailScreen = () => {
 
   const handleAchieve = () => {
     if (mode !== 'myGoal' || !myGoal) return;
+    if (myGoal.achieved) {
+      markAchieved(myGoal.id, false);
+      navigation.goBack();
+      return;
+    }
     if (hasIncompleteItems) {
       setAchieveModalVisible(true);
     } else {
-      markAchieved(myGoal.id, !myGoal.achieved);
-      navigation.goBack();
+      markAchieved(myGoal.id, true);
+      navigation.navigate('GoalAchievedScreen', { goalId: myGoal.id });
     }
   };
 
   const handleAchieveConfirm = () => {
     if (mode !== 'myGoal' || !myGoal) return;
-    markAchieved(myGoal.id, !myGoal.achieved);
+    markAchieved(myGoal.id, true);
     setAchieveModalVisible(false);
-    navigation.navigate('GoalAchievedScreen');
+    navigation.navigate('GoalAchievedScreen', { goalId: myGoal.id });
   };
 
   const handleDeletePress = () => {

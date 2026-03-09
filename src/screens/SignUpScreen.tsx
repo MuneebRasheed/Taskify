@@ -24,7 +24,7 @@ import Header from "../components/Header";
 import EmailIcon from "../assets/svgs/EmailIcon";
 import PasswordIcon from "../assets/svgs/PasswordIcon";
 import CheckIcon from "../assets/svgs/CheckIcon";
-
+import { useTranslation } from "../i18n";
 const SignUpScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -32,6 +32,7 @@ const SignUpScreen = () => {
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
   const handleSignup = () => {
     if (!agreed) {
       alert("Please accept Terms & Conditions");
@@ -110,17 +111,17 @@ const SignUpScreen = () => {
                 )}
               </TouchableOpacity>
               <Text style={styles.termsText}>
-                I agree to Taskify{" "}
+                {t('iAgreeToTaskify')} {" "}
                 <Text style={styles.link} onPress={() => {}}>
-                  Terms & Conditions.
+                  {t('termsAndConditions')}
                 </Text>
               </Text>
             </View>
 
             <View style={styles.signInRow}>
-              <Text style={styles.signInPrompt}>Already have an account? </Text>
+              <Text style={styles.signInPrompt}>{t('alreadyHaveAnAccount')} </Text>
               <Pressable onPress={() => navigation.navigate("WelcomeScreen")}>
-                <Text style={styles.link}>Sign in</Text>
+                <Text style={styles.link}>{t('signIn')}</Text>
               </Pressable>
             </View>
 
@@ -135,7 +136,7 @@ const SignUpScreen = () => {
             <View style={styles.socialButtonsWrap}>
             <Button
               style={styles.socialButton}
-              title="Continue with Google"
+              title={t('continueWithGoogle')}
               variant="outline"
               backgroundColor={palette.white}
               borderColor={palette.gray300}
@@ -147,7 +148,7 @@ const SignUpScreen = () => {
             />
             <Button
               style={styles.socialButton}
-              title="Continue with Apple"
+              title={t('continueWithApple')}
               variant="outline"
               backgroundColor={palette.white}
               borderColor={palette.gray300}
@@ -167,14 +168,14 @@ const SignUpScreen = () => {
       <View style={styles.signUpButtonWrap}>
         <Button
                 style={styles.signUpButton}
-                title="Sign Up"
+                title={t('signUp')}
                 variant="primary"
                 textColor={palette.white}
                 borderRadius={24}
                 onPress={handleSignup}
               />
               </View>
-      <LoadingModal visible={loading} variant="modal" text="Sign up..." />
+      <LoadingModal visible={loading} variant="modal" text={t('signingUp')} />
     </View>
   );
 };

@@ -55,7 +55,29 @@ const SelectCoverImageScreen = () => {
         selectedCoverIndex: selectedIndex,
       });
     } else {
-      navigation.navigate('GoalPlanner', { selectedCoverIndex: selectedIndex });
+      const {
+        goalTitle,
+        fromSelfMade,
+        initialHabits,
+        initialTasks,
+        initialNote,
+        initialCategory,
+        initialDueDate,
+        initialReminderDate,
+        initialReminderTime,
+      } = route.params ?? {};
+      navigation.navigate('GoalPlanner', {
+        selectedCoverIndex: selectedIndex,
+        ...(goalTitle !== undefined && { goalTitle }),
+        ...(fromSelfMade !== undefined && { fromSelfMade }),
+        ...(initialHabits !== undefined && { initialHabits }),
+        ...(initialTasks !== undefined && { initialTasks }),
+        ...(initialNote !== undefined && { initialNote }),
+        ...(initialCategory !== undefined && { initialCategory }),
+        ...(initialDueDate !== undefined && { initialDueDate }),
+        ...(initialReminderDate !== undefined && { initialReminderDate }),
+        ...(initialReminderTime !== undefined && { initialReminderTime }),
+      });
     }
   };
 

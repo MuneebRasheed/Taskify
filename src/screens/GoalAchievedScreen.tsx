@@ -4,10 +4,13 @@ import {
   Text,
   StyleSheet,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import Button from '../components/Button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigations/RootNavigation';
+import { useGoals } from '../context/GoalsContext';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import { useTranslation } from '../i18n';
@@ -72,9 +75,20 @@ function ConfettiLayer() {
 const GoalAchievedScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, 'GoalAchievedScreen'>>();
+  const { markAchieved } = useGoals();
   const { t } = useTranslation();
+  const goalId = route.params?.goalId;
+
   const handleOkSure = () => {
     navigation.navigate('MainTabs' as never, { screen: 'My Goals', params: { initialFilter: 'achieved' } } as never);
+  };
+
+  const handleUnachieve = () => {
+    if (goalId) {
+      markAchieved(goalId, false);
+      navigation.goBack();
+    }
   };
 
   return (
@@ -90,12 +104,19 @@ const GoalAchievedScreen = () => {
         </Text>
       </View>
 
-      <Button
-        title={t('okSure') as string}
-        onPress={handleOkSure}
-        variant="primary"
-        style={styles.okButton}
-      />
+      {/* <View style={styles.buttonRow}>
+        {goalId != null && (
+          <TouchableOpacity style={styles.unachieveBtn} onPress={handleUnachieve} activeOpacity={0.8}>
+            <Text style={styles.unachieveBtnText}>{t('unachieveGoal') as string}</Text>
+          </TouchableOpacity>
+        )} */}
+        <Button
+          title={t('okSure') as string}
+          onPress={handleOkSure}
+          variant="primary"
+          style={styles.okButton}
+        />
+      {/* </View> */}
     </View>
   );
 };
@@ -134,6 +155,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 28,
     // paddingHorizontal: 24,
+  },
+  buttonRow: {
+    paddingHorizontal: 0,
+    marginBottom: 24,
+    gap: 12,
+    alignItems: 'stretch',
+  },
+  unachieveBtn: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: lightColors.accent,
+    backgroundColor: 'transparent',
+  },
+  unachieveBtnText: {
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 16,
+    color: lightColors.accent,
   },
   okButton: {
     marginBottom: 24,

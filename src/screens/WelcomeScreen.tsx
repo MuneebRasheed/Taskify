@@ -8,10 +8,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Button from "../components/Button";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../navigations/RootNavigation";
+import Textt from "../components/Textt";
+import { useTranslation } from "../i18n";
 
 const WelcomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { t } = useTranslation();
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground }]}>
 
@@ -20,14 +23,14 @@ const WelcomeScreen = () => {
     </View>
 
     <View style={styles.heading}>  
-        <Text style={[styles.title, { fontFamily: fontFamilies.urbanistBold }]}>Let's Get Started!</Text>
-        <Text style={styles.description}>Let's dive in into your account</Text>
+        <Textt i18nKey="letsGetStarted" style={[styles.title, { fontFamily: fontFamilies.urbanistBold }]} />
+        <Textt i18nKey="letsDiveIn" style={styles.description} />
     </View>
 
     <View style={styles.formContainer}>
       <Button
         style={styles.button}
-        title="Continue with Google"
+        title={t('continueWithGoogle')}
         variant="outline"
         backgroundColor={palette.white}
         borderColor={palette.gray300}
@@ -39,7 +42,7 @@ const WelcomeScreen = () => {
       />
       <Button
         style={styles.button}
-        title="Continue with Apple"
+        title={t('continueWithApple')}
         variant="outline"
         backgroundColor={palette.white}
         borderColor={palette.gray300}
@@ -53,14 +56,14 @@ const WelcomeScreen = () => {
 
     <View style={styles.footer}>
       <Button
-        title="Sign Up"
+        title={t('signUp')}
         variant="primary"
         textColor={palette.white}
         borderRadius={1000}
         onPress={() => {navigation.navigate('SignUpScreen' as never as keyof RootStackParamList)}}
       />
       <Button
-        title="Sign In"
+        title={t('signIn')}
         variant="primary"
         borderRadius={1000}
         backgroundColor={lightColors.skipbg}
@@ -71,15 +74,15 @@ const WelcomeScreen = () => {
     </View>
 
     <View style={styles.footerText}>
-      <Text style={styles.footerT1}>Privacy Policy</Text>
-      <Text style={styles.footerT2}>.</Text>
-      <Text style={styles.footerT3}>Terms of Service</Text>
+      <Textt i18nKey="privacyPolicy" style={styles.footerT1} />
+      <Text style={styles.footerT2} >.</Text>
+      <Textt i18nKey="termsOfService" style={styles.footerT3} />
     </View>
     <TouchableOpacity
       style={styles.testLink}
       onPress={() => navigation.navigate('LanguageTestScreen' as never)}
     >
-      <Text style={styles.testLinkText}>Test language (EN / AR RTL)</Text>
+      <Textt i18nKey="testLanguage" style={styles.testLinkText} />
     </TouchableOpacity>
     </View>
   );
@@ -141,7 +144,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         gap: 12,
-        marginTop: 60,
+        marginTop: 50,
       },
       footerT1: {
         fontFamily: fontFamilies.urbanist,

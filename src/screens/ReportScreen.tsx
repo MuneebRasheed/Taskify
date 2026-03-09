@@ -10,14 +10,20 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BarChart, LineChart } from 'react-native-gifted-charts';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import LeftArrowIcon from '../assets/svgs/LeftArrowIcon';
+import RightArrowIcon from '../assets/svgs/RightArrowIcon';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Header from '../components/Header';
 import SplashLogo from '../assets/svgs/SpashLogo';
 import { useGoals, isItemScheduledForDateWithGoal } from '../context/GoalsContext';
 import type { GoalItem, SavedGoal } from '../context/GoalsContext';
+import { t, useTranslation } from '../i18n';
 
-// const CHART_WIDTH = Dimensions.get('window').width - 48;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const HORIZONTAL_PADDING = 20 * 2;
+const CHART_SIDE_MARGIN = 28;
+const CHART_WIDTH = Math.max(280, SCREEN_WIDTH - HORIZONTAL_PADDING - CHART_SIDE_MARGIN);
 
 type Timeframe = 'Weekly' | 'Monthly' | 'Yearly';
 
@@ -60,7 +66,7 @@ const ReportScreen = () => {
     habits: 1,
     tasks: 1,
   });
-
+  const { t } = useTranslation();
   const weekDays = useMemo(() => getWeekDateStrings(weekOffset), [weekOffset]);
 
   const dateRangeLabel = useMemo(() => {
@@ -155,8 +161,10 @@ const ReportScreen = () => {
           ? function (this: { value: number; label?: string }) {
               const value = this.value;
               const labelText = showPercent ? `${value}%` : String(value);
+              // When bar is at 100%, the label above the bar gets clipped; pull it down so it stays visible
+              const isMaxValue = showPercent && value === 100;
               return (
-                <View style={styles.activeBarBubbleOuter}>
+                <View style={[styles.activeBarBubbleOuter, isMaxValue && styles.activeBarBubbleOuterAtMax]}>
                   <View style={styles.activeBarBubbleInner}>
                     <Text style={styles.activeBarBubbleText}>{labelText}</Text>
                   </View>
@@ -195,7 +203,7 @@ const ReportScreen = () => {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header
         leftIcon={<SplashLogo fill={lightColors.background} width={28} height={28} />}
-        title="Report"
+        title={t('report')}
         titleStyle={styles.headerTitle}
         rightIcon={<Ionicons name="ellipsis-vertical" size={24} color={lightColors.smallText} />}
         style={styles.header}
@@ -218,11 +226,11 @@ const ReportScreen = () => {
       {/* Date navigator */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={() => setWeekOffset((o) => o - 1)} style={styles.dateArrow} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="chevron-back" size={24} color={lightColors.text} />
+          <LeftArrowIcon width={24} height={24} />
         </TouchableOpacity>
         <Text style={styles.dateText}>{dateRangeLabel}</Text>
         <TouchableOpacity onPress={() => setWeekOffset((o) => o + 1)} style={styles.dateArrow} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="chevron-forward" size={24} color={lightColors.text} />
+          <RightArrowIcon width={24} height={24} />
         </TouchableOpacity>
       </View>
 
@@ -235,22 +243,22 @@ const ReportScreen = () => {
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.goalsAchieved}</Text>
-            <Text style={styles.statLabel}>Goals achieved</Text>
+            <Text style={styles.statLabel}>{t('goalsAchieved')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.habitsFormed}</Text>
-            <Text style={styles.statLabel}>Formed habits</Text>
+            <Text style={styles.statLabel}>{t('formedHabits')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.tasksFinished}</Text>
-            <Text style={styles.statLabel}>Finished tasks</Text>
+            <Text style={styles.statLabel}>{t('finishedTasks')}</Text>
           </View>
         </View>
 
         {/* Completion Rate */}
         <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Completion Rate</Text>
+            <Text style={styles.chartTitle}>{t('completionRate')}</Text>
             <View style={styles.chartToggles}>
               <TouchableOpacity
                 onPress={() => setChartType('completion', 'bar')}
@@ -277,7 +285,7 @@ const ReportScreen = () => {
                 noOfSections={5}
                 maxValue={100}
                 height={200}
-                width={350}
+                width={CHART_WIDTH}
                 yAxisLabelSuffix="%"
                 onPress={(_, index) =>
                   setActiveIndex((prev) => ({ ...prev, completion: index }))
@@ -299,7 +307,7 @@ const ReportScreen = () => {
                 noOfSections={5}
                 maxValue={100}
                 height={220}
-                width={350}
+                width={CHART_WIDTH}
                 yAxisLabelSuffix="%"
                 focusEnabled
                 showDataPointOnFocus
@@ -328,7 +336,7 @@ const ReportScreen = () => {
         {/* Habits Completed */}
         <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Habits Completed</Text>
+            <Text style={styles.chartTitle}>{t('habitsCompleted')}</Text>
             <View style={styles.chartToggles}>
               <TouchableOpacity
                 onPress={() => setChartType('habits', 'bar')}
@@ -355,7 +363,7 @@ const ReportScreen = () => {
                 noOfSections={7}
                 maxValue={7}
                 height={200}
-                width={350}
+                width={CHART_WIDTH}
                 onPress={(_, index) =>
                   setActiveIndex((prev) => ({ ...prev, habits: index }))
                 }
@@ -388,7 +396,7 @@ const ReportScreen = () => {
                 noOfSections={7}
                 maxValue={7}
                 height={220}
-                width={350}
+                width={CHART_WIDTH}
                 focusEnabled
                 showDataPointOnFocus
                 showStripOnFocus
@@ -404,7 +412,7 @@ const ReportScreen = () => {
         {/* Tasks Completed */}
         <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Tasks Completed</Text>
+            <Text style={styles.chartTitle}>{t('tasksCompleted')}</Text>
             <View style={styles.chartToggles}>
               <TouchableOpacity
                 onPress={() => setChartType('tasks', 'bar')}
@@ -431,7 +439,7 @@ const ReportScreen = () => {
                 noOfSections={7}
                 maxValue={7}
                 height={200}
-                width={350}
+                width={CHART_WIDTH}
                 onPress={(_, index) =>
                   setActiveIndex((prev) => ({ ...prev, tasks: index }))
                 }
@@ -464,7 +472,7 @@ const ReportScreen = () => {
                 noOfSections={7}
                 maxValue={7}
                 height={220}
-                width={350}
+                width={CHART_WIDTH}
                 focusEnabled
                 showDataPointOnFocus
                 showStripOnFocus
@@ -576,7 +584,7 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.secondaryBackground,
     height: 350,
     borderRadius: 8,
-    overflow: 'visible',
+    overflow: 'hidden',
   },
   chartHeader: {
     flexDirection: 'row',
@@ -613,10 +621,10 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.taskIndicator,
   },
   chartWrap: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingTop: 36,
-    // height: 300,
-    overflow: 'visible',
+    overflow: 'hidden',
+    width: '100%',
   },
   axisLabel: {
     fontFamily: fontFamilies.urbanistMedium,
@@ -629,6 +637,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
+  },
+  /** When bar is at 100%, top label is clipped; shift it down so it stays visible */
+  activeBarBubbleOuterAtMax: {
+    transform: [{ translateY: 28 }],
   },
   activeBarBubbleInner: {
     minWidth: 44,

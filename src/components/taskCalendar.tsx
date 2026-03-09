@@ -7,7 +7,7 @@ import {
   FlatList,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
+    import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
 import ArrowUpward from '../assets/svgs/ArrowUpward';
 import LeftArrowIcon from '../assets/svgs/LeftArrowIcon';
 import RightArrowIcon from '../assets/svgs/RightArrowIcon';
@@ -43,7 +43,7 @@ const TaskCalendar: React.FC<CalendarProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [internalSelectedDate, setInternalSelectedDate] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const isControlled = controlledSelectedDate !== undefined;
   const selectedDate = isControlled ? (controlledSelectedDate ?? null) : internalSelectedDate;
@@ -114,11 +114,16 @@ const TaskCalendar: React.FC<CalendarProps> = ({
     return days;
   }, [year, month]);
 
-  /* ---------------- CURRENT WEEK DATA ---------------- */
+  /* ---------------- WEEK VIEW DATA (week containing selected date, or current week) ---------------- */
 
-  const currentWeek = useMemo(() => {
-    const today = new Date();
-    const start = new Date(today);
+  const displayWeek = useMemo(() => {
+    const refDate = selectedDate
+      ? (() => {
+          const [y, m, d] = selectedDate.split('-').map(Number);
+          return new Date(y, m - 1, d);
+        })()
+      : new Date();
+    const start = new Date(refDate);
     const day = (start.getDay() + 6) % 7;
     start.setDate(start.getDate() - day);
 
@@ -130,7 +135,7 @@ const TaskCalendar: React.FC<CalendarProps> = ({
       ),
       isCurrentMonth: true,
     }));
-  }, []);
+  }, [selectedDate]);
 
   /* ---------------- RENDER DAY ---------------- */
 
@@ -279,7 +284,7 @@ const TaskCalendar: React.FC<CalendarProps> = ({
 
       {/* Calendar Grid */}
       <FlatList
-        data={isExpanded ? fullMonth : currentWeek}
+        data={isExpanded ? fullMonth : displayWeek}
         renderItem={renderDay}
         keyExtractor={(item) => formatDate(item.date)}
         numColumns={7}

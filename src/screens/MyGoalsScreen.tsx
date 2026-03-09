@@ -22,6 +22,7 @@ import GoalCard from '../components/GoalCard';
 import FlowButton from '../components/FlowButton';
 import type { MainTabsParamList } from '../navigations/MainTabs';
 
+
 const BOTTOM_NAV_HEIGHT = 0;
 const FAB_SIZE = 56;
 

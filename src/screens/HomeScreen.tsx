@@ -43,8 +43,9 @@ const HomeScreen = () => {
     [getCompletionForDate, selectedDate]
   );
 
+  /** Only ongoing (non-achieved) goals with items show on home; achieved goals are hidden */
   const goalsWithItems = useMemo(
-    () => goals.filter((g) => g.items && g.items.length > 0) as SavedGoal[],
+    () => goals.filter((g) => !g.achieved && g.items && g.items.length > 0) as SavedGoal[],
     [goals]
   );
 

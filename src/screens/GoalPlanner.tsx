@@ -106,7 +106,18 @@ const GoalPlannerScreen = () => {
       : null;
 
   const openSelectCover = () => {
-    navigation.navigate('SelectCoverImage', { selectedIndex: coverIndex });
+    navigation.navigate('SelectCoverImage', {
+      selectedIndex: coverIndex,
+      goalTitle: goalTitleText,
+      fromSelfMade,
+      initialHabits: habits,
+      initialTasks: tasks,
+      initialNote: note,
+      initialCategory: category ?? undefined,
+      initialDueDate: dueDate != null ? dueDate.getTime() : null,
+      initialReminderDate: reminderDate != null ? reminderDate.getTime() : null,
+      initialReminderTime: reminderTime ?? undefined,
+    });
   };
 
   const handleCategoryConfirm = () => {

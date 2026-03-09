@@ -5,6 +5,9 @@ import Onboarding from '../screens/Onboarding';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SignInScreen from '../screens/SignInScreen';
+import ForgotPasswordEmailScreen from '../screens/ForgotPasswordEmailScreen';
+import ForgotPasswordOTPScreen from '../screens/ForgotPasswordOTPScreen';
+import ForgotPasswordNewPasswordScreen from '../screens/ForgotPasswordNewPasswordScreen';
 import MainTabs, { type MainTabsParamList } from './MainTabs';
 import AiGenetratingScreen from '../screens/AiGenetratingScreen';
 import LanguageTestScreen from '../screens/LanguageTestScreen';
@@ -42,6 +45,9 @@ export type RootStackParamList = {
   WelcomeScreen: undefined;
   SignUpScreen: undefined;
   SignInScreen: undefined;
+  ForgotPasswordEmail: undefined;
+  ForgotPasswordOTP: { email: string };
+  ForgotPasswordNewPassword: { email: string };
   MainTabs: undefined | { screen: keyof MainTabsParamList };
   AiGenetratingScreen: undefined;
   AiMade: {
@@ -85,11 +91,25 @@ export type RootStackParamList = {
     note: string;
     fromSelfMade: boolean;
   };
-  SelectCoverImage: { selectedIndex?: number; returnToScreen?: 'AiMade'; prompt?: string };
+  SelectCoverImage: {
+    selectedIndex?: number;
+    returnToScreen?: 'AiMade';
+    prompt?: string;
+    /** Pass-through from GoalPlanner when changing cover so state is preserved on return */
+    goalTitle?: string;
+    fromSelfMade?: boolean;
+    initialHabits?: TrackerCardItem[];
+    initialTasks?: TrackerCardItem[];
+    initialNote?: string;
+    initialCategory?: string;
+    initialDueDate?: number | null;
+    initialReminderDate?: number | null;
+    initialReminderTime?: { hours: number; minutes: number; am: boolean } | null;
+  };
   PreMadeGoals: undefined;
   HabitDetailScreen: { goalId: string; itemId: string };
   TaskDetailScreen: { goalId: string; itemId: string };
-  GoalAchievedScreen: undefined;
+  GoalAchievedScreen: { goalId?: string };
   PreMadeGoalDetail: {
     goalId?: string;
     myGoalId?: string;
@@ -160,6 +180,21 @@ function RootNavigation() {
       <Stack.Screen
         name="SignInScreen"
         component={SignInScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ForgotPasswordEmail"
+        component={ForgotPasswordEmailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ForgotPasswordOTP"
+        component={ForgotPasswordOTPScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ForgotPasswordNewPassword"
+        component={ForgotPasswordNewPasswordScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

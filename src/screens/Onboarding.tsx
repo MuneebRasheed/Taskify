@@ -9,12 +9,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { getColors, lightColors, palette } from '../../utils/colors';
+import { getColors, lightColors} from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from '../components/Button';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
+import Textt from '../components/Textt';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
 
@@ -79,7 +80,7 @@ const Onboarding = () => {
         styles.container,
         {
           paddingBottom: insets.bottom,
-          backgroundColor: palette.white,
+          backgroundColor: lightColors.secondaryBackground,
         },
       ]}
     >
@@ -100,20 +101,20 @@ const Onboarding = () => {
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.title, { color: palette.black, fontFamily: fontFamilies.urbanistBold }]}>
-          <Text style={[styles.title, { color: palette.black, fontFamily: fontFamilies.urbanistBold }]}>
+        <Text style={[styles.title, { color: lightColors.text, fontFamily: fontFamilies.urbanistBold }]}>
+          <Text style={[styles.title, { color: lightColors.text, fontFamily: fontFamilies.urbanistBold }]}>
           {slide.titleBold ? (
             [
-              <Text key="1" style={[styles.title, { color: palette.black, fontFamily: fontFamilies.urbanistBold }]}>{slide.title}</Text>,
+              <Text key="1" style={[styles.title, { color: lightColors.text, fontFamily: fontFamilies.urbanistBold }]}>{slide.title}</Text>,
               <Text key="2" style={[styles.title, styles.titleBold]}>{slide.titleBold}</Text>,
-              <Text key="3" style={[styles.title, { color: palette.black, fontFamily: fontFamilies.urbanistBold }]}>{slide.titleAfterBold}</Text>,
+              <Text key="3" style={[styles.title, { color: lightColors.text, fontFamily: fontFamilies.urbanistBold }]}>{slide.titleAfterBold}</Text>,
             ]
           ) : (
             slide.title
           )}
         </Text>
         </Text>
-        <Text style={[styles.description, { color: colors.subText, fontFamily: fontFamilies.urbanist }]}>
+        <Text style={[styles.description, { color: lightColors.subText, fontFamily: fontFamilies.urbanist }]}>
           {slide.description}
         </Text>
 

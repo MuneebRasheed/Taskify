@@ -227,7 +227,7 @@ const MyGoalDetailScreen = () => {
       {/* Bottom buttons */}
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          title={goal.achieved ? (t('unachieveGoal') as string) : (t('achieveGoals') as string)}
+          title={(t('achieveGoals') as string)}
           variant="primary"
           onPress={handleAchieve}
           style={styles.primaryBtn}

@@ -25,7 +25,7 @@ import {
   import CheckIcon from "../assets/svgs/CheckIcon";
   import BackArrowIcon from "../assets/svgs/BackArrowIcon";
   import Header from "../components/Header";
-  
+  import { useTranslation } from "../i18n";
   const SignInScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -33,7 +33,7 @@ import {
     const [password, setPassword] = useState("");
     const [agreed, setAgreed] = useState(false);
     const [loading, setLoading] = useState(false);
-
+    const { t } = useTranslation();
     const handleSignup = () => {
         if (!agreed) {
           alert("Please accept Remember me");
@@ -57,7 +57,7 @@ import {
         <Header
           leftIcon={<BackArrowIcon width={24} height={24} />}
           onLeftPress={() => navigation.goBack()}
-          title=""
+          title={<View />}
           rightIcon={<View />}
           style={styles.header}
         />
@@ -74,74 +74,64 @@ import {
             {/* Title */}
             <View style={styles.titleBlock}>
               <Text style={styles.title}>
-              Welcome Back! 👋
+              {t('welcomeBack')} 👋
               </Text>
               <Text style={styles.subtitle}>
-              Sign in to access your goals, habits, and progress.
+              {t('signInToAccessYourGoals')}
               </Text>
             </View>
   
             {/* Form */}
             <View style={styles.form}>
               <InputField
-                label="Email"
+                label={t('email')}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Email"
+                placeholder={t('email')}
                 leftIcon={<EmailIcon width={20} height={20} />}
               />
               <InputField
-                label="Password"
+                label={t('password')}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Password"
+                placeholder={t('password')}
                 secureTextEntry
                 showPasswordToggle
                 leftIcon={<PasswordIcon width={20} height={20} />}
               />
   
               {/* Terms */}
-              <View style={styles.termsRow} >
-                <View style={{flexDirection: 'row', alignItems: 'center'  }}>
-
-
-                
-               
-                <TouchableOpacity
-                  onPress={() => setAgreed((a) => !a)}
-                  style={[styles.checkbox, agreed && styles.checkboxChecked]}
-                  activeOpacity={0.8}
-                >
-                  {agreed && (
-                    <CheckIcon width={12} height={9} fill={lightColors.secondaryBackground}/>
-                  )}
-                </TouchableOpacity>
-               
-                <Text style={styles.termsText}>
-                  Remember me{" "}</Text> </View>
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                
-                 
-                  <Pressable onPress={() => {}}>
-                    <Text style={styles.link}>Forgot password?</Text>
+              <View style={styles.termsRow}>
+                <View style={styles.termsLeft}>
+                  <TouchableOpacity
+                    onPress={() => setAgreed((a) => !a)}
+                    style={[styles.checkbox, agreed && styles.checkboxChecked]}
+                    activeOpacity={0.8}
+                  >
+                    {agreed && (
+                      <CheckIcon width={12} height={9} fill={lightColors.secondaryBackground} />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.termsText}>{t('rememberMe')}</Text>
+                </View>
+                <View style={styles.termsRight}>
+                  <Pressable onPress={() => navigation.navigate('ForgotPasswordEmail')}>
+                    <Text style={styles.link}>{t('forgotPassword')}</Text>
                   </Pressable>
-                  </View>
-                
+                </View>
               </View>
-  
-              
-  
+
               {/* Separator */}
               <View style={styles.separatorWrap}>
                 <View style={styles.separatorLine} />
-                <Text style={styles.separatorText}>or</Text>
+                <Text style={styles.separatorText}>{t('or')}</Text>
                 <View style={styles.separatorLine} />
               </View>
   
               {/* Social buttons */}
               <Button
                 style={styles.socialButton}
-                title="Continue with Google"
+                title={t('continueWithGoogle')}
                 variant="outline"
                 backgroundColor={palette.white}
                 borderColor={palette.gray300}
@@ -153,7 +143,7 @@ import {
               />
               <Button
                 style={styles.socialButton}
-                title="Continue with Apple"
+                title={t('continueWithApple')}
                 variant="outline"
                 backgroundColor={palette.white}
                 borderColor={palette.gray300}
@@ -163,26 +153,20 @@ import {
                 leftIcon={<AppleIcon width={24} height={24} />}
                 onPress={() => {}}
               />
-  
-              {/* Primary CTA */}
-             
-           
-           
-            
               </View>
           </KeyboardAvoidingView>
         </ScrollView>
-         <View style={styles.signInButtonWrap}>
+        <View style={styles.signInButtonWrap}>
         <Button
                 style={styles.signInButton}
-                title="Sign In"
+                title={t('signIn')}
                 variant="primary"
                 textColor={palette.white}
                 borderRadius={24}
                 onPress={handleSignup}
               />
               </View>
-        <LoadingModal visible={loading} variant="modal" text="Sign in..." />
+        <LoadingModal visible={loading} variant="modal" text={t('signingIn')} />
       </View>
     );
   };
@@ -233,6 +217,14 @@ import {
       alignItems: "center",
       justifyContent: "space-between",
       marginTop: 24,
+    },
+    termsLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    termsRight: {
+      flexDirection: "row",
+      alignItems: "center",
     },
     checkbox: {
       width: 24,
