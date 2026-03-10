@@ -66,12 +66,12 @@ const Onboarding = () => {
     if (currentIndex < totalSlides - 1) {
       setCurrentIndex((i) => i + 1);
     } else {
-      navigation.navigate('WelcomeScreen' as never as keyof RootStackParamList);
+      navigation.navigate('WelcomeScreen');
     }
   };
 
   const handleSkip = () => {
-    navigation.navigate('ThemeTest');
+    navigation.navigate('WelcomeScreen');
   };
 
   return (

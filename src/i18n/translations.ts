@@ -32,7 +32,7 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     },
     // Sign in screen
     signingIn: 'Signing in...',
-    welcomeBack: 'Welcome Back! 👋',
+    welcomeBack: 'Welcome Back!',
     signInToAccessYourGoals: 'Sign in to access your goals, habits, and progress.',
     password: 'Password',
     rememberMe: 'Remember me',
