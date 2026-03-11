@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useAuth } from '../lib/auth/AuthProvider';
+import * as goalsApi from '../lib/api/goalsApi';
 
 export type GoalSource = 'aiMade' | 'preMade' | 'selfMade';
 
@@ -137,9 +139,49 @@ function generateItemId() {
   return `item-${Date.now()}-${nextItemId++}`;
 }
 
+function apiGoalToSavedGoal(g: goalsApi.GoalsPayload['goals'][0]): SavedGoal {
+  return {
+    id: g.id,
+    title: g.title,
+    coverIndex: g.coverIndex,
+    source: g.source as GoalSource,
+    habitsTotal: g.habitsTotal,
+    habitsDone: g.habitsDone,
+    tasksTotal: g.tasksTotal,
+    tasksDone: g.tasksDone,
+    dueDate: g.dueDate != null ? new Date(g.dueDate) : null,
+    achieved: g.achieved,
+    createdAt: g.createdAt,
+    items: (g.items ?? []).map((it) => ({
+      id: it.id,
+      type: it.type as GoalItemType,
+      title: it.title,
+      reminderTime: it.reminderTime,
+      note: it.note,
+      selectedDays: it.selectedDays,
+      dueDate: it.dueDate,
+      paused: it.paused ?? false,
+    })),
+  };
+}
+
 export function GoalsProvider({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth();
   const [goals, setGoals] = useState<SavedGoal[]>([]);
   const [itemCompletions, setItemCompletions] = useState<ItemCompletions>({});
+
+  useEffect(() => {
+    const token = session?.access_token;
+    if (!token) return;
+    goalsApi.fetchGoals(token).then(({ data, error }) => {
+      if (error) {
+        console.warn('[GoalsContext] fetchGoals failed:', error);
+        return;
+      }
+      if (data?.goals) setGoals(data.goals.map(apiGoalToSavedGoal));
+      if (data?.itemCompletions) setItemCompletions(data.itemCompletions);
+    });
+  }, [session?.access_token]);
 
   const addGoal = useCallback((goal: Omit<SavedGoal, 'id' | 'createdAt'>): string => {
     const id = generateId();
@@ -147,17 +189,52 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       ...it,
       id: it.id || generateItemId(),
     }));
-    setGoals((prev) => [
-      ...prev,
-      {
-        ...goal,
-        id,
-        createdAt: Date.now(),
-        items: items ?? [],
-      },
-    ]);
+    const newGoal: SavedGoal = {
+      ...goal,
+      id,
+      createdAt: Date.now(),
+      items: items ?? [],
+    };
+    setGoals((prev) => [...prev, newGoal]);
+
+    const token = session?.access_token;
+    if (token) {
+      const dueDate =
+        goal.dueDate != null
+          ? goal.dueDate instanceof Date
+            ? goal.dueDate.getTime()
+            : (goal.dueDate as unknown as number)
+          : null;
+      goalsApi
+        .createGoal(token, {
+          id,
+          title: newGoal.title,
+          coverIndex: newGoal.coverIndex,
+          source: newGoal.source,
+          habitsTotal: newGoal.habitsTotal,
+          habitsDone: newGoal.habitsDone,
+          tasksTotal: newGoal.tasksTotal,
+          tasksDone: newGoal.tasksDone,
+          dueDate,
+          achieved: newGoal.achieved,
+          createdAt: newGoal.createdAt,
+          items: (newGoal.items ?? []).map((it) => ({
+            id: it.id,
+            type: it.type,
+            title: it.title,
+            reminderTime: it.reminderTime,
+            note: it.note,
+            selectedDays: it.selectedDays,
+            dueDate: it.dueDate,
+            paused: it.paused,
+          })),
+        })
+        .then(({ error }) => {
+          if (error) console.warn('[GoalsContext] createGoal failed:', error);
+        });
+    }
     return id;
-  }, []);
+  }, [session?.access_token]);
 
   const markAchieved = useCallback((id: string, achieved: boolean) => {
     setGoals((prev) =>
