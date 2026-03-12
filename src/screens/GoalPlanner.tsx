@@ -25,11 +25,13 @@ import CalendarModal from '../components/CalendarModal';
 import TimePickerModal from '../components/TimePickerModal';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import ImageIcon from '../assets/svgs/ImageIcon';
+import { useGoalStore } from '../../store/goalStore';
 import Textt from '../components/Textt';
 import {  useTranslation } from '../i18n';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
 import type { TrackerCardItem } from '../components/TrackerCard';
+
 
 
 type GoalPlannerRouteProp = RouteProp<RootStackParamList, 'GoalPlanner'>;
@@ -55,7 +57,6 @@ const GoalPlannerScreen = () => {
   const route = useRoute<GoalPlannerRouteProp>();
 
   const goalTitle = route.params?.goalTitle ?? '';
-  const returnedCoverIndex = route.params?.selectedCoverIndex;
   const fromSelfMade = route.params?.fromSelfMade ?? false;
   const initialHabits = route.params?.initialHabits ?? [];
   const initialTasks = route.params?.initialTasks ?? [];
@@ -66,7 +67,10 @@ const GoalPlannerScreen = () => {
   const initialReminderTime = route.params?.initialReminderTime;
 
   const [goalTitleText, setGoalTitleText] = useState(goalTitle);
-  const [coverIndex, setCoverIndex] = useState(route.params?.selectedCoverIndex ?? 0);
+  const coverIndex = useGoalStore((s) => s.selectedCoverIndex);
+
+  console.log("coverIndex..... goal",coverIndex);    
+  const setSelectedCoverIndex = useGoalStore((s) => s.setSelectedCoverIndex);
   const [category, setCategory] = useState<GoalCategory | null>(
     initialCategory != null ? (initialCategory as GoalCategory) : null
   );
@@ -93,21 +97,22 @@ const GoalPlannerScreen = () => {
     if (goalTitle) setGoalTitleText(goalTitle);
   }, [goalTitle]);
 
+  // Sync store from route when entering from AiMade (or elsewhere) with a selected cover
   useEffect(() => {
-    if (returnedCoverIndex !== undefined) {
-      setCoverIndex(returnedCoverIndex);
-      navigation.setParams({ selectedCoverIndex: undefined });
+    if (route.params?.selectedCoverIndex !== undefined) {
+      setSelectedCoverIndex(route.params.selectedCoverIndex);
     }
-  }, [returnedCoverIndex, navigation]);
+  }, [route.params?.selectedCoverIndex]);
 
   const coverSource: ImageSourcePropType | null =
     COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
       ? COVER_IMAGE_SOURCES[coverIndex]
       : null;
 
+
+      
   const openSelectCover = () => {
     navigation.navigate('SelectCoverImage', {
-      selectedIndex: coverIndex,
       goalTitle: goalTitleText,
       fromSelfMade,
       initialHabits: habits,
@@ -144,6 +149,7 @@ const GoalPlannerScreen = () => {
       : '';
 
   const handleSaveGoal = () => {
+    
     navigation.navigate('FinalScreen', {
       goalTitle: goalTitleText.trim() || t('goalsTitle'),
       coverIndex,
@@ -160,6 +166,34 @@ const GoalPlannerScreen = () => {
   const { t } = useTranslation();
   // const [showPicker, setShowPicker] = useState(false);
   return (
+
+
+<View>
+
+{/* Part 1: Cover image + back arrow + change cover icon */}
+<View style={styles.coverWrap}>
+          {coverSource ? (
+            <Image source={coverSource} style={styles.coverImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.coverPlaceholder}>
+              <Text style={styles.coverPlaceholderText}>Cover image</Text>
+              <Text style={styles.coverPlaceholderHint}>Tap camera to select</Text>
+            </View>
+          )}
+          
+          <TouchableOpacity
+            style={styles.changeCoverBtn}
+            onPress={openSelectCover}
+            activeOpacity={0.8}
+          >
+            <ImageIcon width={43} height={43} />
+          </TouchableOpacity>
+        </View>
+
+
+
+
+
     <View
       style={[
         styles.container,
@@ -184,25 +218,7 @@ const GoalPlannerScreen = () => {
               <BackArrowIcon width={24} height={24} />
             </View>
           </TouchableOpacity>
-        {/* Part 1: Cover image + back arrow + change cover icon */}
-        <View style={styles.coverWrap}>
-          {coverSource ? (
-            <Image source={coverSource} style={styles.coverImage} resizeMode="cover" />
-          ) : (
-            <View style={styles.coverPlaceholder}>
-              <Text style={styles.coverPlaceholderText}>Cover image</Text>
-              <Text style={styles.coverPlaceholderHint}>Tap camera to select</Text>
-            </View>
-          )}
-          
-          <TouchableOpacity
-            style={styles.changeCoverBtn}
-            onPress={openSelectCover}
-            activeOpacity={0.8}
-          >
-            <ImageIcon width={43} height={43} />
-          </TouchableOpacity>
-        </View>
+        
 
         {/* Part 2: Goals Title (with edit icon when from self-made flow) */}
         <View style={styles.section}>
@@ -364,6 +380,7 @@ const GoalPlannerScreen = () => {
         onCancel={() => setReminderTimeModalVisible(false)}
         onConfirm={handleReminderTimeConfirm}
       />
+    </View>
     </View>
   );
 };

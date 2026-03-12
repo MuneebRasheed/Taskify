@@ -27,6 +27,8 @@ import CrossIcon from '../assets/svgs/CrossIcon';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
 import CalendarModal from '../components/CalendarModal';
 import TimePickerModal from '../components/TimePickerModal';
+import { useGoalStore } from '../../store/goalStore';
+
 type AddTaskRouteProp = RouteProp<RootStackParamList, 'AddTaskScreen'>;
 type AddTaskNavProp = NativeStackNavigationProp<RootStackParamList, 'AddTaskScreen'>;
 
@@ -108,12 +110,31 @@ const AddTaskScreen = () => {
     return { ...base, dueDate: dueDate.trim() || undefined };
   };
 
+  const addDraftHabit = useGoalStore((s) => s.addDraftHabit);
+  const addDraftTask = useGoalStore((s) => s.addDraftTask);
+  const updateDraftHabit = useGoalStore((s) => s.updateDraftHabit);
+  const updateDraftTask = useGoalStore((s) => s.updateDraftTask);
+
   const aiMadeParams = (extra: object) =>
     source === 'selfMade' ? { source: 'selfMade' as const, prompt: prompt ?? '', ...extra } : { prompt: prompt ?? '', ...extra };
 
   const handleSubmit = () => {
     Keyboard.dismiss();
     const item = buildItem();
+    if (source === 'selfMade') {
+      if (isEdit) {
+        if (isHabit && editHabitIndex !== undefined) {
+          updateDraftHabit(editHabitIndex, item);
+        } else if (!isHabit && editTaskIndex !== undefined) {
+          updateDraftTask(editTaskIndex, item);
+        }
+      } else {
+        if (isHabit) addDraftHabit(item);
+        else addDraftTask(item);
+      }
+      navigation.goBack();
+      return;
+    }
     if (isEdit) {
       if (isHabit && editHabitIndex !== undefined) {
         navigation.navigate('AiMade', aiMadeParams({ updatedHabit: { index: editHabitIndex, item } }));

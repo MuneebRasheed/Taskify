@@ -172,14 +172,23 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const token = session?.access_token;
+    console.log('[GoalsContext] fetch effect — hasSession:', !!session, 'hasToken:', !!token);
     if (!token) return;
+    console.log('[GoalsContext] calling fetchGoals...');
     goalsApi.fetchGoals(token).then(({ data, error }) => {
+      console.log('[GoalsContext] fetchGoals response — error:', error ?? null, 'goalsCount:', data?.goals?.length ?? 0, 'itemCompletionsKeys:', data?.itemCompletions ? Object.keys(data.itemCompletions).length : 0);
       if (error) {
         console.warn('[GoalsContext] fetchGoals failed:', error);
         return;
       }
-      if (data?.goals) setGoals(data.goals.map(apiGoalToSavedGoal));
-      if (data?.itemCompletions) setItemCompletions(data.itemCompletions);
+      if (data?.goals) {
+        setGoals(data.goals.map(apiGoalToSavedGoal));
+        console.log('[GoalsContext] setGoals:', data.goals.length, 'goals');
+      }
+      if (data?.itemCompletions) {
+        setItemCompletions(data.itemCompletions);
+        console.log('[GoalsContext] setItemCompletions:', Object.keys(data.itemCompletions).length, 'items');
+      }
     });
   }, [session?.access_token]);
 
@@ -230,64 +239,144 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
           })),
         })
         .then(({ error }) => {
-          if (error) console.warn('[GoalsContext] createGoal failed:', error);
+          if (error) {
+            console.warn('[GoalsContext] createGoal failed:', error);
+            setGoals((prev) => prev.filter((g) => g.id !== id));
+          }
         });
     }
     return id;
   }, [session?.access_token]);
 
-  const markAchieved = useCallback((id: string, achieved: boolean) => {
-    setGoals((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, achieved } : g))
-    );
-  }, []);
+  const markAchieved = useCallback(
+    (id: string, achieved: boolean) => {
+      setGoals((prev) => {
+        const next = prev.map((g) => (g.id === id ? { ...g, achieved } : g));
+        const token = session?.access_token;
+        if (token) {
+          goalsApi.updateGoal(token, id, { achieved }).then(({ error }) => {
+            if (error) {
+              console.warn('[GoalsContext] updateGoal (markAchieved) failed:', error);
+              setGoals((current) =>
+                current.map((g) => (g.id === id ? { ...g, achieved: !achieved } : g))
+              );
+            }
+          });
+        }
+        return next;
+      });
+    },
+    [session?.access_token]
+  );
 
-  const updateProgress = useCallback((id: string, habitsDone: number, tasksDone: number) => {
-    setGoals((prev) =>
-      prev.map((g) =>
-        g.id === id ? { ...g, habitsDone, tasksDone } : g
-      )
-    );
-  }, []);
+  const updateProgress = useCallback(
+    (id: string, habitsDone: number, tasksDone: number) => {
+      setGoals((prev) => {
+        const prevGoal = prev.find((g) => g.id === id);
+        const next = prev.map((g) =>
+          g.id === id ? { ...g, habitsDone, tasksDone } : g
+        );
+        const token = session?.access_token;
+        if (token) {
+          goalsApi.updateGoal(token, id, { habitsDone, tasksDone }).then(({ error }) => {
+            if (error && prevGoal) {
+              console.warn('[GoalsContext] updateGoal (updateProgress) failed:', error);
+              setGoals((current) =>
+                current.map((g) =>
+                  g.id === id
+                    ? { ...g, habitsDone: prevGoal.habitsDone, tasksDone: prevGoal.tasksDone }
+                    : g
+                )
+              );
+            }
+          });
+        }
+        return next;
+      });
+    },
+    [session?.access_token]
+  );
 
-  const removeGoal = useCallback((id: string) => {
-    const goalToRemove = goals.find((g) => g.id === id);
-    const itemIds = new Set((goalToRemove?.items ?? []).map((it) => it.id));
-    setGoals((prev) => prev.filter((g) => g.id !== id));
-    setItemCompletions((prev) => {
-      if (itemIds.size === 0) return prev;
-      const next = { ...prev };
-      itemIds.forEach((itemId) => delete next[itemId]);
-      return next;
-    });
-  }, [goals]);
-
-  const toggleItemCompletion = useCallback((itemId: string, dateStr: string, goalId?: string) => {
-    setItemCompletions((prev) => {
-      const list = prev[itemId] ?? [];
-      const has = list.includes(dateStr);
-      const nextList = has ? list.filter((d) => d !== dateStr) : [...list, dateStr];
-      const next: ItemCompletions =
-        nextList.length === 0 && has
-          ? (() => {
-              const { [itemId]: _, ...rest } = prev;
-              return rest;
-            })()
-          : { ...prev, [itemId]: nextList };
-      if (goalId) {
-        setGoals((gPrev) => {
-          const goal = gPrev.find((g) => g.id === goalId);
-          if (!goal?.items) return gPrev;
-          const habitIds = goal.items.filter((i) => i.type === 'habit').map((i) => i.id);
-          const taskIds = goal.items.filter((i) => i.type === 'task').map((i) => i.id);
-          const habitsDone = habitIds.filter((id) => (next[id] ?? []).includes(dateStr)).length;
-          const tasksDone = taskIds.filter((id) => (next[id] ?? []).includes(dateStr)).length;
-          return gPrev.map((g) => (g.id === goalId ? { ...g, habitsDone, tasksDone } : g));
+  const removeGoal = useCallback(
+    (id: string) => {
+      const goalToRemove = goals.find((g) => g.id === id);
+      const itemIds = new Set((goalToRemove?.items ?? []).map((it) => it.id));
+      const prevCompletionsForGoal: ItemCompletions = {};
+      itemIds.forEach((itemId) => {
+        if (itemCompletions[itemId]) prevCompletionsForGoal[itemId] = itemCompletions[itemId];
+      });
+      setGoals((prev) => prev.filter((g) => g.id !== id));
+      setItemCompletions((prev) => {
+        if (itemIds.size === 0) return prev;
+        const next = { ...prev };
+        itemIds.forEach((itemId) => delete next[itemId]);
+        return next;
+      });
+      const token = session?.access_token;
+      if (token) {
+        goalsApi.deleteGoal(token, id).then(({ error }) => {
+          if (error && goalToRemove) {
+            console.warn('[GoalsContext] deleteGoal failed:', error);
+            setGoals((prev) => [...prev, goalToRemove]);
+            setItemCompletions((prev) => ({ ...prev, ...prevCompletionsForGoal }));
+          }
         });
       }
-      return next;
-    });
-  }, []);
+    },
+    [goals, itemCompletions, session?.access_token]
+  );
+
+  const toggleItemCompletion = useCallback(
+    (itemId: string, dateStr: string, goalId?: string) => {
+      const token = session?.access_token;
+      setItemCompletions((prev) => {
+        const list = prev[itemId] ?? [];
+        const has = list.includes(dateStr);
+        const nextList = has ? list.filter((d) => d !== dateStr) : [...list, dateStr];
+        const next: ItemCompletions =
+          nextList.length === 0 && has
+            ? (() => {
+                const { [itemId]: _, ...rest } = prev;
+                return rest;
+              })()
+            : { ...prev, [itemId]: nextList };
+        if (goalId) {
+          setGoals((gPrev) => {
+            const goal = gPrev.find((g) => g.id === goalId);
+            if (!goal?.items) return gPrev;
+            const habitIds = goal.items.filter((i) => i.type === 'habit').map((i) => i.id);
+            const taskIds = goal.items.filter((i) => i.type === 'task').map((i) => i.id);
+            const habitsDone = habitIds.filter((id) => (next[id] ?? []).includes(dateStr)).length;
+            const tasksDone = taskIds.filter((id) => (next[id] ?? []).includes(dateStr)).length;
+            return gPrev.map((g) => (g.id === goalId ? { ...g, habitsDone, tasksDone } : g));
+          });
+        }
+        if (token) {
+          const prevSnapshot = prev;
+          goalsApi.toggleCompletion(token, itemId, dateStr).then(({ error }) => {
+            if (error) {
+              console.warn('[GoalsContext] toggleCompletion failed:', error);
+              setItemCompletions(() => prevSnapshot);
+              if (goalId) {
+                setGoals((gPrev) =>
+                  gPrev.map((g) => {
+                    if (g.id !== goalId || !g.items) return g;
+                    const habitIds = g.items.filter((i) => i.type === 'habit').map((i) => i.id);
+                    const taskIds = g.items.filter((i) => i.type === 'task').map((i) => i.id);
+                    const habitsDone = habitIds.filter((id) => (prevSnapshot[id] ?? []).includes(dateStr)).length;
+                    const tasksDone = taskIds.filter((id) => (prevSnapshot[id] ?? []).includes(dateStr)).length;
+                    return { ...g, habitsDone, tasksDone };
+                  })
+                );
+              }
+            }
+          });
+        }
+        return next;
+      });
+    },
+    [session?.access_token]
+  );
 
   const removeGoalItem = useCallback((goalId: string, itemId: string) => {
     const goal = goals.find((g) => g.id === goalId);

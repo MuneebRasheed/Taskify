@@ -11,6 +11,7 @@ import {
   Keyboard,
   ScrollView,
 } from 'react-native';
+import { Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
@@ -22,21 +23,108 @@ import Header from '../components/Header';
 import Starts from '../assets/svgs/starts';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import { t, useTranslation } from '../i18n';
+import { useAuth } from '../lib/auth/AuthProvider';
+import type { TrackerCardItem } from '../components/TrackerCard';
+// import { generateGoalPlan } from '../lib/api/aiGoalPlanApi';
 
 const AiGenetratingScreen = () => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { session } = useAuth();
   const [goal, setGoal] = useState('');
   const [generating, setGenerating] = useState(false);
 
-  const handleGenerate = () => {
-    Keyboard.dismiss();
-    setGenerating(true);
-    setTimeout(() => {
-      setGenerating(false);
-      navigation.navigate('AiMade', { prompt: goal.trim() || undefined });
-    }, 2500);
+  const handleGenerate = async () => {
+    // Keyboard.dismiss();
+    // const trimmed = goal.trim();
+    // if (!trimmed) return;
+
+    // const accessToken = session?.access_token;
+    // if (!accessToken) {
+    //   Alert.alert(
+    //     t('error') ?? 'Error',
+    //     t('pleaseSignInToUseAi') ??
+    //       'Please sign in again to use AI-generated goals.'
+    //   );
+    //   return;
+    // }
+
+    // try {
+    //   setGenerating(true);
+    //   const { data, error } = await generateGoalPlan(
+    //     accessToken,
+    //     trimmed
+    //   );
+
+    //   if (error || !data) {
+    //     Alert.alert(
+    //       t('somethingWentWrong') ?? 'Something went wrong',
+    //       error ??
+    //         (t('failedToGeneratePlan') ??
+    //           'Failed to generate a plan. Please try again.')
+    //     );
+    //     return;
+    //   }
+
+    //   const habits: TrackerCardItem[] = (data.habits ?? []).map(
+    //     (h) => ({
+    //       title: String(h.title ?? '').trim() || 'Habit',
+    //       selectedDays: Array.isArray(h.selectedDays)
+    //         ? h.selectedDays
+    //             .map((d) => Number(d))
+    //             .filter(
+    //               (d) =>
+    //                 Number.isInteger(d) && d >= 0 && d <= 6
+    //             )
+    //         : [],
+    //       reminderTime:
+    //         h.reminderTime != null &&
+    //         String(h.reminderTime).trim().length > 0
+    //           ? String(h.reminderTime).trim()
+    //           : undefined,
+    //       variant: 'habit',
+    //     })
+    //   );
+
+    //   const tasks: TrackerCardItem[] = (data.tasks ?? []).map(
+    //     (tItem) => ({
+    //       title: String(tItem.title ?? '').trim() || 'Task',
+    //       selectedDays: [],
+    //       dueDate:
+    //         tItem.dueDate != null &&
+    //         String(tItem.dueDate).trim().length > 0
+    //           ? String(tItem.dueDate).trim()
+    //           : undefined,
+    //       reminderTime:
+    //         tItem.reminderTime != null &&
+    //         String(tItem.reminderTime).trim().length > 0
+    //           ? String(tItem.reminderTime).trim()
+    //           : undefined,
+    //       variant: 'task',
+    //     })
+    //   );
+
+    //   const displayTitle =
+    //     (data.goalTitle && data.goalTitle.trim()) || trimmed;
+
+    //   navigation.navigate('AiMade', {
+    //     prompt: displayTitle,
+    //     initialGoalTitle: displayTitle,
+    //     initialHabits: habits,
+    //     initialTasks: tasks,
+    //     initialNote: data.note,
+    //   });
+    // } catch (err) {
+    //   console.error('[AiGenetratingScreen] generate error', err);
+    //   Alert.alert(
+    //     t('somethingWentWrong') ?? 'Something went wrong',
+    //     t('failedToGeneratePlan') ??
+    //       'Failed to generate a plan. Please try again.'
+    //   );
+    // } finally {
+    //   setGenerating(false);
+    // }
   };
 
   return (

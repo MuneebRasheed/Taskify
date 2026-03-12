@@ -273,7 +273,8 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: lightColors.secondaryBackground,
+    
+    backgroundColor: lightColors.BtnBackground,
   },
   scroll: {
     flex: 1,

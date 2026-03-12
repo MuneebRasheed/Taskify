@@ -54,15 +54,23 @@ interface CalendarModalProps {
   onConfirm: () => void;
 }
 
-const CalendarModal: React.FC<CalendarModalProps> = ({
-  visible,
+export interface CalendarContentProps {
+  title: string;
+  selectedDate: Date | null;
+  onSelect: (date: Date) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+  t: (key: string) => string;
+}
+
+export const CalendarContent: React.FC<CalendarContentProps> = ({
   title,
   selectedDate,
   onSelect,
   onCancel,
   onConfirm,
+  t,
 }) => {
-  const insets = useSafeAreaInsets();
   const [viewDate, setViewDate] = useState(() => selectedDate || new Date());
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -82,91 +90,114 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
 
   return (
+    <>
+      <Text style={styles.title}>{title}</Text>
+      <View style={styles.calendarContainer}>
+        <View style={styles.monthRow}>
+          <TouchableOpacity onPress={prevMonth} style={styles.arrowBtn}>
+            <LeftArrowIcon width={20} height={20} />
+          </TouchableOpacity>
+          <Text style={styles.monthText}>{`${monthName} ${year}`}</Text>
+          <TouchableOpacity onPress={nextMonth} style={styles.arrowBtn}>
+            <RightArrowIcon width={20} height={20} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.weekRow}>
+          {DAYS_HEADER.map((d) => (
+            <Text key={d} style={styles.weekHeader}>
+              {d}
+            </Text>
+          ))}
+        </View>
+        <View style={styles.grid}>
+          {grid.map((row, ri) =>
+            row.map((cell, ci) => {
+              const sel =
+                selectedDate &&
+                cell.isCurrentMonth &&
+                selectedDate.getDate() === cell.day &&
+                selectedDate.getMonth() === month &&
+                selectedDate.getFullYear() === year;
+              return (
+                <TouchableOpacity
+                  key={`${ri}-${ci}`}
+                  style={styles.cell}
+                  onPress={() => {
+                    if (cell.isCurrentMonth) {
+                      onSelect(new Date(year, month, cell.day));
+                    } else {
+                      if (ri === 0) {
+                        onSelect(new Date(year, month - 1, cell.day));
+                      } else {
+                        onSelect(new Date(year, month + 1, cell.day));
+                      }
+                    }
+                  }}
+                >
+                  <View style={[styles.cellInner, sel && styles.cellSelected]}>
+                    <Text
+                      style={[
+                        styles.cellText,
+                        !cell.isCurrentMonth && styles.cellTextMuted,
+                        sel && styles.cellTextSelected,
+                      ]}
+                    >
+                      {cell.day}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+      </View>
+      <View style={styles.buttons}>
+        <Button
+          title={t('cancel')}
+          variant="outline"
+          onPress={onCancel}
+          style={styles.cancelBtn}
+          borderWidth={0}
+          backgroundColor={lightColors.skipbg}
+          textColor={lightColors.background}
+        />
+        <Button
+          title={t('ok')}
+          variant="primary"
+          onPress={onConfirm}
+          style={styles.okBtn}
+          backgroundColor={lightColors.accent}
+          textColor={lightColors.secondaryBackground}
+        />
+      </View>
+    </>
+  );
+};
+
+const CalendarModal: React.FC<CalendarModalProps> = ({
+  visible,
+  title,
+  selectedDate,
+  onSelect,
+  onCancel,
+  onConfirm,
+}) => {
+  const insets = useSafeAreaInsets();
+  return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <Pressable style={styles.backdrop} onPress={onCancel}>
         <View
-          style={[styles.sheet, { paddingBottom: insets.bottom}]}
+          style={[styles.sheet, { paddingBottom: insets.bottom }]}
           onStartShouldSetResponder={() => true}
         >
-          <Text style={styles.title}>{title}</Text>
-<View style={styles.calendarContainer}>
-          <View style={styles.monthRow}>
-            <TouchableOpacity onPress={prevMonth} style={styles.arrowBtn}>
-              <LeftArrowIcon width={20} height={20} />
-            </TouchableOpacity>
-            <Text style={styles.monthText}>{`${monthName} ${year}`}</Text>
-            <TouchableOpacity onPress={nextMonth} style={styles.arrowBtn}>
-              <RightArrowIcon width={20} height={20} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.weekRow}>
-            {DAYS_HEADER.map((d) => (
-              <Text key={d} style={styles.weekHeader}>
-                {d}
-              </Text>
-            ))}
-          </View>
-          <View style={styles.grid}>
-            {grid.map((row, ri) =>
-              row.map((cell, ci) => {
-                const sel =
-                  selectedDate &&
-                  cell.isCurrentMonth &&
-                  selectedDate.getDate() === cell.day &&
-                  selectedDate.getMonth() === month &&
-                  selectedDate.getFullYear() === year;
-                return (
-                  <TouchableOpacity
-                    key={`${ri}-${ci}`}
-                    style={styles.cell}
-                    onPress={() => {
-                      if (cell.isCurrentMonth) {
-                        onSelect(new Date(year, month, cell.day));
-                      } else {
-                        if (ri === 0) {
-                          onSelect(new Date(year, month - 1, cell.day));
-                        } else {
-                          onSelect(new Date(year, month + 1, cell.day));
-                        }
-                      }
-                    }}
-                  >
-                    <View style={[styles.cellInner, sel && styles.cellSelected]}>
-                      <Text
-                        style={[
-                          styles.cellText,
-                          !cell.isCurrentMonth && styles.cellTextMuted,
-                          sel && styles.cellTextSelected,
-                        ]}
-                      >
-                        {cell.day}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
-          </View>
-          <View style={styles.buttons}>
-            <Button
-              title={t('cancel')}
-              variant="outline"
-              onPress={onCancel}
-              style={styles.cancelBtn}
-              borderWidth={0}
-              backgroundColor={lightColors.skipbg}
-              textColor={lightColors.background}
-            />
-            <Button
-              title={t('ok')}
-              variant="primary"
-              onPress={onConfirm}
-              style={styles.okBtn}
-              backgroundColor={lightColors.accent}
-              textColor={lightColors.secondaryBackground}
-            />
-          </View>
+          <CalendarContent
+            title={title}
+            selectedDate={selectedDate}
+            onSelect={onSelect}
+            onCancel={onCancel}
+            onConfirm={onConfirm}
+            t={t}
+          />
         </View>
       </Pressable>
     </Modal>

@@ -40,6 +40,156 @@ interface TimePickerModalProps {
   onConfirm: (hours: number, minutes: number, am: boolean) => void;
 }
 
+export interface TimePickerContentProps {
+  title: string;
+  initialTime: { hours: number; minutes: number; am: boolean };
+  onCancel: () => void;
+  onConfirm: (hours: number, minutes: number, am: boolean) => void;
+  t: (key: string) => string;
+}
+
+export const TimePickerContent: React.FC<TimePickerContentProps> = ({
+  title,
+  initialTime,
+  onCancel,
+  onConfirm,
+  t,
+}) => {
+  const [hours, setHours] = useState(initialTime.hours);
+  const [minutes, setMinutes] = useState(initialTime.minutes);
+  const [am, setAm] = useState(initialTime.am);
+
+  const selectedHourLabel = hours.toString().padStart(2, '0');
+  const selectedMinuteLabel = minutes.toString().padStart(2, '0');
+  const selectedAmPmLabel = am ? 'AM' : 'PM';
+
+  const pickerKey = `${initialTime.hours}-${initialTime.minutes}-${initialTime.am}`;
+
+  const renderWheelItem = (selectedLabel: string, selectedColor: string) => {
+    return (props: { fontSize: number; label: string; textAlign: string }) => {
+      const isSelected = props.label === selectedLabel;
+      const unselectedGray = lightColors.placeholderText;
+      return (
+        <Text
+          style={[
+            styles.wheelItemText,
+            {
+              fontSize: isSelected ? 48 : props.fontSize,
+              color: isSelected ? selectedColor : unselectedGray,
+              fontFamily: isSelected
+                ? fontFamilies.urbanistBold
+                : fontFamilies.urbanistMedium,
+            },
+          ]}
+        >
+          {props.label}
+        </Text>
+      );
+    };
+  };
+
+  return (
+    <>
+      <View style={styles.headerContainer}>
+        <Header
+          leftIcon={<BackArrowIcon width={24} height={24} />}
+          title={title}
+          rightIcon={<View style={styles.headerSpacer} />}
+          onLeftPress={onCancel}
+        />
+      </View>
+
+      <View style={styles.pickerSection}>
+        <View style={styles.wheelsRow}>
+          <View style={styles.wheelWrap}>
+            <WheelPickerExpo
+              key={`hour-${pickerKey}`}
+              height={PICKER_HEIGHT}
+              width={WHEEL_WIDTH_HOUR}
+              initialSelectedIndex={hours - 1}
+              items={HOUR_ITEMS}
+              backgroundColor={lightColors.secondaryBackground}
+              selectedStyle={{
+                borderColor: lightColors.background,
+                borderWidth: 2,
+              }}
+              onChange={({ item }) => setHours(Number(item.label))}
+              renderItem={renderWheelItem(
+                selectedHourLabel,
+                lightColors.background,
+                lightColors.placeholderText
+              )}
+            />
+          </View>
+
+          <View style={styles.colonWrap}>
+            <Text style={styles.colon}>:</Text>
+          </View>
+
+          <View style={styles.wheelWrap}>
+            <WheelPickerExpo
+              key={`minute-${pickerKey}`}
+              height={PICKER_HEIGHT}
+              width={WHEEL_WIDTH_MINUTE}
+              initialSelectedIndex={minutes}
+              items={MINUTE_ITEMS}
+              backgroundColor={lightColors.secondaryBackground}
+              selectedStyle={{
+                borderColor: lightColors.background,
+                borderWidth: 2,
+              }}
+              onChange={({ item }) => setMinutes(Number(item.label))}
+              renderItem={renderWheelItem(
+                selectedMinuteLabel,
+                lightColors.background,
+                lightColors.placeholderText
+              )}
+            />
+          </View>
+
+          <View style={styles.wheelWrap}>
+            <WheelPickerExpo
+              key={`ampm-${pickerKey}`}
+              height={PICKER_HEIGHT}
+              width={WHEEL_WIDTH_AMPM}
+              initialSelectedIndex={am ? 0 : 1}
+              items={AM_PM_ITEMS}
+              backgroundColor={lightColors.secondaryBackground}
+              selectedStyle={{
+                borderColor: lightColors.background,
+                borderWidth: 2,
+              }}
+              onChange={({ index }) => setAm(index === 0)}
+              renderItem={renderWheelItem(
+                selectedAmPmLabel,
+                lightColors.background,
+                lightColors.placeholderText
+              )}
+            />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.buttons}>
+        <Button
+          title={t('cancel')}
+          onPress={onCancel}
+          style={styles.cancelBtn}
+          backgroundColor={lightColors.skipbg}
+          textColor={lightColors.accent}
+        />
+        <Button
+          title={t('ok')}
+          onPress={() => onConfirm(hours, minutes, am)}
+          style={styles.okBtn}
+          backgroundColor={lightColors.accent}
+          textColor={lightColors.secondaryBackground}
+        />
+      </View>
+    </>
+  );
+};
+
 const TimePickerModal: React.FC<TimePickerModalProps> = ({
   visible,
   title,
@@ -72,19 +222,10 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
 
   const pickerKey = `${initialTime.hours}-${initialTime.minutes}-${initialTime.am}`;
 
-  /** Deep purple for selected; unselected grays darker when closer, lighter when further. */
-  const renderWheelItem = (
-    selectedLabel: string,
-    selectedColor: string
-  ) => {
+  const renderWheelItem = (selectedLabel: string, selectedColor: string) => {
     return (props: { fontSize: number; label: string; textAlign: string }) => {
       const isSelected = props.label === selectedLabel;
-      const unselectedGray =
-        props.fontSize >= 40
-          ? lightColors.placeholderText 
-          : props.fontSize >= 28
-            ? lightColors.placeholderText
-            : lightColors.placeholderText;
+      const unselectedGray = lightColors.placeholderText;
       return (
         <Text
           style={[
@@ -104,57 +245,22 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
     };
   };
 
-  /** AM/PM: selected has light purple rounded background, smaller bold font; unselected grays. */
-  const renderAmPmItem = (selectedLabel: string, selectedColor: string) => {
-    return (props: { fontSize: number; label: string; textAlign: string }) => {
-      const isSelected = props.label === selectedLabel;
-      const unselectedGray =
-        props.fontSize >= 40 ? lightColors.placeholderText : props.fontSize >= 28 ? lightColors.placeholderText : lightColors.placeholderText;
-      const textNode = (
-        <Text
-          style={[
-            styles.wheelItemText,
-            {
-              fontSize: isSelected ? 18 : props.fontSize,
-              color: isSelected ? selectedColor : unselectedGray,
-              fontFamily: isSelected
-                ? fontFamilies.urbanistBold
-                : fontFamilies.urbanistMedium,
-            },
-          ]}
-        >
-          {props.label}
-        </Text>
-      );
-      if (isSelected) {
-        return (
-          <View style={styles.amPmSelectedWrap}>
-            {textNode}
-          </View>
-        );
-      }
-      return textNode;
-    };
-  };
-
   return (
     <Modal visible={visible} transparent animationType="slide">
       <Pressable style={styles.backdrop} onPress={onCancel}>
         <Pressable
-          style={[styles.sheet, { paddingBottom: insets.bottom}]}
+          style={[styles.sheet, { paddingBottom: insets.bottom }]}
           onPress={() => {}}
         >
-          {/* 1. Header */}
           <View style={styles.headerContainer}>
-          <Header
-            leftIcon={<BackArrowIcon width={24} height={24} />}
-            title={title}
-            rightIcon={<View style={styles.headerSpacer} />}
-            onLeftPress={onCancel}
-          />
+            <Header
+              leftIcon={<BackArrowIcon width={24} height={24} />}
+              title={title}
+              rightIcon={<View style={styles.headerSpacer} />}
+              onLeftPress={onCancel}
+            />
           </View>
 
-          {/* 2. Time picker wheels with top/bottom selection bars */}
           <View style={styles.pickerSection}>
             <View style={styles.wheelsRow}>
               <View style={styles.wheelWrap}>
@@ -168,7 +274,6 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
                   selectedStyle={{
                     borderColor: lightColors.background,
                     borderWidth: 2,
-                   
                   }}
                   onChange={({ item }) => setHours(Number(item.label))}
                   renderItem={renderWheelItem(
@@ -227,7 +332,6 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
             </View>
           </View>
 
-          {/* 3. Buttons */}
           <View style={styles.buttons}>
             <Button
               title={t('cancel')}

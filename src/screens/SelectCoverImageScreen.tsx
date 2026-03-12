@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import SearchIcon from '../assets/svgs/SearchIcon';
 import Textt from '../components/Textt';
 import Header from '../components/Header';
 import { useTranslation } from '../i18n';
+import { useGoalStore } from '../../store/goalStore';
+
 type SelectCoverRouteProp = RouteProp<RootStackParamList, 'SelectCoverImage'>;
 type SelectCoverNavProp = NativeStackNavigationProp<RootStackParamList, 'SelectCoverImage'>;
 
@@ -35,50 +37,27 @@ const SelectCoverImageScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<SelectCoverNavProp>();
   const route = useRoute<SelectCoverRouteProp>();
-  const initialIndex = route.params?.selectedIndex ?? 0;
+  const storeCoverIndex = useGoalStore((s) => s.selectedCoverIndex);
+  const setSelectedCoverIndex = useGoalStore((s) => s.setSelectedCoverIndex);
+  const initialIndex = route.params?.selectedIndex ?? storeCoverIndex;
   const { t } = useTranslation();
 
   const [selectedIndex, setSelectedIndex] = useState<number>(initialIndex);
+
+  console.log("storeCoverIndex.....",storeCoverIndex);    
+
+  useEffect(() => {
+    setSelectedIndex(route.params?.selectedIndex ?? storeCoverIndex);
+  }, [route.params?.selectedIndex, storeCoverIndex]);
 
   const handleCancel = () => {
     navigation.goBack();
   };
 
-  const returnToAiMade = route.params?.returnToScreen === 'AiMade';
-  const prompt = route.params?.prompt ?? '';
-
   const handleOK = () => {
-    if (returnToAiMade) {
-      navigation.navigate('AiMade', {
-        source: 'selfMade',
-        prompt,
-        selectedCoverIndex: selectedIndex,
-      });
-    } else {
-      const {
-        goalTitle,
-        fromSelfMade,
-        initialHabits,
-        initialTasks,
-        initialNote,
-        initialCategory,
-        initialDueDate,
-        initialReminderDate,
-        initialReminderTime,
-      } = route.params ?? {};
-      navigation.navigate('GoalPlanner', {
-        selectedCoverIndex: selectedIndex,
-        ...(goalTitle !== undefined && { goalTitle }),
-        ...(fromSelfMade !== undefined && { fromSelfMade }),
-        ...(initialHabits !== undefined && { initialHabits }),
-        ...(initialTasks !== undefined && { initialTasks }),
-        ...(initialNote !== undefined && { initialNote }),
-        ...(initialCategory !== undefined && { initialCategory }),
-        ...(initialDueDate !== undefined && { initialDueDate }),
-        ...(initialReminderDate !== undefined && { initialReminderDate }),
-        ...(initialReminderTime !== undefined && { initialReminderTime }),
-      });
-    }
+    setSelectedCoverIndex(selectedIndex);
+    route.params?.onCoverSelected?.(selectedIndex);
+    navigation.goBack();
   };
 
   const numColumns = 2;

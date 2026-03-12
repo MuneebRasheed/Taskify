@@ -110,7 +110,7 @@ const FloatingMenu = () => {
   const menuItems = [
     { label: 'AI-made Goals', icon: <AI width={24} height={24} />, onPress: () => navigation.navigate('AiGenetratingScreen') },
     { label: 'Pre-made Goals', icon: <PreMade width={24} height={24} />, onPress: () => navigation.navigate('PreMadeGoals') },
-    { label: 'Self-made Goals', icon: <SelfMade width={24} height={24} />, onPress: () => navigation.navigate('AiMade', { source: 'selfMade' }) },
+    { label: 'Self-made Goals', icon: <SelfMade width={24} height={24} />, onPress: () => navigation.navigate('AiMade', { source: 'selfMade', initialHabits: [], initialTasks: [] }) },
   ];
 
   const handleMenuItemPress = (item: (typeof menuItems)[number]) => {

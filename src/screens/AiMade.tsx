@@ -37,6 +37,7 @@ import SetUpGoalsModal from '../components/SetUpGoalsModal';
 import EditIcon from '../assets/svgs/EditIcon';
 import Header from '../components/Header';
 import type { GoalItem } from '../context/GoalsContext';
+import { useGoalStore } from '../../store/goalStore';
 
 type AiMadeRouteProp = RouteProp<RootStackParamList, 'AiMade'>;
 type AiMadeNavProp = NativeStackNavigationProp<RootStackParamList, 'AiMade'>;
@@ -108,14 +109,44 @@ const AiMadeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<AiMadeNavProp>();
   const route = useRoute<AiMadeRouteProp>();
+  const coverIndextest = useGoalStore((s) => s.selectedCoverIndex);
+
+  console.log("coverIndex..... goal",coverIndextest); 
 
   const isSelfMade = route.params?.source === 'selfMade';
-  const prompt = route.params?.prompt ?? (isSelfMade ? '' : 'Become a UI/UX Designer');
+  const promptParam = route.params?.prompt;
+  const initialHabitsParam = route.params?.initialHabits;
+  const initialTasksParam = route.params?.initialTasks;
+  const initialNoteParam = route.params?.initialNote;
+  const initialGoalTitleParam = route.params?.initialGoalTitle;
 
-  const [habits, setHabits] = useState<TrackerCardItem[]>(isSelfMade ? [] : DEFAULT_HABITS);
-  const [tasks, setTasks] = useState<TrackerCardItem[]>(isSelfMade ? [] : DEFAULT_TASKS);
-  const [note, setNote] = useState(isSelfMade ? '' : DEFAULT_NOTE);
-  const [goalTitle, setGoalTitle] = useState(isSelfMade ? '' : '');
+  const prompt =
+    promptParam ?? (isSelfMade ? '' : 'Become a UI/UX Designer');
+
+  const draftHabits = useGoalStore((s) => s.draftHabits);
+  const draftTasks = useGoalStore((s) => s.draftTasks);
+  const setDraftHabits = useGoalStore((s) => s.setDraftHabits);
+  const setDraftTasks = useGoalStore((s) => s.setDraftTasks);
+
+  const [habits, setHabits] = useState<TrackerCardItem[]>(() =>
+    initialHabitsParam && initialHabitsParam.length > 0
+      ? initialHabitsParam
+      : DEFAULT_HABITS
+  );
+  const [tasks, setTasks] = useState<TrackerCardItem[]>(() =>
+    initialTasksParam && initialTasksParam.length > 0
+      ? initialTasksParam
+      : DEFAULT_TASKS
+  );
+
+  const habitsList = isSelfMade ? draftHabits : habits;
+  const tasksList = isSelfMade ? draftTasks : tasks;
+  const [note, setNote] = useState(
+    isSelfMade ? '' : initialNoteParam ?? DEFAULT_NOTE
+  );
+  const [goalTitle, setGoalTitle] = useState(
+    isSelfMade ? '' : initialGoalTitleParam ?? prompt
+  );
   const [coverIndex, setCoverIndex] = useState(0);
   const [category, setCategory] = useState<GoalCategory | null>(null);
   const [dueDate, setDueDate] = useState<Date | null>(null);
@@ -150,36 +181,20 @@ const AiMadeScreen = () => {
   }, [isSelfMade, route.params?.selectedCoverIndex, route.params?.prompt, navigation]);
 
   useEffect(() => {
-    const addedHabit = route.params?.addedHabit;
-    const addedTask = route.params?.addedTask;
-    const updatedHabit = route.params?.updatedHabit;
-    const updatedTask = route.params?.updatedTask;
-    if (addedHabit) {
-      setHabits((prev) => [...prev, addedHabit]);
-      navigation.setParams({ addedHabit: undefined });
+    if (coverIndextest !== undefined) {
+      setCoverIndex(coverIndextest);
+      // console.log("coverIndex..... goal",coverIndextest); 
     }
-    if (addedTask) {
-      setTasks((prev) => [...prev, addedTask]);
-      navigation.setParams({ addedTask: undefined });
+  }, [coverIndextest]);
+
+  // Sync draft store only on mount when in self-made flow (so we don't overwrite when returning from AddTaskScreen)
+  useEffect(() => {
+    if (isSelfMade) {
+      setDraftHabits(initialHabitsParam ?? []);
+      setDraftTasks(initialTasksParam ?? []);
     }
-    if (updatedHabit) {
-      setHabits((prev) =>
-        prev.map((h, i) => (i === updatedHabit.index ? updatedHabit.item : h))
-      );
-      navigation.setParams({ updatedHabit: undefined });
-    }
-    if (updatedTask) {
-      setTasks((prev) =>
-        prev.map((t, i) => (i === updatedTask.index ? updatedTask.item : t))
-      );
-      navigation.setParams({ updatedTask: undefined });
-    }
-  }, [
-    route.params?.addedHabit,
-    route.params?.addedTask,
-    route.params?.updatedHabit,
-    route.params?.updatedTask,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openAddHabit = (habitIndex?: number) => {
     const isEdit = habitIndex !== undefined;
@@ -188,7 +203,7 @@ const AiMadeScreen = () => {
       prompt: isSelfMade ? goalTitle : prompt,
       ...(isSelfMade ? { source: 'selfMade' as const } : {}),
       ...(isEdit
-        ? { editHabitIndex: habitIndex, initialItem: habits[habitIndex] }
+        ? { editHabitIndex: habitIndex, initialItem: habitsList[habitIndex] }
         : {}),
     });
   };
@@ -200,7 +215,7 @@ const AiMadeScreen = () => {
       prompt: isSelfMade ? goalTitle : prompt,
       ...(isSelfMade ? { source: 'selfMade' as const } : {}),
       ...(isEdit
-        ? { editTaskIndex: taskIndex, initialItem: tasks[taskIndex] }
+        ? { editTaskIndex: taskIndex, initialItem: tasksList[taskIndex] }
         : {}),
     });
   };
@@ -215,8 +230,8 @@ const AiMadeScreen = () => {
     navigation.navigate('GoalPlanner', {
       goalTitle: isSelfMade ? goalTitle : prompt,
       fromSelfMade: isSelfMade,
-      initialHabits: habits,
-      initialTasks: tasks,
+      initialHabits: habitsList,
+      initialTasks: tasksList,
       initialNote: note,
       ...(isSelfMade && {
         selectedCoverIndex: coverIndex,
@@ -229,6 +244,7 @@ const AiMadeScreen = () => {
   };
 
   const handleCreateGoal = () => {
+    console.log("handleCreateGoal.....");
     Keyboard.dismiss();
     const title = goalTitle.trim() || t('addGoalsTitle');
     navigation.navigate('PreMadeGoalDetail', {
@@ -237,8 +253,16 @@ const AiMadeScreen = () => {
         coverIndex,
         dueDate: dueDate ? dueDate.getTime() : null,
         note,
-        habits: habits.map((h) => ({ title: h.title, reminderTime: h.reminderTime })),
-        tasks: tasks.map((t) => ({ title: t.title, reminderTime: t.reminderTime })),
+        habits: habitsList.map((h) => ({
+          title: h.title,
+          reminderTime: h.reminderTime,
+          selectedDays: h.selectedDays ?? [],
+        })),
+        tasks: tasksList.map((t) => ({
+          title: t.title,
+          reminderTime: t.reminderTime,
+          dueDate: t.dueDate ?? null,
+        })),
       },
     });
   };
@@ -408,10 +432,10 @@ const AiMadeScreen = () => {
                 {/* Habits section – unchanged */}
                 <View style={styles.section}>
                   <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.sectionTitle}>{`${t("habit")} (${habits.length})`}</Text>
+                    <Text style={styles.sectionTitle}>{`${t("habit")} (${habitsList.length})`}</Text>
                     <InfoIcon width={20} height={20} />
                   </View>
-                  {habits.map((item, index) => (
+                  {habitsList.map((item, index) => (
                     <TrackerCard
                       key={`habit-${index}`}
                       item={{ ...item, variant: 'habit' }}
@@ -431,10 +455,10 @@ const AiMadeScreen = () => {
                 {/* Tasks section – unchanged */}
                 <View style={styles.section}>
                   <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.sectionTitle}>{`${t("task")} (${tasks.length})`}</Text>
+                    <Text style={styles.sectionTitle}>{`${t("task")} (${tasksList.length})`}</Text>
                     <InfoIcon width={20} height={20} />
                   </View>
-                  {tasks.map((item, index) => (
+                  {tasksList.map((item, index) => (
                     <TrackerCard
                       key={`task-${index}`}
                       item={{ ...item, variant: 'task' }}
@@ -497,10 +521,10 @@ const AiMadeScreen = () => {
                 >
                   <View style={styles.section}>
                     <View style={styles.sectionHeaderRow}>
-                      <Text style={styles.sectionTitle}>{`${t("habit")} (${habits.length})`}</Text>
+                      <Text style={styles.sectionTitle}>{`${t("habit")} (${habitsList.length})`}</Text>
                       <InfoIcon width={20} height={20} />
                     </View>
-                  {habits.map((item, index) => (
+                  {habitsList.map((item, index) => (
                     <TrackerCard
                       key={`habit-${index}`}
                       item={{ ...item, variant: 'habit' }}
@@ -519,10 +543,10 @@ const AiMadeScreen = () => {
 
                 <View style={styles.section}>
                   <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.sectionTitle}>{`${t("task")} (${tasks.length})`}</Text>
+                    <Text style={styles.sectionTitle}>{`${t("task")} (${tasksList.length})`}</Text>
                     <InfoIcon width={20} height={20} />
                   </View>
-                  {tasks.map((item, index) => (
+                  {tasksList.map((item, index) => (
                     <TrackerCard
                       key={`task-${index}`}
                       item={{ ...item, variant: 'task' }}

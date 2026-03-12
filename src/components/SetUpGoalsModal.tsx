@@ -13,13 +13,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
 import Button from './Button';
-import CategoryModal, { type GoalCategory } from './CategoryModal';
-import CalendarModal from './CalendarModal';
-import TimePickerModal from './TimePickerModal';
+import { type GoalCategory, CategoryPickerContent } from './CategoryModal';
+import { CalendarContent } from './CalendarModal';
+import { TimePickerContent } from './TimePickerModal';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
 import TimeIcon from '../assets/svgs/TimeIcon';
 import CrossIcon from '../assets/svgs/CrossIcon';
 import BottomArrowIcon from '../assets/svgs/BotttomArrowIcon';
+
+type ModalView = 'main' | 'category' | 'dueDate' | 'reminderDate' | 'reminderTime';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', {
@@ -74,10 +76,7 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
     am: boolean;
   } | null>(initialReminderTime);
 
-  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
-  const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
-  const [reminderDateModalVisible, setReminderDateModalVisible] = useState(false);
-  const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
+  const [currentView, setCurrentView] = useState<ModalView>('main');
 
   useEffect(() => {
     if (visible) {
@@ -86,6 +85,7 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
       setDueDate(initialDueDate);
       setReminderDate(initialReminderDate);
       setReminderTime(initialReminderTime);
+      setCurrentView('main');
     }
   }, [
     visible,
@@ -111,172 +111,184 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
     });
   };
 
-  const isSubModalOpen =
-    categoryModalVisible ||
-    dueDateModalVisible ||
-    reminderDateModalVisible ||
-    reminderTimeModalVisible;
+  const goBack = () => setCurrentView('main');
 
   return (
-    <>
-      <Modal
-        visible={visible && !isSubModalOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={onCancel}
-      >
-        <Pressable style={styles.backdrop} onPress={onCancel}>
-          <TouchableWithoutFeedback>
-            <Pressable
-              style={[styles.sheet, { paddingBottom: insets.bottom }]}
-              onPress={() => {}}
-            >
-            <Text style={styles.title}>{t('setUpGoals')}</Text>
-
-            <Text style={styles.label}>{t('goalsTitle')}</Text>
-            <TextInput
-              style={styles.input}
-              value={goalTitle}
-              onChangeText={setGoalTitle}
-              placeholder={t('addGoalsTitle')}
-              placeholderTextColor={lightColors.subText}
-            />
-
-            <Text style={styles.label}>{t('category')}</Text>
-            <TouchableOpacity
-              style={styles.inputRow}
-              onPress={() => setCategoryModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[styles.inputRowText, !category && styles.placeholder]}
-                numberOfLines={1}
-              >
-                {category ?? t('category')}
-              </Text>
-              <BottomArrowIcon width={12} height={8} />
-            </TouchableOpacity>
-
-            <Text style={styles.label}>{t('goalsDueDate')}</Text>
-            <TouchableOpacity
-              style={styles.inputRow}
-              onPress={() => setDueDateModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <CalendarIcon width={20} height={20} />
-              <Text
-                style={[styles.inputRowTextFlex, !dueDate && styles.placeholder]}
-                numberOfLines={1}
-              >
-                {dueDate ? formatDate(dueDate) : t('goalsDueDate')}
-              </Text>
-              {dueDate && (
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setDueDate(null);
-                  }}
-                  style={styles.clearBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <CrossIcon />
-                </TouchableOpacity>
-              )}
-            </TouchableOpacity>
-
-            <Text style={styles.label}>{t('goalsReminder')}</Text>
-            <TouchableOpacity
-              style={styles.inputRow}
-              onPress={() => setReminderDateModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <TimeIcon width={20} height={20} />
-              <Text
-                style={[styles.inputRowTextFlex, !reminderDisplay && styles.placeholder]}
-                numberOfLines={1}
-              >
-                {reminderDisplay || t('goalsReminder')}
-              </Text>
-              {reminderDisplay && (
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setReminderDate(null);
-                    setReminderTime(null);
-                  }}
-                  style={styles.clearBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <CrossIcon />
-                </TouchableOpacity>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.actions}>
-              <Button
-                title={t('cancel')}
-                variant="outline"
-                onPress={onCancel}
-                style={styles.cancelBtn}
-                backgroundColor={lightColors.skipbg}
-                textColor={lightColors.accent}
-                borderWidth={0}
-              />
-              <Button
-                title={t('ok')}
-                variant="primary"
-                onPress={handleOK}
-                style={styles.okBtn}
-                backgroundColor={lightColors.accent}
-                textColor={lightColors.secondaryBackground}
-              />
-            </View>
-            </Pressable>
-          </TouchableWithoutFeedback>
-        </Pressable>
-      </Modal>
-
-      <CategoryModal
-        visible={categoryModalVisible}
-        selectedCategory={category}
-        onSelect={setCategory}
-        onCancel={() => setCategoryModalVisible(false)}
-        onConfirm={() => setCategoryModalVisible(false)}
-      />
-      <CalendarModal
-        visible={dueDateModalVisible}
-        title={t('goalsDueDate')}
-        selectedDate={dueDate}
-        onSelect={setDueDate}
-        onCancel={() => setDueDateModalVisible(false)}
-        onConfirm={() => setDueDateModalVisible(false)}
-      />
-      <CalendarModal
-        visible={reminderDateModalVisible}
-        title={t('goalsReminder')}
-        selectedDate={reminderDate}
-        onSelect={setReminderDate}
-        onCancel={() => setReminderDateModalVisible(false)}
-        onConfirm={() => {
-          setReminderDateModalVisible(false);
-          setReminderTimeModalVisible(true);
-        }}
-      />
-      <TimePickerModal
-        visible={reminderTimeModalVisible}
-        title={t('goalsReminder')}
-        initialTime={
-          reminderTime
-            ? { hours: reminderTime.hours, minutes: reminderTime.minutes, am: reminderTime.am }
-            : { hours: 10, minutes: 0, am: true }
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => {
+        if (currentView !== 'main') {
+          setCurrentView('main');
+        } else {
+          onCancel();
         }
-        onCancel={() => setReminderTimeModalVisible(false)}
-        onConfirm={(hours, minutes, am) => {
-          setReminderTime({ hours, minutes, am });
-          setReminderTimeModalVisible(false);
-        }}
-      />
-    </>
+      }}
+    >
+      <Pressable style={styles.backdrop} onPress={() => currentView === 'main' ? onCancel() : goBack()}>
+        <TouchableWithoutFeedback>
+          <Pressable
+            style={[styles.sheet, { paddingBottom: insets.bottom }]}
+            onPress={() => {}}
+          >
+            {currentView === 'main' && (
+              <>
+                <Text style={styles.title}>{t('setUpGoals')}</Text>
+
+                <Text style={styles.label}>{t('goalsTitle')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={goalTitle}
+                  onChangeText={setGoalTitle}
+                  placeholder={t('addGoalsTitle')}
+                  placeholderTextColor={lightColors.subText}
+                />
+
+                <Text style={styles.label}>{t('category')}</Text>
+                <TouchableOpacity
+                  style={styles.inputRow}
+                  onPress={() => setCurrentView('category')}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[styles.inputRowText, !category && styles.placeholder]}
+                    numberOfLines={1}
+                  >
+                    {category ?? t('category')}
+                  </Text>
+                  <BottomArrowIcon width={12} height={8} />
+                </TouchableOpacity>
+
+                <Text style={styles.label}>{t('goalsDueDate')}</Text>
+                <TouchableOpacity
+                  style={styles.inputRow}
+                  onPress={() => setCurrentView('dueDate')}
+                  activeOpacity={0.7}
+                >
+                  <CalendarIcon width={20} height={20} />
+                  <Text
+                    style={[styles.inputRowTextFlex, !dueDate && styles.placeholder]}
+                    numberOfLines={1}
+                  >
+                    {dueDate ? formatDate(dueDate) : t('goalsDueDate')}
+                  </Text>
+                  {dueDate && (
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setDueDate(null);
+                      }}
+                      style={styles.clearBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <CrossIcon />
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={styles.label}>{t('goalsReminder')}</Text>
+                <TouchableOpacity
+                  style={styles.inputRow}
+                  onPress={() => setCurrentView('reminderDate')}
+                  activeOpacity={0.7}
+                >
+                  <TimeIcon width={20} height={20} />
+                  <Text
+                    style={[styles.inputRowTextFlex, !reminderDisplay && styles.placeholder]}
+                    numberOfLines={1}
+                  >
+                    {reminderDisplay || t('goalsReminder')}
+                  </Text>
+                  {reminderDisplay && (
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setReminderDate(null);
+                        setReminderTime(null);
+                      }}
+                      style={styles.clearBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <CrossIcon />
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.actions}>
+                  <Button
+                    title={t('cancel')}
+                    variant="outline"
+                    onPress={onCancel}
+                    style={styles.cancelBtn}
+                    backgroundColor={lightColors.skipbg}
+                    textColor={lightColors.accent}
+                    borderWidth={0}
+                  />
+                  <Button
+                    title={t('ok')}
+                    variant="primary"
+                    onPress={handleOK}
+                    style={styles.okBtn}
+                    backgroundColor={lightColors.accent}
+                    textColor={lightColors.secondaryBackground}
+                  />
+                </View>
+              </>
+            )}
+
+            {currentView === 'category' && (
+              <CategoryPickerContent
+                selectedCategory={category}
+                onSelect={setCategory}
+                onCancel={goBack}
+                onConfirm={goBack}
+                t={t}
+              />
+            )}
+
+            {currentView === 'dueDate' && (
+              <CalendarContent
+                title={t('goalsDueDate')}
+                selectedDate={dueDate}
+                onSelect={setDueDate}
+                onCancel={goBack}
+                onConfirm={goBack}
+                t={t}
+              />
+            )}
+
+            {currentView === 'reminderDate' && (
+              <CalendarContent
+                title={t('goalsReminder')}
+                selectedDate={reminderDate}
+                onSelect={setReminderDate}
+                onCancel={goBack}
+                onConfirm={() => setCurrentView('reminderTime')}
+                t={t}
+              />
+            )}
+
+            {currentView === 'reminderTime' && (
+              <TimePickerContent
+                title={t('goalsReminder')}
+                initialTime={
+                  reminderTime
+                    ? { hours: reminderTime.hours, minutes: reminderTime.minutes, am: reminderTime.am }
+                    : { hours: 10, minutes: 0, am: true }
+                }
+                onCancel={goBack}
+                onConfirm={(hours, minutes, am) => {
+                  setReminderTime({ hours, minutes, am });
+                  goBack();
+                }}
+                t={t}
+              />
+            )}
+          </Pressable>
+        </TouchableWithoutFeedback>
+      </Pressable>
+    </Modal>
   );
 };
 

@@ -18,6 +18,7 @@ export async function getAuthenticatedUser(
 ): Promise<{ user: User | null; error?: string }> {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
+    console.warn('[auth] getAuthenticatedUser — missing or invalid Authorization header');
     res.status(401).json({ error: 'Missing or invalid Authorization header' });
     return { user: null, error: 'unauthorized' };
   }
@@ -27,6 +28,7 @@ export async function getAuthenticatedUser(
   });
   const { data: { user }, error } = await client.auth.getUser();
   if (error || !user) {
+    console.warn('[auth] getAuthenticatedUser — invalid or expired token:', error?.message ?? 'no user');
     res.status(401).json({ error: error?.message ?? 'Invalid or expired token' });
     return { user: null, error: 'unauthorized' };
   }

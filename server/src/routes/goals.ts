@@ -17,11 +17,16 @@ function getAdminClient() {
  * Returns all goals for the authenticated user with their items and item_completions.
  */
 router.get('/', async (req: Request, res: Response) => {
+  console.log('[goals] GET /goals — request received');
   const { user, error } = await getAuthenticatedUser(req, res);
-  if (error) return;
+  if (error) {
+    console.warn('[goals] GET /goals — auth failed:', error);
+    return;
+  }
 
   const admin = getAdminClient();
   const userId = user!.id;
+  console.log('[goals] GET /goals — user id:', userId);
 
   const { data: goalsRows, error: goalsErr } = await admin
     .from('goals')
@@ -30,13 +35,16 @@ router.get('/', async (req: Request, res: Response) => {
     .order('created_at', { ascending: false });
 
   if (goalsErr) {
+    console.error('[goals] GET /goals — goals query failed:', goalsErr.message, goalsErr.code, goalsErr.details);
     res.status(500).json({ error: 'Failed to load goals' });
     return;
   }
 
   const goals = goalsRows ?? [];
   const goalIds = goals.map((g: { id: string }) => g.id);
+  console.log('[goals] GET /goals — goals count:', goals.length, 'goalIds:', goalIds);
   if (goalIds.length === 0) {
+    console.log('[goals] GET /goals — no goals, returning empty');
     res.json({ goals: [], itemCompletions: {} });
     return;
   }
@@ -47,6 +55,7 @@ router.get('/', async (req: Request, res: Response) => {
     .in('goal_id', goalIds);
 
   if (itemsErr) {
+    console.error('[goals] GET /goals — goal_items query failed:', itemsErr.message, itemsErr.code, itemsErr.details);
     res.status(500).json({ error: 'Failed to load goal items' });
     return;
   }
@@ -62,6 +71,7 @@ router.get('/', async (req: Request, res: Response) => {
     .eq('user_id', userId);
 
   if (compErr) {
+    console.error('[goals] GET /goals — item_completions query failed:', compErr.message, compErr.code, compErr.details);
     res.status(500).json({ error: 'Failed to load completions' });
     return;
   }
@@ -96,6 +106,7 @@ router.get('/', async (req: Request, res: Response) => {
     })),
   }));
 
+  console.log('[goals] GET /goals — success: goals=', goalsPayload.length, 'itemCompletions keys=', Object.keys(itemCompletions).length);
   res.json({ goals: goalsPayload, itemCompletions });
 });
 
@@ -231,6 +242,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
   const itemIds = (goalItemRows ?? []).map((r: { id: string }) => r.id);
   if (itemIds.length > 0) {
     await admin.from('item_completions').delete().eq('user_id', user!.id).in('item_id', itemIds);
+  }
+  const { error: itemsDelErr } = await admin.from('goal_items').delete().eq('goal_id', id);
+  if (itemsDelErr) {
+    console.error('[goals] DELETE goal_items failed:', itemsDelErr.message);
+    res.status(500).json({ error: 'Failed to delete goal items' });
+    return;
   }
   const { error: delErr } = await admin.from('goals').delete().eq('id', id);
   if (delErr) {

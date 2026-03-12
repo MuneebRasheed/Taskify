@@ -52,12 +52,18 @@ export type RootStackParamList = {
   AiGenetratingScreen: undefined;
   AiMade: {
     source?: 'selfMade';
+    /** Title shown under the AI-made header (usually the goal title). */
     prompt?: string;
     selectedCoverIndex?: number;
     addedHabit?: TrackerCardItem;
     addedTask?: TrackerCardItem;
     updatedHabit?: { index: number; item: TrackerCardItem };
     updatedTask?: { index: number; item: TrackerCardItem };
+    /** Optional AI-generated initial content when coming from AiGenetratingScreen. */
+    initialHabits?: TrackerCardItem[];
+    initialTasks?: TrackerCardItem[];
+    initialNote?: string;
+    initialGoalTitle?: string;
   };
   AddTaskScreen: {
     mode: 'habit' | 'task';
@@ -95,6 +101,8 @@ export type RootStackParamList = {
     selectedIndex?: number;
     returnToScreen?: 'AiMade';
     prompt?: string;
+    /** Callback from GoalPlanner to update cover state when user selects an image */
+    onCoverSelected?: (index: number) => void;
     /** Pass-through from GoalPlanner when changing cover so state is preserved on return */
     goalTitle?: string;
     fromSelfMade?: boolean;
@@ -118,8 +126,8 @@ export type RootStackParamList = {
       coverIndex: number;
       dueDate: number | null;
       note: string;
-      habits: { title: string; reminderTime?: string }[];
-      tasks: { title: string; reminderTime?: string }[];
+      habits: { title: string; reminderTime?: string; selectedDays?: number[] }[];
+      tasks: { title: string; reminderTime?: string; dueDate?: string | null }[];
     };
   };
   ExploreSearch: undefined;

@@ -38,6 +38,66 @@ interface CategoryModalProps {
   onConfirm: () => void;
 }
 
+export interface CategoryPickerContentProps {
+  selectedCategory: GoalCategory | null;
+  onSelect: (category: GoalCategory) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+  t: (key: string) => string;
+}
+
+export const CategoryPickerContent: React.FC<CategoryPickerContentProps> = ({
+  selectedCategory,
+  onSelect,
+  onCancel,
+  onConfirm,
+  t,
+}) => (
+  <>
+    <Textt i18nKey="category" style={styles.title} />
+    <View style={styles.divider} />
+    <View style={styles.list}>
+      {GOAL_CATEGORIES.map((cat) => {
+        const isSelected = selectedCategory === cat;
+        return (
+          <TouchableOpacity
+            key={cat}
+            style={styles.row}
+            onPress={() => onSelect(cat)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.rowText}>{cat}</Text>
+            {isSelected && (
+              <View style={styles.checkWrap}>
+                <CheckIcon width={22} height={22} fill={lightColors.background}/>
+              </View>
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+    <View style={styles.buttons}>
+      <Button
+        title={t('cancel')}
+        variant="outline"
+        onPress={onCancel}
+        style={styles.cancelBtn}
+        borderWidth={0}
+        backgroundColor={lightColors.skipbg}
+        textColor={lightColors.background}
+      />
+      <Button
+        title={t('ok')}
+        variant="primary"
+        onPress={onConfirm}
+        style={styles.okBtn}
+        backgroundColor={lightColors.accent}
+        textColor={palette.white}
+      />
+    </View>
+  </>
+);
+
 const CategoryModal: React.FC<CategoryModalProps> = ({
   visible,
   selectedCategory,
@@ -66,47 +126,13 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
             onStartShouldSetResponder={() => true}
           >
             <View style={styles.handle} />
-            <Textt i18nKey="category" style={styles.title} />
-            <View style={styles.divider} />
-            <View style={styles.list}>
-              {GOAL_CATEGORIES.map((cat) => {
-                const isSelected = selectedCategory === cat;
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={styles.row}
-                    onPress={() => onSelect(cat)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.rowText}>{cat}</Text>
-                    {isSelected && (
-                      <View style={styles.checkWrap}>
-                        <CheckIcon width={22} height={22} fill={lightColors.background}/>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <View style={styles.buttons}>
-              <Button
-                title={t('cancel')}
-                variant="outline"
-                onPress={onCancel}
-                style={styles.cancelBtn}
-                borderWidth={0}
-                backgroundColor={lightColors.skipbg}
-                textColor={lightColors.background}
-              />
-              <Button
-                title={t('ok')}
-                variant="primary"
-                onPress={onConfirm}
-                style={styles.okBtn}
-                backgroundColor={lightColors.accent}
-                textColor={palette.white}
-              />
-            </View>
+            <CategoryPickerContent
+              selectedCategory={selectedCategory}
+              onSelect={onSelect}
+              onCancel={onCancel}
+              onConfirm={onConfirm}
+              t={t}
+            />
           </View>
         </TouchableWithoutFeedback>
       </Pressable>

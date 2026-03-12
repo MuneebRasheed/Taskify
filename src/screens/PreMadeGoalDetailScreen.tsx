@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,32 @@ import { t } from '../i18n';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoIcon from '../assets/svgs/InfoIcon';
+import SetUpGoalsModal from '../components/SetUpGoalsModal';
+import type { GoalCategory } from '../components/CategoryModal';
+import CalendarIcon from '../assets/svgs/CalendarIcon';
+import TimeIcon from '../assets/svgs/TimeIcon';
+import EditIcon from '../assets/svgs/EditIcon';
+
+function formatDate(d: Date): string {
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatTime(hours: number, minutes: number, am: boolean): string {
+  const h = am ? (hours === 12 ? 12 : hours) : hours === 12 ? 0 : hours + 12;
+  return `${h.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
+}
+
+function daysUntilDue(d: Date): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(d);
+  due.setHours(0, 0, 0, 0);
+  return Math.ceil((due.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+}
 
 type PreMadeGoalDetailRouteProp = RouteProp<RootStackParamList, 'PreMadeGoalDetail'>;
 type PreMadeGoalDetailNavProp = NativeStackNavigationProp<RootStackParamList, 'PreMadeGoalDetail'>;
@@ -54,6 +80,34 @@ const PreMadeGoalDetailScreen = () => {
     () => (myGoalId ? goals.find((g) => g.id === myGoalId) : null),
     [goals, myGoalId]
   );
+
+  const initialDueDate = useMemo(() => {
+    if (mode === 'myGoal' && myGoal?.dueDate) return myGoal.dueDate instanceof Date ? myGoal.dueDate : new Date(myGoal.dueDate as unknown as number);
+    if (mode === 'selfMade' && selfMadePayload?.dueDate != null) return new Date(selfMadePayload.dueDate);
+    return null;
+  }, [mode, myGoal?.dueDate, selfMadePayload?.dueDate]);
+
+  const [dueDate, setDueDate] = useState<Date | null>(() => initialDueDate);
+  const [reminderDate, setReminderDate] = useState<Date | null>(null);
+  const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(null);
+  const [setUpGoalsModalVisible, setSetUpGoalsModalVisible] = useState(false);
+
+  useEffect(() => {
+    setDueDate(initialDueDate);
+  }, [initialDueDate]);
+
+  const category: GoalCategory | null = mode === 'preMade' && preMadeGoal ? preMadeGoal.category : null;
+  const reminderDisplay = reminderDate && reminderTime
+    ? `${formatDate(reminderDate)} - ${formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)}`
+    : '';
+  const reminderTimeOnly = reminderTime
+    ? formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)
+    : '';
+  const dueDateDaysLabel = dueDate
+    ? daysUntilDue(dueDate) >= 0
+      ? `D-${daysUntilDue(dueDate)} days`
+      : 'Overdue'
+    : null;
 
   const coverSource: ImageSourcePropType | null = useMemo(() => {
     if (mode === 'preMade' && preMadeGoal) return preMadeGoal.coverImage;
@@ -96,7 +150,7 @@ const PreMadeGoalDetailScreen = () => {
     if (mode === 'selfMade' && selfMadePayload) {
       return selfMadePayload.habits.map((h) => ({
         title: h.title,
-        selectedDays: [0, 1, 2, 3, 4, 5, 6],
+        selectedDays: h.selectedDays && h.selectedDays.length > 0 ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
         reminderTime: h.reminderTime ?? null,
         variant: 'habit' as const,
       }));
@@ -129,7 +183,7 @@ const PreMadeGoalDetailScreen = () => {
         }));
     }
     if (mode === 'selfMade' && selfMadePayload) {
-      const dueStr = selfMadePayload.dueDate
+      const goalDueStr = selfMadePayload.dueDate
         ? (() => {
             const d = new Date(selfMadePayload.dueDate!);
             return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
@@ -138,7 +192,7 @@ const PreMadeGoalDetailScreen = () => {
       return selfMadePayload.tasks.map((t) => ({
         title: t.title,
         selectedDays: [],
-        dueDate: dueStr,
+        dueDate: t.dueDate ?? goalDueStr ?? undefined,
         reminderTime: t.reminderTime ?? null,
         variant: 'task' as const,
       }));
@@ -205,12 +259,14 @@ const PreMadeGoalDetailScreen = () => {
         type: 'habit' as const,
         title: h.title,
         reminderTime: h.reminderTime,
+        selectedDays: h.selectedDays && h.selectedDays.length > 0 ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
       })),
       ...selfMadePayload.tasks.map((t, i) => ({
         id: `self-task-${Date.now()}-${i}`,
         type: 'task' as const,
         title: t.title,
         reminderTime: t.reminderTime,
+        dueDate: t.dueDate ?? undefined,
       })),
     ];
     addGoal({
@@ -300,21 +356,93 @@ const PreMadeGoalDetailScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>{title}</Text>
+        {/* Goals title + category, due date, reminder; Edit opens Set up Goals modal */}
+        <View style={styles.addGoalsSection}>
+          <View style={styles.goalTitleDisplayRow}>
+            <Text style={styles.goalTitleDisplayText} numberOfLines={1}>
+              {title}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSetUpGoalsModalVisible(true)}
+              style={styles.goalTitleEditCircle}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <EditIcon width={18} height={18} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.metadataRowPills}
+            style={styles.metadataRowPillsScroll}
+          >
+            {category != null && (
+              <TouchableOpacity
+                style={styles.metadataPillCategory}
+                onPress={() => setSetUpGoalsModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.metadataPillTextDark} numberOfLines={1}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.metadataPillWithIcon}
+              onPress={() => setSetUpGoalsModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <CalendarIcon width={18} height={18} />
+              {dueDate ? (
+                <View style={styles.dueDateTextWrap}>
+                  <Text style={styles.metadataPillTextDark} numberOfLines={1}>{dueDateDaysLabel}</Text>
+                  <Text style={styles.metadataPillTextDark} numberOfLines={1}>{formatDate(dueDate)}</Text>
+                </View>
+              ) : (
+                <Text style={styles.metadataPillTextDark} numberOfLines={1}>{t('noDueDate')}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.metadataPillWithIcon}
+              onPress={() => setSetUpGoalsModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <TimeIcon width={18} height={18} />
+              <Text style={styles.metadataPillTextDark} numberOfLines={1}>
+                {reminderDisplay || reminderTimeOnly || t('setReminder')}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
           {mode === 'preMade' && preMadeGoal && (
-            <View style={styles.metaRow}>
-              <View style={styles.categoryTag}>
-                <Text style={styles.categoryTagText}>{preMadeGoal.category}</Text>
-              </View>
-              <View style={styles.userCountRow}>
-                <Ionicons name="people-outline" size={16} color={lightColors.subText} />
-                <Text style={styles.userCount}>{preMadeGoal.userCount}</Text>
-              </View>
+            <View style={styles.userCountRow}>
+              <Ionicons name="people-outline" size={16} color={lightColors.subText} />
+              <Text style={styles.userCount}>{preMadeGoal.userCount}</Text>
             </View>
           )}
         </View>
+
+        <SetUpGoalsModal
+          visible={setUpGoalsModalVisible}
+          goalTitle={title}
+          category={category}
+          dueDate={dueDate}
+          reminderDate={reminderDate}
+          reminderTime={reminderTime}
+          onCancel={() => setSetUpGoalsModalVisible(false)}
+          onConfirm={(data) => {
+            setDueDate(data.dueDate);
+            setReminderDate(data.reminderDate);
+            setReminderTime(data.reminderTime);
+            setSetUpGoalsModalVisible(false);
+          }}
+          t={t}
+        />
+
+        
+
+
+
+        
 
         <View style={styles.contentSection}>
           <View style={styles.section}>
@@ -541,6 +669,77 @@ const styles = StyleSheet.create({
   coverSpacer: {
     flex: 1,
   },
+  addGoalsSection: {
+    marginHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 20,
+    backgroundColor: lightColors.secondaryBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: lightColors.border,
+  },
+  goalTitleDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 12,
+  },
+  goalTitleDisplayText: {
+    flex: 1,
+    fontFamily: fontFamilies.urbanistBold,
+    fontSize: 22,
+    color: lightColors.text,
+    paddingVertical: 4,
+  },
+  goalTitleEditCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: lightColors.secondaryBackground,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metadataRowPillsScroll: {
+    flexGrow: 0,
+    marginHorizontal: -24,
+  },
+  metadataRowPills: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 24,
+    paddingVertical: 4,
+  },
+  metadataPillCategory: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: lightColors.inputBackground,
+    borderRadius: 4,
+  },
+  metadataPillTextDark: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 12,
+    color: lightColors.subText,
+  },
+  metadataPillWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 0,
+    flexShrink: 0,
+  },
+  dueDateTextWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
   titleSection: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -572,6 +771,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginTop: 12,
   },
   userCount: {
     fontFamily: fontFamilies.urbanistMedium,
