@@ -40,9 +40,11 @@ export interface GoalCardProps {
   userCount?: string;
   /** Optional due date; when set, shows "D-X days" row (for my goals) */
   dueDate?: Date | null;
+  /** When true, card is dimmed (e.g. pre-made goal already added); add button is hidden */
+  dimmed?: boolean;
   /** When provided, the card is pressable */
   onPress?: () => void;
-  /** When provided, shows circular add button on the right (pre-made goals) */
+  /** When provided, shows circular add button on the right (pre-made goals). Omit when dimmed/already added. */
   onAddPress?: (e?: any) => void;
   /** Optional container style override */
   style?: ViewStyle;
@@ -59,6 +61,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
   tasksTotal,
   userCount,
   dueDate,
+  dimmed,
   onPress,
   onAddPress,
   style,
@@ -66,6 +69,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
   const showProgress = habitsDone !== undefined && habitsTotal !== undefined && tasksDone !== undefined && tasksTotal !== undefined;
   const habitsLabel = showProgress ? `Habits ${habitsDone}/${habitsTotal}` : `Habits ${habitsCount}`;
   const tasksLabel = showProgress ? `Tasks ${tasksDone}/${tasksTotal}` : `Tasks ${tasksCount}`;
+  const showAddButton = !dimmed && onAddPress != null;
 
   const content = (
     <>
@@ -105,12 +109,12 @@ const GoalCard: React.FC<GoalCardProps> = ({
         )}
       </View>
 
-      {onAddPress != null && (
+      {showAddButton && (
         <TouchableOpacity
           style={styles.addBtn}
           onPress={(e) => {
             e?.stopPropagation?.();
-            onAddPress(e);
+            onAddPress?.(e);
           }}
           activeOpacity={0.8}
         >
@@ -120,7 +124,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
     </>
   );
 
-  const cardStyle = [styles.goalCard, style];
+  const cardStyle = [styles.goalCard, dimmed && styles.goalCardDimmed, style];
 
   if (onPress) {
     return (
@@ -144,15 +148,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: lightColors.secondaryBackground,
-    // borderRadius: 14,
     marginBottom: 16,
     gap: 16,
     minHeight: 120,
     borderBottomWidth: 1,
     borderBottomColor: lightColors.border,
-    // paddingTop: 24,
     paddingBottom: 16,
-    // paddingHorizontal: 16,
+  },
+  goalCardDimmed: {
+    opacity: 0.6,
   },
   imageWrap: {
     width: '38%',

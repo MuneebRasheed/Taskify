@@ -21,6 +21,7 @@ import type { RootStackParamList } from '../navigations/RootNavigation';
 import SplashLogo from '../assets/svgs/SpashLogo';
 import SearchIcon from '../assets/svgs/SearchIcon';
 import Textt from '../components/Textt';
+import { useGoals } from '../context/GoalsContext';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ExploreSearch'>;
 
@@ -29,7 +30,13 @@ const FILTER_OPTIONS: (GoalCategory | 'Popular')[] = ['Popular', ...GOAL_CATEGOR
 const ExploreScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
+  const { goals } = useGoals();
   const [selectedCategory, setSelectedCategory] = useState<GoalCategory | 'Popular'>('Popular');
+
+  const addedPreMadeTitles = useMemo(
+    () => new Set(goals.filter((g) => g.source === 'preMade' && !g.achieved).map((g) => g.title)),
+    [goals]
+  );
 
   const filteredGoals = useMemo(() => {
     if (selectedCategory === 'Popular') {
@@ -102,18 +109,22 @@ const ExploreScreen = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {filteredGoals.map((goal) => (
-          <GoalCard
-            key={goal.id}
-            coverSource={goal.coverImage}
-            title={goal.title}
-            habitsCount={goal.habitsCount}
-            tasksCount={goal.tasksCount}
-            userCount={goal.userCount}
-            onPress={() => handleGoalPress(goal)}
-            onAddPress={(e) => handleAddGoal(goal, e)}
-          />
-        ))}
+        {filteredGoals.map((goal) => {
+          const alreadyAdded = addedPreMadeTitles.has(goal.title);
+          return (
+            <GoalCard
+              key={goal.id}
+              coverSource={goal.coverImage}
+              title={goal.title}
+              habitsCount={goal.habitsCount}
+              tasksCount={goal.tasksCount}
+              userCount={goal.userCount}
+              dimmed={alreadyAdded}
+              onPress={() => handleGoalPress(goal)}
+              onAddPress={alreadyAdded ? undefined : (e) => handleAddGoal(goal, e)}
+            />
+          );
+        })}
       </ScrollView>
     </View>
   );

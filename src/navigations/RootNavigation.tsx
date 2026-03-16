@@ -130,7 +130,7 @@ export type RootStackParamList = {
       tasks: { title: string; reminderTime?: string; dueDate?: string | null }[];
     };
   };
-  ExploreSearch: undefined;
+  ExploreSearch: { fromPreMade?: boolean } | undefined;
   MyGoalsScreen: undefined;
   UpgradePlanScreen: undefined;
   AccountSecurityScreen: undefined;

@@ -9,7 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { lightColors } from '../../utils/colors';
@@ -21,8 +21,10 @@ import type { GoalCategory } from '../components/CategoryModal';
 import { PREMADE_GOALS, type PreMadeGoalItem } from '../data/preMadeGoals';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import { useTranslation } from '../i18n';
+import { useGoals } from '../context/GoalsContext';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ExploreSearch'>;
+type ExploreSearchRouteProp = RouteProp<RootStackParamList, 'ExploreSearch'>;
 
 const FILTER_OPTIONS: (GoalCategory | 'Popular')[] = ['Popular', ...GOAL_CATEGORIES];
 
@@ -37,10 +39,18 @@ const POPULAR_GOALS_PREVIEW = PREMADE_GOALS.slice(0, 2);
 const ExploreSearchScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
+  const route = useRoute<ExploreSearchRouteProp>();
+  const { goals } = useGoals();
   const { t } = useTranslation();
+  const fromPreMade = route.params?.fromPreMade === true;
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>(DEFAULT_RECENT_SEARCHES);
   const [selectedCategory, setSelectedCategory] = useState<GoalCategory | 'Popular'>('Popular');
+
+  const addedPreMadeTitles = useMemo(
+    () => new Set(goals.filter((g) => g.source === 'preMade' && !g.achieved).map((g) => g.title)),
+    [goals]
+  );
 
   const searchResults = useMemo(() => {
     if (!query.trim()) return PREMADE_GOALS;
@@ -92,18 +102,20 @@ const ExploreSearchScreen = () => {
         </View>
       </View>
 
-      {/* Initial state: banner, recent searches, popular goals */}
+      {/* Initial state: banner (hidden when from pre-made goals), recent searches, popular goals */}
       {!hasQuery && (
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
-          <Image
-            source={require('../assets/images/ExploreCard.png')}
-            style={styles.bannerImage}
-            resizeMode="cover"
-          />
+          {!fromPreMade && (
+            <Image
+              source={require('../assets/images/ExploreCard.png')}
+              style={styles.bannerImage}
+              resizeMode="cover"
+            />
+          )}
           <View style={styles.section}>
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>{t('recentSearches')}</Text>
@@ -130,18 +142,22 @@ const ExploreSearchScreen = () => {
                 <Ionicons name="chevron-forward" size={18} color={lightColors.background} />
               </TouchableOpacity>
             </View>
-            {POPULAR_GOALS_PREVIEW.map((goal) => (
-              <GoalCard
-                key={goal.id}
-                coverSource={goal.coverImage}
-                title={goal.title}
-                habitsCount={goal.habitsCount}
-                tasksCount={goal.tasksCount}
-                userCount={goal.userCount}
-                onPress={() => handleGoalPress(goal)}
-                onAddPress={(e) => handleAddGoal(goal, e)}
-              />
-            ))}
+            {POPULAR_GOALS_PREVIEW.map((goal) => {
+              const alreadyAdded = addedPreMadeTitles.has(goal.title);
+              return (
+                <GoalCard
+                  key={goal.id}
+                  coverSource={goal.coverImage}
+                  title={goal.title}
+                  habitsCount={goal.habitsCount}
+                  tasksCount={goal.tasksCount}
+                  userCount={goal.userCount}
+                  dimmed={alreadyAdded}
+                  onPress={() => handleGoalPress(goal)}
+                  onAddPress={alreadyAdded ? undefined : (e) => handleAddGoal(goal, e)}
+                />
+              );
+            })}
           </View>
         </ScrollView>
       )}
@@ -194,18 +210,22 @@ const ExploreSearchScreen = () => {
             contentContainerStyle={[styles.listContent, { paddingBottom: 24 + insets.bottom }]}
             showsVerticalScrollIndicator={false}
           >
-            {filteredResults.map((goal) => (
-              <GoalCard
-                key={goal.id}
-                coverSource={goal.coverImage}
-                title={goal.title}
-                habitsCount={goal.habitsCount}
-                tasksCount={goal.tasksCount}
-                userCount={goal.userCount}
-                onPress={() => handleGoalPress(goal)}
-                onAddPress={(e) => handleAddGoal(goal, e)}
-              />
-            ))}
+            {filteredResults.map((goal) => {
+              const alreadyAdded = addedPreMadeTitles.has(goal.title);
+              return (
+                <GoalCard
+                  key={goal.id}
+                  coverSource={goal.coverImage}
+                  title={goal.title}
+                  habitsCount={goal.habitsCount}
+                  tasksCount={goal.tasksCount}
+                  userCount={goal.userCount}
+                  dimmed={alreadyAdded}
+                  onPress={() => handleGoalPress(goal)}
+                  onAddPress={alreadyAdded ? undefined : (e) => handleAddGoal(goal, e)}
+                />
+              );
+            })}
           </ScrollView>
         </>
       )}

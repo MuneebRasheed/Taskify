@@ -206,6 +206,11 @@ const PreMadeGoalDetailScreen = () => {
       ? selfMadePayload.note || ''
       : "To achieve this goal, it's essential to follow key steps in the journey. Begin by researching and identifying areas that align with your interests and strengths.";
 
+  const preMadeAlreadyAdded = useMemo(
+    () => mode === 'preMade' && preMadeGoal && goals.some((g) => g.source === 'preMade' && g.title === preMadeGoal.title && !g.achieved),
+    [mode, preMadeGoal, goals]
+  );
+
   const notFound = (mode === 'preMade' && !preMadeGoal) || (mode === 'myGoal' && !myGoal) || (mode === 'selfMade' && !selfMadePayload);
 
   if (notFound) {
@@ -228,12 +233,14 @@ const PreMadeGoalDetailScreen = () => {
         type: 'habit' as const,
         title: h.title,
         reminderTime: h.reminderTime,
+        selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
       })),
       ...preMadeGoal.tasks.map((t, i) => ({
         id: `pre-${preMadeGoal.id}-task-${i}`,
         type: 'task' as const,
         title: t.title,
         reminderTime: t.reminderTime,
+        dueDate: t.dueDate ?? undefined,
       })),
     ];
     addGoal({
@@ -244,7 +251,7 @@ const PreMadeGoalDetailScreen = () => {
       habitsDone: 0,
       tasksTotal: preMadeGoal.tasksCount,
       tasksDone: 0,
-      dueDate: null,
+      dueDate: dueDate ?? null,
       achieved: false,
       items,
     });
@@ -537,7 +544,7 @@ const PreMadeGoalDetailScreen = () => {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
-        {mode === 'preMade' && (
+        {mode === 'preMade' && !preMadeAlreadyAdded && (
           <Button
             title={t('addGoals') as string}
             variant="primary"

@@ -20,6 +20,7 @@ import { PREMADE_GOALS, type PreMadeGoalItem } from '../data/preMadeGoals';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import Textt from '../components/Textt';
+import { useGoals } from '../context/GoalsContext';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'PreMadeGoals'>;
 
@@ -29,7 +30,13 @@ const FILTER_OPTIONS: (GoalCategory | 'Popular')[] = ['Popular', ...GOAL_CATEGOR
 const PreMadeGoalsScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
+  const { goals } = useGoals();
   const [selectedCategory, setSelectedCategory] = useState<GoalCategory | 'Popular'>('Popular');
+
+  const addedPreMadeTitles = useMemo(
+    () => new Set(goals.filter((g) => g.source === 'preMade' && !g.achieved).map((g) => g.title)),
+    [goals]
+  );
 
   const filteredGoals = useMemo(() => {
     if (selectedCategory === 'Popular') {
@@ -46,6 +53,9 @@ const PreMadeGoalsScreen = () => {
     e?.stopPropagation?.();
     navigation.navigate('PreMadeGoalDetail', { goalId: goal.id });
   };
+  const handleSearchPress = () => {
+    navigation.navigate('ExploreSearch', { fromPreMade: true });
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -55,6 +65,7 @@ const PreMadeGoalsScreen = () => {
         onLeftPress={() => navigation.goBack()}
         title={<Textt i18nKey="preMadeGoals" style={styles.headerTitle} />}
         rightIcon={<SearchIcon width={28} height={28} />}
+        onRightPress={handleSearchPress}
         style={styles.header}
       />
 
@@ -90,18 +101,22 @@ const PreMadeGoalsScreen = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {filteredGoals.map((goal) => (
-          <GoalCard
-            key={goal.id}
-            coverSource={goal.coverImage}
-            title={goal.title}
-            habitsCount={goal.habitsCount}
-            tasksCount={goal.tasksCount}
-            userCount={goal.userCount}
-            onPress={() => handleGoalPress(goal)}
-            onAddPress={(e) => handleAddGoal(goal, e)}
-          />
-        ))}
+        {filteredGoals.map((goal) => {
+          const alreadyAdded = addedPreMadeTitles.has(goal.title);
+          return (
+            <GoalCard
+              key={goal.id}
+              coverSource={goal.coverImage}
+              title={goal.title}
+              habitsCount={goal.habitsCount}
+              tasksCount={goal.tasksCount}
+              userCount={goal.userCount}
+              dimmed={alreadyAdded}
+              onPress={() => handleGoalPress(goal)}
+              onAddPress={alreadyAdded ? undefined : (e) => handleAddGoal(goal, e)}
+            />
+          );
+        })}
       </ScrollView>
     </View>
   );

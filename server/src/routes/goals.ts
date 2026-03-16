@@ -148,17 +148,21 @@ router.post('/', async (req: Request, res: Response) => {
   const items = body.items ?? [];
   if (items.length > 0) {
     const ts = Date.now();
-    const rows = items.map((it: Record<string, unknown>, index: number) => ({
-      id: it.id ?? `item-${ts}-${index}-${Math.random().toString(36).slice(2, 9)}`,
-      goal_id: id,
-      type: it.type ?? 'task',
-      title: it.title ?? '',
-      reminder_time: it.reminderTime ?? null,
-      note: it.note ?? null,
-      selected_days: it.selectedDays ?? null,
-      due_date: it.dueDate ?? null,
-      paused: it.paused ?? false,
-    }));
+    const rows = items.map((it: Record<string, unknown>, index: number) => {
+      const type = it.type ?? 'task';
+      const isHabit = type === 'habit';
+      return {
+        id: it.id ?? `item-${ts}-${index}-${Math.random().toString(36).slice(2, 9)}`,
+        goal_id: id,
+        type,
+        title: it.title ?? '',
+        reminder_time: it.reminderTime ?? null,
+        note: it.note ?? null,
+        selected_days: isHabit ? (it.selectedDays ?? []) : null,
+        due_date: it.dueDate ?? null,
+        paused: it.paused === true,
+      };
+    });
     const { error: itemsErr } = await admin.from('goal_items').insert(rows);
     if (itemsErr) {
       console.error('[goals] POST /goals goal_items insert failed:', itemsErr.message, itemsErr.details);
