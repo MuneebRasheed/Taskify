@@ -204,7 +204,8 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       items: items ?? [],
     };
-    setGoals((prev) => [...prev, newGoal]);
+    // Insert newest goal at the front so it appears at the top of My Goals.
+    setGoals((prev) => [newGoal, ...prev]);
 
     const token = session?.access_token;
     if (token) {
