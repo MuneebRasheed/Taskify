@@ -227,20 +227,28 @@ const PreMadeGoalDetailScreen = () => {
   const handleAddGoal = () => {
     if (mode !== 'preMade' || !preMadeGoal) return;
     const coverIndex = Math.max(0, parseInt(preMadeGoal.id, 10) - 1) % 3;
+    const goalDueDateIso = dueDate ? dueDate.toISOString() : undefined;
+    const goalReminderTime = reminderTimeOnly || undefined;
     const items: GoalItem[] = [
       ...preMadeGoal.habits.map((h, i) => ({
         id: `pre-${preMadeGoal.id}-habit-${i}`,
         type: 'habit' as const,
         title: h.title,
-        reminderTime: h.reminderTime,
+        // If the user defined a reminder time for this goal, apply it to all habits;
+        // otherwise keep the habit's own reminderTime.
+        reminderTime: goalReminderTime ?? h.reminderTime,
         selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
       })),
       ...preMadeGoal.tasks.map((t, i) => ({
         id: `pre-${preMadeGoal.id}-task-${i}`,
         type: 'task' as const,
         title: t.title,
-        reminderTime: t.reminderTime,
-        dueDate: t.dueDate ?? undefined,
+        // If the user defined a reminder time for this goal, apply it to all tasks;
+        // otherwise keep the task's own reminderTime.
+        reminderTime: goalReminderTime ?? t.reminderTime,
+        // Use the user-selected goal due date for all tasks so the backend
+        // receives a concrete, parseable date instead of human text like "Today".
+        dueDate: goalDueDateIso,
       })),
     ];
     addGoal({

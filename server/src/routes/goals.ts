@@ -151,15 +151,26 @@ router.post('/', async (req: Request, res: Response) => {
     const rows = items.map((it: Record<string, unknown>, index: number) => {
       const type = it.type ?? 'task';
       const isHabit = type === 'habit';
+
+      let dueDateIso: string | null = null;
+      if (it.dueDate != null) {
+        const raw = String(it.dueDate);
+        const parsedTs = Date.parse(raw);
+        if (!Number.isNaN(parsedTs)) {
+          dueDateIso = new Date(parsedTs).toISOString();
+        }
+      }
+
       return {
         id: it.id ?? `item-${ts}-${index}-${Math.random().toString(36).slice(2, 9)}`,
         goal_id: id,
+        user_id: userId,
         type,
         title: it.title ?? '',
         reminder_time: it.reminderTime ?? null,
         note: it.note ?? null,
         selected_days: isHabit ? (it.selectedDays ?? []) : null,
-        due_date: it.dueDate ?? null,
+        due_date: dueDateIso,
         paused: it.paused === true,
       };
     });
