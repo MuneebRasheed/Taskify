@@ -5,7 +5,7 @@ Node.js backend for Taskify with auth and forgot-password flow.
 ## Setup
 
 1. Copy `.env.example` to `.env` and fill in your values.
-2. Create the `profiles` table in Supabase: open **Dashboard → SQL Editor**, then run the script in `server/supabase-migrations/001_profiles_and_otp.sql` (or the minimal `001_profiles_minimal.sql`). This creates `public.profiles` with `email`, `password_reset_otp`, and `password_reset_otp_expires_at`. If you already ran 001, run `002_profiles_insert_on_signup.sql` for the insert policy, then `003_add_email_to_profiles.sql` to add and backfill the `email` column.
+2. Create required goals tables in Supabase: open **Dashboard → SQL Editor** and run `server/supabase-migrations/004_goals_schema.sql`. This creates `public.goals`, `public.goal_items`, and `public.item_completions`.
 3. Install and run:
 
 ```bash
