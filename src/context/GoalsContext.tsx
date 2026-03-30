@@ -196,7 +196,8 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
     const id = generateId();
     const items = goal.items?.map((it) => ({
       ...it,
-      id: it.id || generateItemId(),
+      // Always re-key item ids to avoid collisions from template/static ids.
+      id: generateItemId(),
     }));
     const newGoal: SavedGoal = {
       ...goal,
@@ -243,6 +244,8 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
           if (error) {
             console.warn('[GoalsContext] createGoal failed:', error);
             setGoals((prev) => prev.filter((g) => g.id !== id));
+            // Server-side goal creation now rolls back atomically when item creation fails.
+            // Keep client rollback local only to avoid noisy "Goal not found" follow-up warnings.
           }
         });
     }

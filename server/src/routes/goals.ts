@@ -146,6 +146,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 
   const items = body.items ?? [];
+  let insertedItemRows: Record<string, unknown>[] = [];
   if (items.length > 0) {
     const ts = Date.now();
     const rows = items.map((it: Record<string, unknown>, index: number) => {
@@ -162,9 +163,8 @@ router.post('/', async (req: Request, res: Response) => {
       }
 
       return {
-        id: it.id ?? `item-${ts}-${index}-${Math.random().toString(36).slice(2, 9)}`,
+        id: `${id}-item-${ts}-${index}-${Math.random().toString(36).slice(2, 9)}`,
         goal_id: id,
-        user_id: userId,
         type,
         title: it.title ?? '',
         reminder_time: it.reminderTime ?? null,
@@ -174,27 +174,36 @@ router.post('/', async (req: Request, res: Response) => {
         paused: it.paused === true,
       };
     });
-    const { error: itemsErr } = await admin.from('goal_items').insert(rows);
+    const { data: insertedRows, error: itemsErr } = await admin.from('goal_items').insert(rows).select('*');
     if (itemsErr) {
       console.error('[goals] POST /goals goal_items insert failed:', itemsErr.message, itemsErr.details);
-      res.status(500).json({ error: 'Failed to create goal items', details: itemsErr.message });
+      // Roll back the goal row so we don't end up with orphan goals that have no habits/tasks.
+      const { error: rollbackErr } = await admin.from('goals').delete().eq('id', id);
+      if (rollbackErr) {
+        console.error('[goals] POST /goals rollback delete failed:', rollbackErr.message, rollbackErr.details);
+      }
+      res.status(500).json({
+        error: 'Failed to create goal items',
+        details: itemsErr.details ? `${itemsErr.message}: ${itemsErr.details}` : itemsErr.message,
+      });
       return;
     }
+    insertedItemRows = (insertedRows ?? []) as Record<string, unknown>[];
   }
 
   const created = {
     ...goalRow,
     dueDate: goalRow.due_date ? new Date(goalRow.due_date).getTime() : null,
     createdAt: goalRow.created_at,
-    items: items.map((it: Record<string, unknown>) => ({
+    items: insertedItemRows.map((it: Record<string, unknown>) => ({
       id: it.id,
       type: it.type,
       title: it.title,
-      reminderTime: it.reminderTime,
-      note: it.note,
-      selectedDays: it.selectedDays,
-      dueDate: it.dueDate,
-      paused: it.paused,
+      reminderTime: it.reminder_time ?? undefined,
+      note: it.note ?? undefined,
+      selectedDays: it.selected_days ?? undefined,
+      dueDate: it.due_date ?? undefined,
+      paused: it.paused ?? false,
     })),
   };
   res.status(201).json(created);

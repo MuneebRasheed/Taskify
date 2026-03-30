@@ -51,6 +51,8 @@ const AddTaskScreen = () => {
 
   const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [errors, setErrors] = useState<{ title?: string; dueDate?: string; repeatDays?: string }>({});
 
   const formatDate = (d: Date): string => {
     return d.toLocaleDateString('en-US', {
@@ -87,10 +89,27 @@ const AddTaskScreen = () => {
     }
   }, [initialItem, isHabit]);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const toggleDay = (index: number) => {
-    setSelectedDays((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
+    setSelectedDays((prev) => {
+      const next = prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index];
+      if (errors.repeatDays && next.length > 0) {
+        setErrors((p) => ({ ...p, repeatDays: undefined }));
+      }
+      return next;
+    });
   };
 
   const clearReminder = () => setReminderTime('');
@@ -120,6 +139,13 @@ const AddTaskScreen = () => {
 
   const handleSubmit = () => {
     Keyboard.dismiss();
+    const nextErrors: { title?: string; dueDate?: string; repeatDays?: string } = {};
+    if (!title.trim()) nextErrors.title = 'This is mandatory';
+    if (isHabit && selectedDays.length === 0) nextErrors.repeatDays = 'This is mandatory';
+    if (!isHabit && !dueDate.trim()) nextErrors.dueDate = 'This is mandatory';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     const item = buildItem();
     if (source === 'selfMade') {
       if (isEdit) {
@@ -211,7 +237,10 @@ const AddTaskScreen = () => {
               <TextInput
                 style={styles.inputFlex}
                 value={title}
-                onChangeText={setTitle}
+                onChangeText={(v) => {
+                  setTitle(v);
+                  if (errors.title && v.trim()) setErrors((p) => ({ ...p, title: undefined }));
+                }}
                 placeholder={isHabit ? 'Habit title...' : 'Task title...'}
                 placeholderTextColor={lightColors.placeholderText}
               />
@@ -224,6 +253,7 @@ const AddTaskScreen = () => {
                 </TouchableOpacity>
               )}
             </View>
+            {!!errors.title && <Text style={styles.inlineError}>{errors.title}</Text>}
 
             {isHabit && (
               <>
@@ -252,6 +282,9 @@ const AddTaskScreen = () => {
                     );
                   })}
                 </View>
+                {!!errors.repeatDays && (
+                  <Text style={styles.inlineError}>{errors.repeatDays}</Text>
+                )}
               </>
             )}
 
@@ -262,7 +295,7 @@ const AddTaskScreen = () => {
                   activeOpacity={0.7}
                   onPress={() => setDueDateModalVisible(true)}
                 >
-                  <View style={styles.inputRow}>
+                  <View style={[styles.inputRow, !!errors.dueDate && styles.inputRowError]}>
                     <CalendarIcon width={20} height={20} />
                     <Text
                       style={styles.inputFlex}
@@ -283,6 +316,7 @@ const AddTaskScreen = () => {
                     )}
                   </View>
                 </TouchableOpacity>
+                {!!errors.dueDate && <Text style={styles.inlineError}>{errors.dueDate}</Text>}
               </>
             )}
 
@@ -328,16 +362,18 @@ const AddTaskScreen = () => {
           </ScrollView>
         </TouchableWithoutFeedback>
 
-        <View style={[styles.footer, { paddingBottom: insets.bottom}]}>
-          <Button
-            title={submitLabel}
-            variant="primary"
-            onPress={handleSubmit}
-            style={styles.submitBtn}
-            backgroundColor={lightColors.accent}
-            textColor={lightColors.secondaryBackground}
-          />
-        </View>
+        {!keyboardVisible && (
+          <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+            <Button
+              title={submitLabel}
+              variant="primary"
+              onPress={handleSubmit}
+              style={styles.submitBtn}
+              backgroundColor={lightColors.accent}
+              textColor={lightColors.secondaryBackground}
+            />
+          </View>
+        )}
       </KeyboardAvoidingView>
 
       {/* Task Due Date calendar */}
@@ -421,6 +457,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: lightColors.inputBackground,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
     paddingHorizontal: 20,
     paddingVertical: 18,
     marginBottom: 20,
@@ -430,6 +468,16 @@ const styles = StyleSheet.create({
     // shadowOpacity: 0.04,
     // shadowRadius: 2,
     // elevation: 2,
+  },
+  inputRowError: {
+    borderColor: '#E11D48',
+  },
+  inlineError: {
+    marginTop: -12,
+    marginBottom: 16,
+    fontFamily: fontFamilies.urbanist,
+    fontSize: 13,
+    color: '#E11D48',
   },
   // inputIcon: {
   //   fontSize: 16,

@@ -7,8 +7,9 @@ import {
     Pressable,
     KeyboardAvoidingView,
     Platform,
+  Keyboard,
   } from "react-native";
-  import { useState } from "react";
+  import { useEffect, useState } from "react";
   import { Feather } from "@expo/vector-icons";
   import { lightColors, palette } from "../../utils/colors";
   import { fontFamilies } from "../theme/typography";
@@ -32,15 +33,33 @@ import { useAuth } from "../lib/auth/AuthProvider";
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     const { signIn } = useAuth();
-    const [email, setEmail] = useState("arslan.asad0101@gmail.com");
+    const [email, setEmail] = useState("jupyter6699@gmail.com");
     const [password, setPassword] = useState("hello123");
     const [agreed, setAgreed] = useState(false);
     const [loading, setLoading] = useState(false);
     const { t } = useTranslation();
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+    useEffect(() => {
+      const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+      const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+      const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+      const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+      return () => {
+        showSub.remove();
+        hideSub.remove();
+      };
+    }, []);
 
     const handleSignIn = async () => {
-      if (!email.trim() || !password) {
-        alert("Please enter email and password");
+      const nextErrors: { email?: string; password?: string } = {};
+      if (!email.trim()) nextErrors.email = "This is mandatory";
+      if (!password) nextErrors.password = "This is mandatory";
+      setErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) {
         return;
       }
 
@@ -70,15 +89,18 @@ import { useAuth } from "../lib/auth/AuthProvider";
           rightIcon={<View />}
           style={styles.header}
         />
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={0}
+          style={styles.keyboardAvoiding}
         >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={styles.keyboardView}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={false}
+            contentInsetAdjustmentBehavior="never"
+            showsVerticalScrollIndicator={false}
           >
             {/* Title */}
             <View style={styles.titleBlock}>
@@ -95,18 +117,26 @@ import { useAuth } from "../lib/auth/AuthProvider";
               <InputField
                 label={t('email')}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(v) => {
+                  setEmail(v);
+                  if (errors.email && v.trim()) setErrors((p) => ({ ...p, email: undefined }));
+                }}
                 placeholder={t('email')}
                 leftIcon={<EmailIcon width={20} height={20} />}
+                errorText={errors.email ?? null}
               />
               <InputField
                 label={t('password')}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(v) => {
+                  setPassword(v);
+                  if (errors.password && v) setErrors((p) => ({ ...p, password: undefined }));
+                }}
                 placeholder={t('password')}
                 secureTextEntry
                 showPasswordToggle
                 leftIcon={<PasswordIcon width={20} height={20} />}
+                errorText={errors.password ?? null}
               />
   
               {/* Terms */}
@@ -163,18 +193,20 @@ import { useAuth } from "../lib/auth/AuthProvider";
                 onPress={() => {}}
               />
               </View>
-          </KeyboardAvoidingView>
-        </ScrollView>
-        <View style={styles.signInButtonWrap}>
-        <Button
-                style={styles.signInButton}
-                title={t('signIn')}
-                variant="primary"
-                textColor={palette.white}
-                borderRadius={24}
-                onPress={handleSignIn}
-              />
-              </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        {!keyboardVisible && (
+          <View style={styles.signInButtonWrap}>
+            <Button
+              style={styles.signInButton}
+              title={t("signIn")}
+              variant="primary"
+              textColor={palette.white}
+              borderRadius={24}
+              onPress={handleSignIn}
+            />
+          </View>
+        )}
         <LoadingModal visible={loading} variant="modal" text={t('signingIn')} />
       </View>
     );
@@ -186,14 +218,16 @@ import { useAuth } from "../lib/auth/AuthProvider";
     container: {
       flex: 1,
     },
+    keyboardAvoiding: {
+      flex: 1,
+    },
     scroll: {
       flex: 1,
     },
     scrollContent: {
-      paddingBottom: 20,
-    },
-    keyboardView: {
+      flexGrow: 1,
       paddingHorizontal: 24,
+      paddingBottom: 12,
     },
     header: {
       paddingVertical: 0,

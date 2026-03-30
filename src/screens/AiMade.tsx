@@ -157,6 +157,7 @@ const AiMadeScreen = () => {
   const [reminderDateModalVisible, setReminderDateModalVisible] = useState(false);
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
   const [setUpGoalsModalVisible, setSetUpGoalsModalVisible] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const reminderDisplay =
     reminderDate && reminderTime
@@ -186,6 +187,19 @@ const AiMadeScreen = () => {
       // console.log("coverIndex..... goal",coverIndextest); 
     }
   }, [coverIndextest]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Sync draft store only on mount when in self-made flow (so we don't overwrite when returning from AddTaskScreen)
   useEffect(() => {
@@ -227,19 +241,17 @@ const AiMadeScreen = () => {
 
   const handleContinue = () => {
     Keyboard.dismiss();
-    navigation.navigate('GoalPlanner', {
+    navigation.navigate('FinalScreen', {
       goalTitle: isSelfMade ? goalTitle : prompt,
+      coverIndex,
+      category,
+      dueDate: dueDate ? dueDate.getTime() : null,
+      reminderDate: reminderDate ? reminderDate.getTime() : null,
+      reminderTime,
+      habits: habitsList,
+      tasks: tasksList,
+      note,
       fromSelfMade: isSelfMade,
-      initialHabits: habitsList,
-      initialTasks: tasksList,
-      initialNote: note,
-      ...(isSelfMade && {
-        selectedCoverIndex: coverIndex,
-        initialCategory: category ?? undefined,
-        initialDueDate: dueDate?.getTime(),
-        initialReminderDate: reminderDate?.getTime(),
-        initialReminderTime: reminderTime,
-      }),
     });
   };
 
@@ -316,7 +328,10 @@ const AiMadeScreen = () => {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
               <ScrollView
                 style={styles.selfMadeScroll}
-                contentContainerStyle={[styles.selfMadeScrollContent, { paddingBottom: insets.bottom + 100 }]}
+                contentContainerStyle={[
+                  styles.selfMadeScrollContent,
+                  { paddingBottom: insets.bottom + (keyboardVisible ? 24 : 140) },
+                ]}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
@@ -495,17 +510,19 @@ const AiMadeScreen = () => {
               
             </TouchableWithoutFeedback>
 
-             {/* Create Goals button – inside scroll */}
-             <View style={[styles.selfMadeActionsWrap, { paddingBottom: insets.bottom + 16}]}>
-                  <Button
-                    title={t('createGoals')}
-                    variant="primary"
-                    onPress={handleCreateGoal}
-                    style={styles.createGoalBtn}
-                    backgroundColor={lightColors.accent}
-                    textColor={lightColors.secondaryBackground}
-                  />
-                </View>
+            {/* Create Goals button – fixed footer (hidden when keyboard is open) */}
+            {!keyboardVisible && (
+              <View style={[styles.selfMadeActionsWrap, { paddingBottom: insets.bottom + 16 }]}>
+                <Button
+                  title={t('createGoals')}
+                  variant="primary"
+                  onPress={handleCreateGoal}
+                  style={styles.createGoalBtn}
+                  backgroundColor={lightColors.accent}
+                  textColor={lightColors.secondaryBackground}
+                />
+              </View>
+            )}
 
           </>
         ) : (
@@ -578,25 +595,27 @@ const AiMadeScreen = () => {
               </ScrollView>
             </TouchableWithoutFeedback>
 
-            <View style={[styles.actionsRow, { paddingBottom: insets.bottom }]}>
-              <Button
-                title={t("regenerate")}
-                variant="outline"
-                onPress={handleRegenerate}
-                style={styles.regenerateBtn}
-                borderWidth={0}
-                backgroundColor={lightColors.skipbg}
-                textColor={lightColors.background}
-              />
-              <Button
-                title={t("continue")}
-                variant="primary"
-                onPress={handleContinue}
-                style={styles.continueBtn}
-                backgroundColor={lightColors.accent}
-                textColor={lightColors.secondaryBackground}
-              />
-            </View>
+            {!keyboardVisible && (
+              <View style={[styles.actionsRow, { paddingBottom: insets.bottom }]}>
+                <Button
+                  title={t("regenerate")}
+                  variant="outline"
+                  onPress={handleRegenerate}
+                  style={styles.regenerateBtn}
+                  borderWidth={0}
+                  backgroundColor={lightColors.skipbg}
+                  textColor={lightColors.background}
+                />
+                <Button
+                  title={t("continue")}
+                  variant="primary"
+                  onPress={handleContinue}
+                  style={styles.continueBtn}
+                  backgroundColor={lightColors.accent}
+                  textColor={lightColors.secondaryBackground}
+                />
+              </View>
+            )}
           </View>
         </>
         )}

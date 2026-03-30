@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,20 @@ const AiGenetratingScreen = () => {
   const { session } = useAuth();
   const [goal, setGoal] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleGenerate = async () => {
     Keyboard.dismiss();
@@ -164,24 +178,26 @@ const AiGenetratingScreen = () => {
           </ScrollView>
         </TouchableWithoutFeedback>
 
-        <View style={styles.footer}>
-  <Button
-    title={t("generate")}
-    variant="primary"
-    onPress={handleGenerate}
-    textColor={lightColors.secondaryBackground}
-    borderRadius={24}
-    disabled={!goal.trim()}
-    style={StyleSheet.flatten([
-      styles.generateBtn,
-      {
-        backgroundColor: goal.trim()
-          ? lightColors.accent   // when user types
-          : lightColors.disabledButton,       // default color
-      },
-    ])}
-  />
-</View>
+        {!keyboardVisible && (
+          <View style={styles.footer}>
+            <Button
+              title={t('generate')}
+              variant="primary"
+              onPress={handleGenerate}
+              textColor={lightColors.secondaryBackground}
+              borderRadius={24}
+              disabled={!goal.trim()}
+              style={StyleSheet.flatten([
+                styles.generateBtn,
+                {
+                  backgroundColor: goal.trim()
+                    ? lightColors.accent
+                    : lightColors.disabledButton,
+                },
+              ])}
+            />
+          </View>
+        )}
       </KeyboardAvoidingView>
 
       <LoadingModal visible={generating} variant="generating" text="Generating plan..." />

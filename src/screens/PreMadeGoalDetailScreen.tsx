@@ -229,9 +229,12 @@ const PreMadeGoalDetailScreen = () => {
     const coverIndex = Math.max(0, parseInt(preMadeGoal.id, 10) - 1) % 3;
     const goalDueDateIso = dueDate ? dueDate.toISOString() : undefined;
     const goalReminderTime = reminderTimeOnly || undefined;
+    // Ensure goal_items IDs are unique per added instance; otherwise re-adding the same
+    // template can cause primary-key conflicts and prevent habits/tasks from being created.
+    const goalInstanceKey = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const items: GoalItem[] = [
       ...preMadeGoal.habits.map((h, i) => ({
-        id: `pre-${preMadeGoal.id}-habit-${i}`,
+        id: `pre-${preMadeGoal.id}-${goalInstanceKey}-habit-${i}`,
         type: 'habit' as const,
         title: h.title,
         // If the user defined a reminder time for this goal, apply it to all habits;
@@ -240,7 +243,7 @@ const PreMadeGoalDetailScreen = () => {
         selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
       })),
       ...preMadeGoal.tasks.map((t, i) => ({
-        id: `pre-${preMadeGoal.id}-task-${i}`,
+        id: `pre-${preMadeGoal.id}-${goalInstanceKey}-task-${i}`,
         type: 'task' as const,
         title: t.title,
         // If the user defined a reminder time for this goal, apply it to all tasks;
@@ -572,25 +575,21 @@ const PreMadeGoalDetailScreen = () => {
             textColor={lightColors.secondaryBackground}
           />
         )}
-        {mode === 'myGoal' && (
+        {mode === 'myGoal' && myGoal && !myGoal.achieved && (
           <>
-            {/* <Button
-              title={t('saveGoals') as string}
-              variant="primary"
-              onPress={handleGoToMyGoals}
-              style={styles.saveGoalsBtn}
-              backgroundColor={lightColors.accent}
-              textColor={lightColors.secondaryBackground}
-            /> */}
             <Button
-              title={(myGoal?.achieved ? t('unachieveGoal') : t('achieveGoals')) as string}
+              title={t('achieveGoals') as string}
               variant="primary"
               onPress={handleAchieve}
               style={styles.achieveBtnFull}
               backgroundColor={lightColors.background}
               textColor={lightColors.secondaryBackground}
             />
-            <TouchableOpacity style={styles.deleteBtn} onPress={handleDeletePress} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={handleDeletePress}
+              activeOpacity={0.8}
+            >
               <Text style={styles.deleteBtnText}>{t('deleteGoals') as string}</Text>
             </TouchableOpacity>
           </>

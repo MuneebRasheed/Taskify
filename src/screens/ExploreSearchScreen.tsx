@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   ScrollView,
   TextInput,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -46,6 +49,22 @@ const ExploreSearchScreen = () => {
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>(DEFAULT_RECENT_SEARCHES);
   const [selectedCategory, setSelectedCategory] = useState<GoalCategory | 'Popular'>('Popular');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates?.height ?? 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const addedPreMadeTitles = useMemo(
     () => new Set(goals.filter((g) => g.source === 'preMade' && !g.achieved).map((g) => g.title)),
@@ -69,6 +88,11 @@ const ExploreSearchScreen = () => {
   const hasQuery = query.trim().length > 0;
   const showNoResults = hasQuery && filteredResults.length === 0;
 
+  // Add a small scroll buffer when keyboard is open (not full keyboard height).
+  // This keeps the keyboard visible while still letting the user scroll content.
+  const keyboardScrollBuffer = keyboardHeight ? Math.min(keyboardHeight * 0.35 + 16, 140) : 0;
+  const scrollBottomPadding = insets.bottom;
+
   const handleGoalPress = (goal: PreMadeGoalItem) => {
     navigation.navigate('PreMadeGoalDetail', { goalId: goal.id });
   };
@@ -79,157 +103,167 @@ const ExploreSearchScreen = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Header: back + search input */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <BackArrowIcon width={24} height={24} />
-        </TouchableOpacity>
-        <View style={styles.searchWrap}>
-          <Ionicons name="search" size={20} color={lightColors.placeholderText} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t('searchGoals')}
-            placeholderTextColor={lightColors.placeholderText}
-            value={query}
-            onChangeText={setQuery}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={20} color={lightColors.placeholderText} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Initial state: banner (hidden when from pre-made goals), recent searches, popular goals */}
-      {!hasQuery && (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
-          showsVerticalScrollIndicator={false}
-        >
-          {!fromPreMade && (
-            <Image
-              source={require('../assets/images/ExploreCard.png')}
-              style={styles.bannerImage}
-              resizeMode="cover"
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+    >
+      <View style={[styles.inner, { paddingTop: insets.top }]}>
+        {/* Header: back + search input */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <BackArrowIcon width={24} height={24} />
+          </TouchableOpacity>
+          <View style={styles.searchWrap}>
+            <Ionicons name="search" size={20} color={lightColors.placeholderText} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('searchGoals')}
+              placeholderTextColor={lightColors.placeholderText}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
             />
-          )}
-          <View style={styles.section}>
-            <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>{t('recentSearches')}</Text>
-              {recentSearches.length > 0 && (
-                <TouchableOpacity onPress={() => setRecentSearches([])} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close" size={20} color={lightColors.text} />
-                </TouchableOpacity>
-              )}
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => setQuery('')} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={20} color={lightColors.placeholderText} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Initial state: banner (hidden when from pre-made goals), recent searches, popular goals */}
+        {!hasQuery && (
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={false}
+            contentInsetAdjustmentBehavior="never"
+          >
+            {!fromPreMade && (
+              <Image
+                source={require('../assets/images/ExploreCard.png')}
+                style={styles.bannerImage}
+                resizeMode="cover"
+              />
+            )}
+            <View style={styles.section}>
+              <View style={styles.sectionRow}>
+                <Text style={styles.sectionTitle}>{t('recentSearches')}</Text>
+                {recentSearches.length > 0 && (
+                  <TouchableOpacity onPress={() => setRecentSearches([])} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close" size={20} color={lightColors.text} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {recentSearches.map((item) => (
+                <View key={item} style={styles.recentItem}>
+                  <Text style={styles.recentText}>{item}</Text>
+                  <TouchableOpacity onPress={() => setRecentSearches((p) => p.filter((s) => s !== item))} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close" size={18} color={lightColors.subText} />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
-            {recentSearches.map((item) => (
-              <View key={item} style={styles.recentItem}>
-                <Text style={styles.recentText}>{item}</Text>
-                <TouchableOpacity onPress={() => setRecentSearches((p) => p.filter((s) => s !== item))} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close" size={18} color={lightColors.subText} />
+            <View style={styles.section}>
+              <View style={styles.sectionRow}>
+                <Text style={styles.sectionTitle}>Popular Goals</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('PreMadeGoals')} style={styles.viewAllBtn}>
+                  <Text style={styles.viewAllText}>View All</Text>
+                  <Ionicons name="chevron-forward" size={18} color={lightColors.background} />
                 </TouchableOpacity>
               </View>
-            ))}
-          </View>
-          <View style={styles.section}>
-            <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Popular Goals</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('PreMadeGoals')} style={styles.viewAllBtn}>
-                <Text style={styles.viewAllText}>View All</Text>
-                <Ionicons name="chevron-forward" size={18} color={lightColors.background} />
-              </TouchableOpacity>
+              {POPULAR_GOALS_PREVIEW.map((goal) => {
+                const alreadyAdded = addedPreMadeTitles.has(goal.title);
+                return (
+                  <GoalCard
+                    key={goal.id}
+                    coverSource={goal.coverImage}
+                    title={goal.title}
+                    habitsCount={goal.habitsCount}
+                    tasksCount={goal.tasksCount}
+                    userCount={goal.userCount}
+                    dimmed={alreadyAdded}
+                    onPress={() => handleGoalPress(goal)}
+                    onAddPress={alreadyAdded ? undefined : (e) => handleAddGoal(goal, e)}
+                  />
+                );
+              })}
             </View>
-            {POPULAR_GOALS_PREVIEW.map((goal) => {
-              const alreadyAdded = addedPreMadeTitles.has(goal.title);
-              return (
-                <GoalCard
-                  key={goal.id}
-                  coverSource={goal.coverImage}
-                  title={goal.title}
-                  habitsCount={goal.habitsCount}
-                  tasksCount={goal.tasksCount}
-                  userCount={goal.userCount}
-                  dimmed={alreadyAdded}
-                  onPress={() => handleGoalPress(goal)}
-                  onAddPress={alreadyAdded ? undefined : (e) => handleAddGoal(goal, e)}
-                />
-              );
-            })}
-          </View>
-        </ScrollView>
-      )}
-
-      {/* No results */}
-      {showNoResults && (
-        <View style={styles.emptyWrap}>
-          <View style={styles.emptyIllustration}>
-            {/* <View style={styles.clipboard} />
-            <View style={[styles.clipboard, styles.clipboardSecond]} />
-            <View style={styles.clip} />
-            <View style={[styles.clip, styles.clipSecond]} /> */}
-            <Image source={require('../assets/images/Goal.png')} style={styles.emptyIllustration} />
-          </View>
-          <Text style={styles.emptyTitle}>{t('noGoalsFound')}</Text>
-          <Text style={styles.emptyDescription}>
-            {t('pleaseTrySearchingUsingAlternativeKeywords')}
-          </Text>
-        </View>
-      )}
-
-      {/* Search results: category chips + list */}
-      {hasQuery && !showNoResults && (
-        <>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesWrap}
-            style={styles.categoriesScroll}
-            bounces={false}
-          >
-            {FILTER_OPTIONS.map((cat) => {
-              const isSelected = selectedCategory === cat;
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setSelectedCategory(cat)}
-                  style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
           </ScrollView>
-          <ScrollView
-            style={styles.listScroll}
-            contentContainerStyle={[styles.listContent, { paddingBottom: 24 + insets.bottom }]}
-            showsVerticalScrollIndicator={false}
-          >
-            {filteredResults.map((goal) => {
-              const alreadyAdded = addedPreMadeTitles.has(goal.title);
-              return (
-                <GoalCard
-                  key={goal.id}
-                  coverSource={goal.coverImage}
-                  title={goal.title}
-                  habitsCount={goal.habitsCount}
-                  tasksCount={goal.tasksCount}
-                  userCount={goal.userCount}
-                  dimmed={alreadyAdded}
-                  onPress={() => handleGoalPress(goal)}
-                  onAddPress={alreadyAdded ? undefined : (e) => handleAddGoal(goal, e)}
-                />
-              );
-            })}
-          </ScrollView>
-        </>
-      )}
-    </View>
+        )}
+
+        {/* No results */}
+        {showNoResults && (
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIllustration}>
+              <Image source={require('../assets/images/Goal.png')} style={styles.emptyIllustration} />
+            </View>
+            <Text style={styles.emptyTitle}>{t('noGoalsFound')}</Text>
+            <Text style={styles.emptyDescription}>
+              {t('pleaseTrySearchingUsingAlternativeKeywords')}
+            </Text>
+          </View>
+        )}
+
+        {/* Search results: category chips + list */}
+        {hasQuery && !showNoResults && (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesWrap}
+              style={styles.categoriesScroll}
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {FILTER_OPTIONS.map((cat) => {
+                const isSelected = selectedCategory === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    onPress={() => setSelectedCategory(cat)}
+                    style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <ScrollView
+              style={styles.listScroll}
+              contentContainerStyle={[styles.listContent, { paddingBottom: scrollBottomPadding }]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={false}
+              contentInsetAdjustmentBehavior="never"
+            >
+              {filteredResults.map((goal) => {
+                const alreadyAdded = addedPreMadeTitles.has(goal.title);
+                return (
+                  <GoalCard
+                    key={goal.id}
+                    coverSource={goal.coverImage}
+                    title={goal.title}
+                    habitsCount={goal.habitsCount}
+                    tasksCount={goal.tasksCount}
+                    userCount={goal.userCount}
+                    dimmed={alreadyAdded}
+                    onPress={() => handleGoalPress(goal)}
+                    onAddPress={alreadyAdded ? undefined : (e) => handleAddGoal(goal, e)}
+                  />
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -239,6 +273,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: lightColors.secondaryBackground,
+  },
+  inner: {
+    flex: 1,
   },
   headerRow: {
     flexDirection: 'row',

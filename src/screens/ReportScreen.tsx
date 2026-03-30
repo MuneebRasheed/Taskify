@@ -16,6 +16,7 @@ import Header from '../components/Header';
 import SplashLogo from '../assets/svgs/SpashLogo';
 import { useGoals } from '../context/GoalsContext';
 import { useTranslation } from '../i18n';
+import { showOverflowMenu } from '../utils/showOverflowMenu';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - 80;
@@ -254,6 +255,18 @@ const ReportScreen = () => {
     });
   };
 
+  const handleHeaderMenuPress = () => {
+    showOverflowMenu({
+      title: 'Report options',
+      items: [
+        { label: 'Weekly', onPress: () => setPeriodAndReset('weekly') },
+        { label: 'Monthly', onPress: () => setPeriodAndReset('monthly') },
+        { label: 'Yearly', onPress: () => setPeriodAndReset('yearly') },
+        { label: 'Jump to current date', onPress: () => setAnchorDate(atMidday(new Date())) },
+      ],
+    });
+  };
+
   //////////////////////////////////////////////////////
   // 🔥 BAR CHART DATA BUILDER
   //////////////////////////////////////////////////////
@@ -456,6 +469,7 @@ const ReportScreen = () => {
         rightIcon={
           <Ionicons name="ellipsis-vertical" size={24} color={lightColors.smallText} />
         }
+        onRightPress={handleHeaderMenuPress}
       />
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -698,7 +712,6 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
 
-  // ── Line chart tooltip (pin style like design) ──────
   lineTooltipWrapper: {
     alignItems: 'center',
     marginBottom: 4,

@@ -38,16 +38,46 @@ async function request<T>(
     headers,
   });
   const text = await res.text();
-  let data: T;
-  try {
-    data = (text ? JSON.parse(text) : {}) as T;
-  } catch {
-    return { error: 'Invalid response from server' };
+
+  const contentType = res.headers.get('content-type') ?? '';
+  const isJson = contentType.toLowerCase().includes('application/json');
+  const extractMessageFromHtml = (html: string): string | null => {
+    const preMatch = html.match(/<pre>([\s\S]*?)<\/pre>/i);
+    if (preMatch?.[1]) return preMatch[1].trim();
+    const stripped = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return stripped.length > 0 ? stripped : null;
+  };
+
+  let data: T | undefined;
+  if (isJson && text) {
+    try {
+      data = JSON.parse(text) as T;
+    } catch {
+      return { error: 'Server returned invalid JSON' };
+    }
   }
+
   if (!res.ok) {
-    return {
-      error: (data as { error?: string }).error ?? 'Request failed',
-    };
+    if (data && typeof data === 'object') {
+      const errorFromJson = (data as { error?: string }).error;
+      if (errorFromJson) {
+        return { error: errorFromJson };
+      }
+    }
+
+    if (res.status === 404 && path === '/ai/goal-plan') {
+      return {
+        error:
+          'AI endpoint is not available on the server. Restart/update backend and expose POST /ai/goal-plan.',
+      };
+    }
+
+    const fromHtml = text ? extractMessageFromHtml(text) : null;
+    return { error: fromHtml || `Request failed (${res.status})` };
+  }
+
+  if (!data) {
+    return { error: 'Server returned an empty response' };
   }
   return { data };
 }

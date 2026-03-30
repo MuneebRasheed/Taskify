@@ -19,6 +19,8 @@ import { useGoals, getGoalDueDateStr, isItemScheduledForDate } from '../context/
 import type { SavedGoal, GoalItem } from '../context/GoalsContext';
 import Textt from '../components/Textt';
 import { t, useTranslation } from '../i18n';
+import { useNavigation } from '@react-navigation/native';
+import { showOverflowMenu } from '../utils/showOverflowMenu';
 
 
 function formatDateKey(d: Date): string {
@@ -27,6 +29,8 @@ function formatDateKey(d: Date): string {
 
 const HomeScreen = () => {
   const { t } = useTranslation();
+  const navigation = useNavigation<any>();
+
   const insets = useSafeAreaInsets();
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
   const [selectedDate, setSelectedDate] = useState<string>(todayKey);
@@ -69,6 +73,10 @@ const HomeScreen = () => {
     [selectedDate]
   );
 
+  const hasAnyItemsOnSelectedDate = useMemo(() => {
+    return goalsVisibleOnSelectedDate.some((g) => itemsForSelectedDate(g).length > 0);
+  }, [goalsVisibleOnSelectedDate, itemsForSelectedDate]);
+
   const habitCount = useMemo(() => {
     return goalsVisibleOnSelectedDate.reduce((sum, g) => {
       return sum + (itemsForSelectedDate(g).filter((i) => i.type === 'habit').length ?? 0);
@@ -90,6 +98,17 @@ const HomeScreen = () => {
 
   const handleToggleItem = (itemId: string) => {
     toggleItemCompletion(itemId, selectedDate);
+  };
+
+  const handleHeaderMenuPress = () => {
+    showOverflowMenu({
+      title: 'Home options',
+      items: [
+        { label: 'Go to today', onPress: () => setSelectedDate(todayKey) },
+        { label: 'Open My Goals', onPress: () => navigation.navigate('My Goals') },
+        { label: 'Open Report', onPress: () => navigation.navigate('Report') },
+      ],
+    });
   };
 
   const scrollContentPaddingBottom =  insets.bottom;
@@ -117,6 +136,8 @@ const HomeScreen = () => {
               color={lightColors.smallText}
             />
           }
+          onRightPress={handleHeaderMenuPress}
+
         />
 
         {/* Task Calendar – controlled selectedDate, circles fill by completion */}
@@ -166,7 +187,7 @@ const HomeScreen = () => {
         )}
         {/* Goals list with items: only goals (and their items) scheduled for the selected date */}
         <View style={styles.goalsList}>
-          {goalsWithItems.length === 0 ? (
+          {!hasAnyItemsOnSelectedDate ? (
             <View style={styles.emptyState}>
               <Image
                 source={require('../assets/images/Goal.png')}

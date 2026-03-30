@@ -7,8 +7,9 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { lightColors, palette } from "../../utils/colors";
 import { fontFamilies } from "../theme/typography";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,14 +37,29 @@ const SignUpScreen = () => {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string; agreed?: string }>({});
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleSignup = async () => {
-    if (!agreed) {
-      alert("Please accept Terms & Conditions");
-      return;
-    }
-    if (!email.trim() || !password) {
-      alert("Please enter email and password");
+    const nextErrors: { email?: string; password?: string; agreed?: string } = {};
+    if (!agreed) nextErrors.agreed = "This is mandatory";
+    if (!email.trim()) nextErrors.email = "This is mandatory";
+    if (!password) nextErrors.password = "This is mandatory";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -73,15 +89,18 @@ const SignUpScreen = () => {
         rightIcon={<View />}
         style={styles.header}
       />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
+        style={styles.keyboardAvoiding}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.keyboardView}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={false}
+          contentInsetAdjustmentBehavior="never"
+          showsVerticalScrollIndicator={false}
         >
           {/* Title */}
           <View style={styles.titleBlock}>
@@ -98,24 +117,38 @@ const SignUpScreen = () => {
             <InputField
               label="Email"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(v) => {
+                setEmail(v);
+                if (errors.email && v.trim()) setErrors((p) => ({ ...p, email: undefined }));
+              }}
               placeholder="andrew.ainsley@yourdomain.com"
               leftIcon={<EmailIcon width={20} height={20} />}
+              errorText={errors.email ?? null}
             />
             <InputField
               label="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(v) => {
+                setPassword(v);
+                if (errors.password && v) setErrors((p) => ({ ...p, password: undefined }));
+              }}
               placeholder="••••••••"
               secureTextEntry
               showPasswordToggle
               leftIcon={<PasswordIcon width={20} height={20} />}
+              errorText={errors.password ?? null}
             />
 
             {/* Terms */}
             <View style={styles.termsRow}>
               <TouchableOpacity
-                onPress={() => setAgreed((a) => !a)}
+                onPress={() =>
+                  setAgreed((a) => {
+                    const next = !a;
+                    if (next && errors.agreed) setErrors((p) => ({ ...p, agreed: undefined }));
+                    return next;
+                  })
+                }
                 style={[styles.checkbox, agreed && styles.checkboxChecked]}
                 activeOpacity={0.8}
               >
@@ -130,6 +163,7 @@ const SignUpScreen = () => {
                 </Text>
               </Text>
             </View>
+            {!!errors.agreed && <Text style={styles.inlineError}>{errors.agreed}</Text>}
 
             <View style={styles.signInRow}>
               <Text style={styles.signInPrompt}>{t('alreadyHaveAnAccount')} </Text>
@@ -175,19 +209,21 @@ const SignUpScreen = () => {
             {/* Primary CTA */}
             
           </View>
-        </KeyboardAvoidingView>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-      <View style={styles.signUpButtonWrap}>
-        <Button
-                style={styles.signUpButton}
-                title={t('signUp')}
-                variant="primary"
-                textColor={palette.white}
-                borderRadius={24}
-                onPress={handleSignup}
-              />
-              </View>
+      {!keyboardVisible && (
+        <View style={styles.signUpButtonWrap}>
+          <Button
+            style={styles.signUpButton}
+            title={t("signUp")}
+            variant="primary"
+            textColor={palette.white}
+            borderRadius={24}
+            onPress={handleSignup}
+          />
+        </View>
+      )}
       <LoadingModal visible={loading} variant="modal" text={t('signingUp')} />
     </View>
   );
@@ -199,17 +235,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scroll: {
+  keyboardAvoiding: {
     flex: 1,
   },
-  scrollContent: {
-    paddingBottom: 20,
+  scroll: {
+    // flex: 1,
+
   },
-  keyboardView: {
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
+    paddingBottom: 12,
   },
   header: {
     paddingVertical: 0,
+
   },
   titleBlock: {
     marginTop: 20,
@@ -219,6 +259,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 44,
     color: lightColors.text,
+
   },
   sparkle: {
     fontSize: 20,
@@ -238,6 +279,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     // alignSelf: "center",
+  },
+  inlineError: {
+    marginTop: 8,
+    fontFamily: fontFamilies.urbanist,
+    fontSize: 13,
+    color: "#E11D48",
   },
   checkbox: {
     width: 24,
@@ -280,7 +327,7 @@ const styles = StyleSheet.create({
   separatorWrap: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 24,
+    // marginTop: 24,
     gap: 16,
   },
   separatorLine: {

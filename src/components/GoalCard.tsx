@@ -42,6 +42,8 @@ export interface GoalCardProps {
   dueDate?: Date | null;
   /** When true, card is dimmed (e.g. pre-made goal already added); add button is hidden */
   dimmed?: boolean;
+  /** When true, show "Achieved!" indicator on the card */
+  achieved?: boolean;
   /** When provided, the card is pressable */
   onPress?: () => void;
   /** When provided, shows circular add button on the right (pre-made goals). Omit when dimmed/already added. */
@@ -62,6 +64,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
   userCount,
   dueDate,
   dimmed,
+  achieved,
   onPress,
   onAddPress,
   style,
@@ -70,6 +73,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
   const habitsLabel = showProgress ? `Habits ${habitsDone}/${habitsTotal}` : `Habits ${habitsCount}`;
   const tasksLabel = showProgress ? `Tasks ${tasksDone}/${tasksTotal}` : `Tasks ${tasksCount}`;
   const showAddButton = !dimmed && onAddPress != null;
+  const showAchievedIndicator = achieved === true;
 
   const content = (
     <>
@@ -95,6 +99,16 @@ const GoalCard: React.FC<GoalCardProps> = ({
             <Text style={styles.taskTagText}>{tasksLabel}</Text>
           </View>
         </View>
+        {showAchievedIndicator && (
+          <View style={styles.achievedRow}>
+            <Ionicons
+              name="checkmark-circle"
+              size={18}
+              color={lightColors.completedGreen}
+            />
+            <Text style={styles.achievedText}>Achieved!</Text>
+          </View>
+        )}
         {userCount != null && userCount !== '' && (
           <View style={styles.userCountRow}>
             <UserIcon width={16} height={16} />
@@ -189,6 +203,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 6,
+  },
+  achievedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  achievedText: {
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 14,
+    color: lightColors.completedGreen,
   },
   habitTag: {
     paddingHorizontal: 10,

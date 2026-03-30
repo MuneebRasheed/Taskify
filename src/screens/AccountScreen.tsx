@@ -18,6 +18,7 @@ import ShieldSetting from '../assets/svgs/ShieldSetting';
 import ActivitySetting from '../assets/svgs/ActivitySetting';
 import LogoutModal from '../components/LogoutModal';
 import { useAuth } from '../lib/auth/AuthProvider';
+import { showOverflowMenu } from '../utils/showOverflowMenu';
 
 function displayNameFromUser(user: { email?: string | null; user_metadata?: Record<string, unknown> } | null): string {
   if (!user) return '';
@@ -61,6 +62,16 @@ const AccountScreen = () => {
     // Navigate to profile edit
   };
 
+  const handleHeaderMenuPress = () => {
+    showOverflowMenu({
+      title: t('account'),
+      items: [
+        { label: t('helpSupport'), onPress: () => navigation.navigate('HelpSupportScreen') },
+        { label: t('logout'), onPress: () => setLogoutModalVisible(true), destructive: true },
+      ],
+    });
+  };
+
   const settingsItems = [
     {
       icon: <StarSetting width={24} height={24} color={lightColors.smallText} />,
@@ -97,7 +108,7 @@ const AccountScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScreenHeader title={t('account')} onMenuPress={() => {}} />
+      <ScreenHeader title={t('account')} onMenuPress={handleHeaderMenuPress} />
 
       <ScrollView
         style={styles.scroll}

@@ -21,6 +21,7 @@ import SpashLogo from '../assets/svgs/SpashLogo';
 import GoalCard from '../components/GoalCard';
 import FlowButton from '../components/FlowButton';
 import type { MainTabsParamList } from '../navigations/MainTabs';
+import { showOverflowMenu } from '../utils/showOverflowMenu';
 
 
 const BOTTOM_NAV_HEIGHT = 0;
@@ -62,6 +63,17 @@ const MyGoalsScreen = () => {
     rootNav?.navigate('PreMadeGoalDetail', { myGoalId: goal.id });
   };
 
+  const handleHeaderMenuPress = () => {
+    showOverflowMenu({
+      title: 'My goals options',
+      items: [
+        { label: 'Show ongoing', onPress: () => setFilter('ongoing') },
+        { label: 'Show achieved', onPress: () => setFilter('achieved') },
+        { label: 'Add goal', onPress: handleAddGoal },
+      ],
+    });
+  };
+
   const coverSource = (goal: SavedGoal) => {
     const idx = goal.coverIndex % COVER_IMAGE_SOURCES.length;
     return COVER_IMAGE_SOURCES[idx];
@@ -76,6 +88,7 @@ const MyGoalsScreen = () => {
         rightIcon={
           <Ionicons name="ellipsis-vertical" size={24} color={lightColors.text} />
         }
+        onRightPress={handleHeaderMenuPress}
         style={styles.header}
       />
 
@@ -119,6 +132,7 @@ const MyGoalsScreen = () => {
               key={goal.id}
               coverSource={coverSource(goal)}
               title={goal.title}
+              achieved={goal.achieved}
               habitsDone={goal.habitsDone}
               habitsTotal={goal.habitsTotal}
               tasksDone={goal.tasksDone}

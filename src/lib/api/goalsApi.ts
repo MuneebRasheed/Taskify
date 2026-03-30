@@ -54,7 +54,9 @@ async function request<T>(
     return { error: 'Invalid response from server' };
   }
   if (!res.ok) {
-    return { error: (data as { error?: string }).error ?? 'Request failed' };
+    const errData = data as { error?: string; details?: unknown };
+    const errorMsg = errData?.error ?? 'Request failed';
+    return { error: errData?.details ? `${errorMsg}: ${String(errData.details)}` : errorMsg };
   }
   return { data };
 }

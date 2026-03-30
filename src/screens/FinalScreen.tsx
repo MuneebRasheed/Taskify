@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,12 @@ import TimeIcon from '../assets/svgs/TimeIcon';
 import InfoIcon from '../assets/svgs/InfoIcon';
 import { useGoals } from '../context/GoalsContext';
 import type { GoalItem } from '../context/GoalsContext';
+import ImageIcon from '../assets/svgs/ImageIcon';
+import EditIcon from '../assets/svgs/EditIcon';
+import SetUpGoalsModal from '../components/SetUpGoalsModal';
+import type { GoalCategory } from '../components/CategoryModal';
+import { useTranslation } from '../i18n';
+import { useGoalStore } from '../../store/goalStore';
 
 type FinalScreenRouteProp = RouteProp<RootStackParamList, 'FinalScreen'>;
 type FinalScreenNavProp = NativeStackNavigationProp<RootStackParamList, 'FinalScreen'>;
@@ -56,6 +62,9 @@ const FinalScreen = () => {
   const navigation = useNavigation<FinalScreenNavProp>();
   const route = useRoute<FinalScreenRouteProp>();
   const { addGoal } = useGoals();
+  const { t } = useTranslation();
+  const storeCoverIndex = useGoalStore((s) => s.selectedCoverIndex);
+  const setSelectedCoverIndex = useGoalStore((s) => s.setSelectedCoverIndex);
 
   const {
     goalTitle,
@@ -70,9 +79,38 @@ const FinalScreen = () => {
     fromSelfMade,
   } = route.params;
 
+  const [goalTitleText, setGoalTitleText] = useState(goalTitle);
+  const [categoryValue, setCategoryValue] = useState<GoalCategory | null>(
+    (category as GoalCategory | null) ?? null
+  );
+  const [dueDateValue, setDueDateValue] = useState<Date | null>(
+    dueDate != null ? new Date(dueDate) : null
+  );
+  const [reminderDateValue, setReminderDateValue] = useState<Date | null>(
+    reminderDate != null ? new Date(reminderDate) : null
+  );
+  const [reminderTimeValue, setReminderTimeValue] = useState<{ hours: number; minutes: number; am: boolean } | null>(
+    reminderTime ?? null
+  );
+  const [setupModalVisible, setSetupModalVisible] = useState(false);
+  const [coverIndexValue, setCoverIndexValue] = useState<number>(coverIndex);
+
+  // Keep goal store in sync for cover image selection UX parity
+  useEffect(() => {
+    setSelectedCoverIndex(coverIndex);
+    setCoverIndexValue(coverIndex);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof storeCoverIndex === 'number') {
+      setCoverIndexValue(storeCoverIndex);
+    }
+  }, [storeCoverIndex]);
+
   const coverSource: ImageSourcePropType | null =
-    COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
-      ? COVER_IMAGE_SOURCES[coverIndex]
+    COVER_IMAGE_SOURCES.length > 0 && coverIndexValue < COVER_IMAGE_SOURCES.length
+      ? COVER_IMAGE_SOURCES[coverIndexValue]
       : null;
 
   // const dueDateDaysLabel =
@@ -81,10 +119,16 @@ const FinalScreen = () => {
   //       ? `0 - ${daysUntilDue(dueDate)} days`
   //       : 'Overdue'
   //     : null;
-  const reminderDisplay =
-    reminderDate != null && reminderTime != null
-      ? `${formatDateFromStamp(reminderDate)} - ${formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)}`
-      : '';
+  const reminderDisplay = useMemo(() => {
+    if (reminderDateValue != null && reminderTimeValue != null) {
+      return `${formatDateFromStamp(reminderDateValue.getTime())} - ${formatTime(
+        reminderTimeValue.hours,
+        reminderTimeValue.minutes,
+        reminderTimeValue.am
+      )}`;
+    }
+    return '';
+  }, [reminderDateValue, reminderTimeValue]);
 
   const habitItems: TrackerCardItem[] = habits.map((h) => ({
     ...h,
@@ -111,18 +155,28 @@ const FinalScreen = () => {
       })),
     ];
     addGoal({
-      title: goalTitle.trim() || 'Goals Title',
-      coverIndex,
+      title: goalTitleText.trim() || t('goalsTitle'),
+      coverIndex: coverIndexValue,
       source: fromSelfMade ? 'selfMade' : 'aiMade',
       habitsTotal: habits.length,
       habitsDone: 0,
       tasksTotal: tasks.length,
       tasksDone: 0,
-      dueDate: dueDate != null ? new Date(dueDate) : null,
+      dueDate: dueDateValue != null ? new Date(dueDateValue.getTime()) : null,
       achieved: false,
       items,
     });
     navigation.navigate('MainTabs', { screen: 'My Goals' });
+  };
+
+  const openSelectCover = () => {
+    navigation.navigate('SelectCoverImage', {
+      selectedIndex: coverIndexValue,
+      onCoverSelected: (index) => {
+        setSelectedCoverIndex(index);
+        setCoverIndexValue(index);
+      },
+    });
   };
 
   return (
@@ -154,14 +208,29 @@ const FinalScreen = () => {
             </TouchableOpacity>
             <View style={styles.coverHeaderSpacer} />
           </View>
+
+          <TouchableOpacity
+            style={styles.changeCoverBtn}
+            onPress={openSelectCover}
+            activeOpacity={0.8}
+          >
+            <ImageIcon width={43} height={43} />
+          </TouchableOpacity>
         </View>
 
         {/* Goal overview card: title + category + due date + reminder */}
         <View style={styles.addGoalsSection}>
           <View style={styles.goalTitleDisplayRow}>
             <Text style={styles.goalTitleDisplayText} numberOfLines={2}>
-              {goalTitle || 'Add Goals Title'}
+              {goalTitleText || t('addGoalsTitle')}
             </Text>
+            <TouchableOpacity
+              onPress={() => setSetupModalVisible(true)}
+              style={styles.goalTitleEditCircle}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <EditIcon width={18} height={18} />
+            </TouchableOpacity>
           </View>
           <ScrollView
             horizontal
@@ -169,34 +238,46 @@ const FinalScreen = () => {
             contentContainerStyle={styles.metadataRowPills}
             style={styles.metadataRowPillsScroll}
           >
-            <View style={styles.metadataPillCategory}>
+            <TouchableOpacity
+              style={styles.metadataPillCategory}
+              onPress={() => setSetupModalVisible(true)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.metadataPillCategoryText} numberOfLines={1}>
-                {category ?? 'Category'}
+                {categoryValue ?? t('category')}
               </Text>
-            </View>
-            <View style={styles.metadataPillWithIcon}>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.metadataPillWithIcon}
+              onPress={() => setSetupModalVisible(true)}
+              activeOpacity={0.7}
+            >
               <CalendarIcon width={18} height={18} />
-              {dueDate != null ? (
+              {dueDateValue != null ? (
                 <View style={styles.dueDateTextWrap}>
                   <Text style={styles.metadataPillTextDark} numberOfLines={1}>
                     {/* {dueDateDaysLabel} */}
                   </Text>
                   <Text style={styles.metadataPillTextDark} numberOfLines={1}>
-                    {formatDateFromStamp(dueDate)}
+                    {formatDateFromStamp(dueDateValue.getTime())}
                   </Text>
                 </View>
               ) : (
                 <Text style={styles.metadataPillTextDark} numberOfLines={1}>
-                  No Due Date
+                  {t('noDueDate')}
                 </Text>
               )}
-            </View>
-            <View style={styles.metadataPillWithIcon}>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.metadataPillWithIcon}
+              onPress={() => setSetupModalVisible(true)}
+              activeOpacity={0.7}
+            >
               <TimeIcon width={18} height={18} />
               <Text style={styles.metadataPillTextDark} numberOfLines={1}>
-                {reminderDisplay || 'Set Reminder'}
+                {reminderDisplay || t('setReminder')}
               </Text>
-            </View>
+            </TouchableOpacity>
           </ScrollView>
         </View>
 
@@ -232,7 +313,7 @@ const FinalScreen = () => {
       {/* Save Goals button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Button
-          title="Save Goals"
+          title={t('saveGoals')}
           variant="primary"
           onPress={handleSaveGoals}
           style={styles.saveGoalsBtn}
@@ -240,6 +321,25 @@ const FinalScreen = () => {
           textColor={lightColors.secondaryBackground}
         />
       </View>
+
+      <SetUpGoalsModal
+        visible={setupModalVisible}
+        goalTitle={goalTitleText}
+        category={categoryValue}
+        dueDate={dueDateValue}
+        reminderDate={reminderDateValue}
+        reminderTime={reminderTimeValue}
+        onCancel={() => setSetupModalVisible(false)}
+        onConfirm={(data) => {
+          setGoalTitleText(data.goalTitle);
+          setCategoryValue(data.category);
+          setDueDateValue(data.dueDate);
+          setReminderDateValue(data.reminderDate);
+          setReminderTimeValue(data.reminderTime);
+          setSetupModalVisible(false);
+        }}
+        t={t}
+      />
     </View>
   );
 };
@@ -325,6 +425,22 @@ const styles = StyleSheet.create({
   coverHeaderSpacer: {
     width: 48,
   },
+  changeCoverBtn: {
+    position: 'absolute',
+    bottom: 12,
+    right: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: lightColors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
   addGoalsSection: {
     marginHorizontal: 24,
     paddingTop: 24,
@@ -346,6 +462,16 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: lightColors.text,
     paddingVertical: 4,
+  },
+  goalTitleEditCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: lightColors.secondaryBackground,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metadataRowPillsScroll: {
     flexGrow: 0,

@@ -52,8 +52,14 @@ const TaskCalendar: React.FC<CalendarProps> = ({
     if (!isControlled) setInternalSelectedDate(dateKey);
   };
 
-  const formatDate = (date: Date) =>
-    date.toISOString().split('T')[0];
+  const formatDate = (date: Date) => {
+    // IMPORTANT: avoid toISOString() here (UTC) which can shift the calendar day.
+    // We want a stable local calendar key: YYYY-MM-DD.
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();

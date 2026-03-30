@@ -20,6 +20,8 @@ export interface InputFieldProps extends Omit<TextInputProps, "value" | "onChang
   showPasswordToggle?: boolean;
   /** Custom left icon (e.g. EmailIcon, PasswordIcon). When set, replaces the default Feather icon. */
   leftIcon?: React.ReactNode;
+  /** When set, shows inline validation text and highlights the field. */
+  errorText?: string | null;
 }
 
 export default function InputField({
@@ -31,6 +33,7 @@ export default function InputField({
   showPasswordToggle = false,
   keyboardType = "email-address",
   leftIcon,
+  errorText = null,
   ...rest
 }: InputFieldProps) {
   const [visible, setVisible] = useState(false);
@@ -45,7 +48,7 @@ export default function InputField({
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputWrapper}>
+      <View style={[styles.inputWrapper, !!errorText && styles.inputWrapperError]}>
         {leftIcon ? (
           <View style={styles.leftIcon}>{leftIcon}</View>
         ) : (
@@ -81,6 +84,7 @@ export default function InputField({
           </TouchableOpacity>
         )}
       </View>
+      {!!errorText && <Text style={styles.errorText}>{errorText}</Text>}
     </View>
   );
 }
@@ -105,6 +109,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "transparent",
   },
+  inputWrapperError: {
+    borderColor: "#E11D48",
+  },
   leftIcon: {
     marginRight: 12,
   },
@@ -118,5 +125,11 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     padding: 4,
+  },
+  errorText: {
+    marginTop: 8,
+    fontFamily: fontFamilies.urbanist,
+    fontSize: 13,
+    color: "#E11D48",
   },
 });

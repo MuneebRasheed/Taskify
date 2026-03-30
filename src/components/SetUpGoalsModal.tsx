@@ -77,6 +77,7 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
   } | null>(initialReminderTime);
 
   const [currentView, setCurrentView] = useState<ModalView>('main');
+  const [errors, setErrors] = useState<{ goalTitle?: string; dueDate?: string }>({});
 
   useEffect(() => {
     if (visible) {
@@ -86,6 +87,7 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
       setReminderDate(initialReminderDate);
       setReminderTime(initialReminderTime);
       setCurrentView('main');
+      setErrors({});
     }
   }, [
     visible,
@@ -102,6 +104,12 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
       : '';
 
   const handleOK = () => {
+    const nextErrors: { goalTitle?: string; dueDate?: string } = {};
+    if (!goalTitle.trim()) nextErrors.goalTitle = 'This is mandatory';
+    if (dueDate == null) nextErrors.dueDate = 'This is mandatory';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     onConfirm({
       goalTitle,
       category,
@@ -138,12 +146,18 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
 
                 <Text style={styles.label}>{t('goalsTitle')}</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, !!errors.goalTitle && styles.inputError]}
                   value={goalTitle}
-                  onChangeText={setGoalTitle}
+                  onChangeText={(v) => {
+                    setGoalTitle(v);
+                    if (errors.goalTitle && v.trim()) {
+                      setErrors((p) => ({ ...p, goalTitle: undefined }));
+                    }
+                  }}
                   placeholder={t('addGoalsTitle')}
                   placeholderTextColor={lightColors.subText}
                 />
+                {!!errors.goalTitle && <Text style={styles.inlineError}>{errors.goalTitle}</Text>}
 
                 <Text style={styles.label}>{t('category')}</Text>
                 <TouchableOpacity
@@ -162,7 +176,7 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
 
                 <Text style={styles.label}>{t('goalsDueDate')}</Text>
                 <TouchableOpacity
-                  style={styles.inputRow}
+                  style={[styles.inputRow, !!errors.dueDate && styles.inputRowError]}
                   onPress={() => setCurrentView('dueDate')}
                   activeOpacity={0.7}
                 >
@@ -186,6 +200,7 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
                     </TouchableOpacity>
                   )}
                 </TouchableOpacity>
+                {!!errors.dueDate && <Text style={styles.inlineError}>{errors.dueDate}</Text>}
 
                 <Text style={styles.label}>{t('goalsReminder')}</Text>
                 <TouchableOpacity
@@ -251,7 +266,10 @@ const SetUpGoalsModal: React.FC<SetUpGoalsModalProps> = ({
               <CalendarContent
                 title={t('goalsDueDate')}
                 selectedDate={dueDate}
-                onSelect={setDueDate}
+                onSelect={(d) => {
+                  setDueDate(d);
+                  if (errors.dueDate && d != null) setErrors((p) => ({ ...p, dueDate: undefined }));
+                }}
                 onCancel={goBack}
                 onConfirm={goBack}
                 t={t}
@@ -324,6 +342,8 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: lightColors.inputBackground,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontFamily: fontFamilies.urbanistMedium,
@@ -331,15 +351,30 @@ const styles = StyleSheet.create({
     color: lightColors.text,
     marginBottom: 22,
   },
+  inputError: {
+    borderColor: '#E11D48',
+  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: lightColors.inputBackground,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 10,
     marginBottom: 24,
+  },
+  inputRowError: {
+    borderColor: '#E11D48',
+  },
+  inlineError: {
+    marginTop: -16,
+    marginBottom: 18,
+    fontFamily: fontFamilies.urbanist,
+    fontSize: 13,
+    color: '#E11D48',
   },
   inputRowText: {
     flex: 1,
