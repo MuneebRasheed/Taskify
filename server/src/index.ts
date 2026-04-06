@@ -17,9 +17,13 @@ app.use('/auth', authRoutes);
 app.use('/goals', goalsRoutes);
 app.use('/ai', aiRoutes);
 
-app.get('/health', (_req, res) => {
-  res.json({ ok: true });
-});
+/** Public health checks — no auth; safe for load balancers / uptime monitors */
+const publicHealthHandler: express.RequestHandler = (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'taskify-api' });
+};
+
+app.get('/health', publicHealthHandler);
+app.get('/public/health', publicHealthHandler);
 
 app.listen(PORT, () => {
   console.log(`Taskify server running at http://localhost:${PORT}`);
