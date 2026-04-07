@@ -28,9 +28,10 @@ import ImageIcon from '../assets/svgs/ImageIcon';
 import { useGoalStore } from '../../store/goalStore';
 import Textt from '../components/Textt';
 import {  useTranslation } from '../i18n';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
 import type { TrackerCardItem } from '../components/TrackerCard';
+import { useGoals } from '../context/GoalsContext';
+import type { GoalItem } from '../context/GoalsContext';
 
 
 
@@ -55,6 +56,7 @@ const GoalPlannerScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<GoalPlannerNavProp>();
   const route = useRoute<GoalPlannerRouteProp>();
+  const { addGoal } = useGoals();
 
   const goalTitle = route.params?.goalTitle ?? '';
   const fromSelfMade = route.params?.fromSelfMade ?? false;
@@ -92,6 +94,7 @@ const GoalPlannerScreen = () => {
   const [reminderDateModalVisible, setReminderDateModalVisible] = useState(false);
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
   const goalTitleInputRef = useRef<TextInput>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (goalTitle) setGoalTitleText(goalTitle);
@@ -149,26 +152,39 @@ const GoalPlannerScreen = () => {
       : '';
 
   const handleSaveGoal = () => {
-    
-    navigation.navigate('FinalScreen', {
-      goalTitle: goalTitleText.trim() || t('goalsTitle'),
+    if (!dueDate) return;
+    const items: GoalItem[] = [
+      ...habits.map((habit, index) => ({
+        id: `planner-h-${index}`,
+        type: 'habit' as const,
+        title: habit.title,
+        reminderTime: habit.reminderTime ?? undefined,
+      })),
+      ...tasks.map((task, index) => ({
+        id: `planner-t-${index}`,
+        type: 'task' as const,
+        title: task.title,
+        reminderTime: task.reminderTime ?? undefined,
+      })),
+    ];
+
+    addGoal({
+      title: goalTitleText.trim() || t('goalsTitle'),
       coverIndex,
-      category,
-      dueDate: dueDate != null ? dueDate.getTime() : null,
-      reminderDate: reminderDate != null ? reminderDate.getTime() : null,
-      reminderTime,
-      habits,
-      tasks,
-      note,
-      fromSelfMade,
+      source: fromSelfMade ? 'selfMade' : 'aiMade',
+      habitsTotal: habits.length,
+      habitsDone: 0,
+      tasksTotal: tasks.length,
+      tasksDone: 0,
+      dueDate: new Date(dueDate.getTime()),
+      achieved: false,
+      items,
     });
+    navigation.navigate('MainTabs', { screen: 'My Goals' });
   };
-  const { t } = useTranslation();
-  // const [showPicker, setShowPicker] = useState(false);
+
   return (
-
-
-<View>
+<View style={styles.root}>
 
 {/* Part 1: Cover image + back arrow + change cover icon */}
 <View style={styles.coverWrap}>
@@ -180,6 +196,35 @@ const GoalPlannerScreen = () => {
               <Text style={styles.coverPlaceholderHint}>Tap camera to select</Text>
             </View>
           )}
+
+          <TouchableOpacity
+            style={[styles.backBtn, { top: insets.top + 10 }]}
+            onPress={() =>
+              navigation.navigate(
+                'AiMade',
+                fromSelfMade
+                  ? {
+                      source: 'selfMade',
+                      prompt: goalTitleText,
+                      initialHabits: habits,
+                      initialTasks: tasks,
+                      initialNote: note,
+                    }
+                  : {
+                      prompt: goalTitleText,
+                      initialGoalTitle: goalTitleText,
+                      initialHabits: habits,
+                      initialTasks: tasks,
+                      initialNote: note,
+                    }
+              )
+            }
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <View style={styles.backBtnCircle}>
+              <BackArrowIcon width={24} height={24} />
+            </View>
+          </TouchableOpacity>
           
           <TouchableOpacity
             style={styles.changeCoverBtn}
@@ -209,31 +254,9 @@ const GoalPlannerScreen = () => {
       >
 
 
-<TouchableOpacity
-            style={[styles.backBtn, {  left: 16, top: insets.top }]}
-            onPress={() => navigation.navigate('AiMade', fromSelfMade ? { source: 'selfMade', prompt: goalTitleText } : { prompt: goalTitleText })}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <View style={styles.backBtnCircle}>
-              <BackArrowIcon width={24} height={24} />
-            </View>
-          </TouchableOpacity>
-        
-
-        {/* Part 2: Goals Title (with edit icon when from self-made flow) */}
+        {/* Part 2: Goals Title */}
         <View style={styles.section}>
-          <View style={styles.labelRow}>
-            <Textt i18nKey="goalsTitle" style={styles.label} />
-            {fromSelfMade && (
-              <TouchableOpacity
-                onPress={() => goalTitleInputRef.current?.focus()}
-                style={styles.editTitleBtn}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="pencil" size={20} color={lightColors.text} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <Textt i18nKey="goalsTitle" style={styles.label} />
           <TextInput
             ref={goalTitleInputRef}
             style={styles.input}
@@ -329,7 +352,10 @@ const GoalPlannerScreen = () => {
           title={t("saveGoals")}
           variant="primary"
           onPress={handleSaveGoal}
+          disabled={!dueDate}
           style={styles.saveBtn}
+          backgroundColor={dueDate ? lightColors.accent : lightColors.disabledButton}
+          textColor={lightColors.secondaryBackground}
         />
       </View>
 
@@ -388,6 +414,10 @@ const GoalPlannerScreen = () => {
 export default GoalPlannerScreen;
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: lightColors.secondaryBackground,
+  },
   container: {
     flex: 1,
   },
@@ -456,16 +486,6 @@ const styles = StyleSheet.create({
     color: lightColors.text,
     marginBottom: 8,
     marginTop: 22,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  editTitleBtn: {
-    padding: 4,
   },
   input: {
     backgroundColor: lightColors.inputBackground,

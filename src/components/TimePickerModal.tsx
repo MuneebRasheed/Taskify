@@ -382,21 +382,25 @@ const styles = StyleSheet.create({
   pickerSection: {
     marginTop: 8,
     marginBottom: 28,
+    
   },
   wheelsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    // backgroundColor: 'red',
   },
   wheelWrap: {
     overflow: 'hidden',
     height: 300,
     justifyContent: 'center',
+    // backgroundColor: 'blue',
   },
   colonWrap: {
     paddingHorizontal: 6,
     height: PICKER_HEIGHT,
     justifyContent: 'center',
+    // backgroundColor: 'green',
   },
   colon: {
     fontFamily: fontFamilies.urbanistBold,

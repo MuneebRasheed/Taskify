@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -241,23 +242,34 @@ const AiMadeScreen = () => {
 
   const handleContinue = () => {
     Keyboard.dismiss();
-    navigation.navigate('FinalScreen', {
-      goalTitle: isSelfMade ? goalTitle : prompt,
-      coverIndex,
-      category,
-      dueDate: dueDate ? dueDate.getTime() : null,
-      reminderDate: reminderDate ? reminderDate.getTime() : null,
-      reminderTime,
-      habits: habitsList,
-      tasks: tasksList,
-      note,
-      fromSelfMade: isSelfMade,
+    // Collect title, category, due date, reminder on GoalPlanner; then FinalScreen for review + save
+    navigation.navigate('GoalPlanner', {
+      goalTitle: prompt,
+      selectedCoverIndex: coverIndex,
+      fromSelfMade: false,
+      initialHabits: habitsList,
+      initialTasks: tasksList,
+      initialNote: note,
     });
   };
 
   const handleCreateGoal = () => {
     console.log("handleCreateGoal.....");
     Keyboard.dismiss();
+    if (habitsList.length === 0 && tasksList.length === 0) {
+      Alert.alert(
+        t('cannotCreateGoal'),
+        t('addAtLeastOneHabitOrTask')
+      );
+      return;
+    }
+    if (!dueDate) {
+      Alert.alert(
+        t('cannotCreateGoal'),
+        t('pleaseSetDueDateToCreateGoal')
+      );
+      return;
+    }
     const title = goalTitle.trim() || t('addGoalsTitle');
     navigation.navigate('PreMadeGoalDetail', {
       selfMadePayload: {

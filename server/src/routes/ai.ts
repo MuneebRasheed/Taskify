@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Router, Request, Response } from 'express';
 import Groq from 'groq-sdk';
 import { getAuthenticatedUser } from '../lib/auth';
@@ -17,7 +18,16 @@ const send = (res: Response, body: object, status: number): void => {
 
 const log = (msg: string, meta?: object): void => {
   // eslint-disable-next-line no-console
-  console.log('[AI Goal Plan]', msg, meta ?? '');
+  console.log('[AI Goal Plan]', msg, meta && Object.keys(meta).length ? meta : '');
+};
+
+const logError = (msg: string, err: unknown, meta?: object): void => {
+  const base =
+    err instanceof Error
+      ? { message: err.message, stack: err.stack, name: err.name }
+      : { detail: String(err) };
+  // eslint-disable-next-line no-console
+  console.error('[AI Goal Plan]', msg, { ...meta, ...base });
 };
 
 export type AiGoalHabit = {
@@ -83,15 +93,30 @@ Rules:
 router.post(
   '/goal-plan',
   async (req: Request, res: Response): Promise<void> => {
+    const requestId = randomUUID();
+    const wallStart = Date.now();
+
     try {
+      log('POST /ai/goal-plan — start', {
+        requestId,
+        ip: req.ip,
+        xForwardedFor: req.headers['x-forwarded-for'],
+        hasBearerToken: Boolean(
+          req.headers.authorization?.startsWith('Bearer ')
+        ),
+        contentType: req.headers['content-type'],
+      });
+
       const { user, error } = await getAuthenticatedUser(req, res);
       if (error || !user) {
-        log('Rejected: auth failed', { error });
+        log('Rejected: auth failed', { requestId, error, elapsedMs: Date.now() - wallStart });
         return;
       }
 
+      log('Auth OK', { requestId, userId: user.id, elapsedMs: Date.now() - wallStart });
+
       if (!groqApiKey) {
-        log('GROQ_API_KEY / EXPO_PUBLIC_GROQ_API_KEY not set');
+        log('Rejected: GROQ key not configured', { requestId });
         send(
           res,
           {
@@ -107,6 +132,10 @@ router.post(
       const prompt =
         typeof rawPrompt === 'string' ? rawPrompt.trim() : '';
       if (!prompt) {
+        log('Rejected: empty or invalid prompt', {
+          requestId,
+          bodyType: rawPrompt === undefined ? 'missing' : typeof rawPrompt,
+        });
         send(
           res,
           { error: 'Body must include a non-empty "prompt" string' },
@@ -115,23 +144,66 @@ router.post(
         return;
       }
 
-      const groq = new Groq({ apiKey: groqApiKey });
-      const completion = await groq.chat.completions.create({
+      log('Calling Groq', {
+        requestId,
         model: 'llama-3.1-8b-instant',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: `Create a goal plan for this user goal and output JSON only:\n\n${prompt}`,
-          },
-        ],
-        max_tokens: 1024,
-        temperature: 0.3,
+        promptLength: prompt.length,
+        promptPreview:
+          prompt.length > 100 ? `${prompt.slice(0, 100)}…` : prompt,
       });
 
-      const content = completion.choices[0]?.message?.content?.trim();
+      const groq = new Groq({ apiKey: groqApiKey });
+      const groqStarted = Date.now();
+      let completion: Awaited<
+        ReturnType<Groq['chat']['completions']['create']>
+      >;
+      try {
+        completion = await groq.chat.completions.create({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            {
+              role: 'user',
+              content: `Create a goal plan for this user goal and output JSON only:\n\n${prompt}`,
+            },
+          ],
+          max_tokens: 1024,
+          temperature: 0.3,
+        });
+      } catch (groqErr) {
+        logError('Groq API threw', groqErr, { requestId, groqMs: Date.now() - groqStarted });
+        send(
+          res,
+          {
+            error:
+              groqErr instanceof Error
+                ? groqErr.message
+                : 'Groq request failed',
+          },
+          502
+        );
+        return;
+      }
+
+      const groqMs = Date.now() - groqStarted;
+      const choice0 = completion.choices[0];
+      log('Groq response', {
+        requestId,
+        groqMs,
+        totalElapsedMs: Date.now() - wallStart,
+        usage: completion.usage ?? null,
+        choiceCount: completion.choices?.length ?? 0,
+        finishReason: choice0?.finish_reason ?? null,
+        contentLength: choice0?.message?.content?.length ?? 0,
+      });
+
+      const content = choice0?.message?.content?.trim();
       if (!content) {
-        log('Empty AI response');
+        log('Rejected: empty AI message content', {
+          requestId,
+          finishReason: choice0?.finish_reason,
+          rawMessage: choice0?.message,
+        });
         send(res, { error: 'AI returned no content' }, 502);
         return;
       }
@@ -148,7 +220,11 @@ router.post(
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : String(err);
-        log('JSON parse error', { msg, snippet: jsonStr.slice(0, 200) });
+        log('JSON parse error', {
+          requestId,
+          msg,
+          snippet: jsonStr.slice(0, 200),
+        });
         send(res, { error: 'Invalid JSON from AI' }, 502);
         return;
       }
@@ -230,17 +306,30 @@ router.post(
         tasks,
       };
 
+      if (habits.length === 0 && tasks.length === 0) {
+        log('Warning: parsed plan has no habits or tasks', {
+          requestId,
+          rawHabitsLen: rawHabits.length,
+          rawTasksLen: rawTasks.length,
+        });
+      }
+
       log('Success', {
+        requestId,
         userId: user.id,
         habits: habits.length,
         tasks: tasks.length,
+        totalMs: Date.now() - wallStart,
       });
 
       send(res, payload, 200);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : String(err);
-      log('Error', { message });
+      logError('Unhandled error in /ai/goal-plan', err, {
+        requestId,
+        totalMs: Date.now() - wallStart,
+      });
       send(
         res,
         { error: message || 'AI goal plan failed' },

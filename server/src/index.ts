@@ -11,6 +11,15 @@ const app = express();
 const PORT = process.env.PORT ?? 3001;
 
 app.use(cors());
+app.use((req, _res, next) => {
+  console.log(
+    '[HTTP]',
+    new Date().toISOString(),
+    req.method,
+    req.originalUrl ?? req.url
+  );
+  next();
+});
 app.use(express.json());
 
 app.use('/auth', authRoutes);
@@ -25,6 +34,9 @@ const publicHealthHandler: express.RequestHandler = (_req, res) => {
 app.get('/health', publicHealthHandler);
 app.get('/public/health', publicHealthHandler);
 
-app.listen(PORT, () => {
-  console.log(`Taskify server running at http://localhost:${PORT}`);
+const HOST = process.env.HOST ?? '0.0.0.0';
+app.listen(Number(PORT), HOST, () => {
+  console.log(
+    `Taskify server listening on http://${HOST}:${PORT} (also http://localhost:${PORT})`
+  );
 });

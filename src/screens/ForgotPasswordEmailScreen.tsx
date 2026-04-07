@@ -125,6 +125,8 @@ const ForgotPasswordEmailScreen = () => {
                 {!trimmedEmail ? t('emailRequired') : t('invalidEmailFormat')}
               </Text>
             )}
+            </View>
+            <View style={styles.buttonContainer}>
             <Button
               title={t('sendOTP')}
               variant="primary"
@@ -135,7 +137,8 @@ const ForgotPasswordEmailScreen = () => {
               textColor={lightColors.secondaryBackground}
               borderRadius={24}
             />
-          </View>
+            </View>
+          
         </KeyboardAvoidingView>
       </ScrollView>
       <LoadingModal visible={loading} text={t('sendingCode')} variant="modal" />
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
   },
   form: {
     marginTop: 28,
-    gap: 20,
+    gap: 410,
   },
   primaryButton: {
     marginTop: 16,
@@ -191,5 +194,11 @@ const styles = StyleSheet.create({
     color: '#dc3545',
     marginTop: -8,
     marginBottom: 4,
+  },
+  buttonContainer: {
+    borderTopColor: lightColors.border,
+    borderTopWidth: 1,
+    marginTop: 410,
+    
   },
 });

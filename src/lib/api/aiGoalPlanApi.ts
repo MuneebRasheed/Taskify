@@ -19,6 +19,43 @@ export type AiGoalPlan = {
   tasks: AiGoalTask[];
 };
 
+/** Gateways (Render, etc.) often return JSON errors with Content-Type text/html or text/plain. */
+function tryParseJsonObject(text: string): Record<string, unknown> | undefined {
+  const t = text.trim();
+  if (!t.startsWith('{')) return undefined;
+  try {
+    const v = JSON.parse(t) as unknown;
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      return v as Record<string, unknown>;
+    }
+  } catch {
+    /* ignore */
+  }
+  return undefined;
+}
+
+function extractGatewayOrApiError(
+  parsedBody: Record<string, unknown> | undefined,
+  resStatus: number
+): string | undefined {
+  if (!parsedBody) return undefined;
+  const err = typeof parsedBody.error === 'string' ? parsedBody.error : undefined;
+  if (err) return err;
+  if (parsedBody.status === 'error' && typeof parsedBody.message === 'string') {
+    const code =
+      typeof parsedBody.code === 'number' ? parsedBody.code : resStatus;
+    const msg = parsedBody.message;
+    if (code === 502 || /failed to respond|bad gateway/i.test(msg)) {
+      return (
+        'The API did not respond in time, or your phone never reached your computer\'s server. ' +
+        'Start the Taskify server (port 3001), run ngrok http 3001, put that URL in EXPO_PUBLIC_API_URL, restart Expo (npx expo start -c), then try again.'
+      );
+    }
+    return msg;
+  }
+  return undefined;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit & { accessToken?: string } = {}
@@ -33,7 +70,13 @@ async function request<T>(
     headers['ngrok-skip-browser-warning'] = '1';
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const url = `${API_BASE_URL}${path}`;
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('[aiGoalPlanApi] POST', url, '(API_BASE_URL from env)');
+  }
+
+  const res = await fetch(url, {
     ...fetchOptions,
     headers,
   });
@@ -41,6 +84,15 @@ async function request<T>(
 
   const contentType = res.headers.get('content-type') ?? '';
   const isJson = contentType.toLowerCase().includes('application/json');
+
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('[aiGoalPlanApi] response', {
+      status: res.status,
+      contentType,
+      bodyPreview: text.slice(0, 280),
+    });
+  }
   const extractMessageFromHtml = (html: string): string | null => {
     const preMatch = html.match(/<pre>([\s\S]*?)<\/pre>/i);
     if (preMatch?.[1]) return preMatch[1].trim();
@@ -58,11 +110,13 @@ async function request<T>(
   }
 
   if (!res.ok) {
-    if (data && typeof data === 'object') {
-      const errorFromJson = (data as { error?: string }).error;
-      if (errorFromJson) {
-        return { error: errorFromJson };
-      }
+    const obj =
+      data && typeof data === 'object'
+        ? (data as Record<string, unknown>)
+        : tryParseJsonObject(text);
+    const fromStructured = extractGatewayOrApiError(obj, res.status);
+    if (fromStructured) {
+      return { error: fromStructured };
     }
 
     if (res.status === 404 && path === '/ai/goal-plan') {

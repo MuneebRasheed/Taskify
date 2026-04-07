@@ -135,6 +135,9 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     habit: "Habit",
     // Self Made Goals Screen
     createGoals: "Create Goals",
+    cannotCreateGoal: "Cannot Create Goal",
+    addAtLeastOneHabitOrTask: "Please add at least one habit or task to create the goal.",
+    pleaseSetDueDateToCreateGoal: "Please set a due date to create the goal.",
     // AddTaskScreen
     editHabit: "Edit Habit",
     editTask: "Edit Task",
@@ -534,5 +537,8 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     newCodeSent: 'تم إرسال رمز جديد إلى بريدك الإلكتروني.',
     failedToSendEmail: 'فشل إرسال البريد. يرجى المحاولة مرة أخرى.',
     tooManyRequests: 'محاولات كثيرة. يرجى المحاولة لاحقاً.',
+    cannotCreateGoal: 'لا يمكن إنشاء الهدف',
+    addAtLeastOneHabitOrTask: 'يرجى إضافة عادة واحدة على الأقل أو مهمة واحدة لإنشاء الهدف.',
+    pleaseSetDueDateToCreateGoal: 'يرجى تحديد تاريخ استحقاق لإنشاء الهدف.',
   },
 };

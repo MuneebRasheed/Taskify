@@ -174,7 +174,7 @@ const ReportScreen = () => {
         dateKeys.push(toDateKey(d));
       }
       return {
-        label: MONTH_LABELS[month],
+        label: String(month + 1),
         start,
         end,
         dateKeys,
@@ -357,8 +357,13 @@ const ReportScreen = () => {
     dataCount: number;
   }) => {
     const isLine = chartType[chartKey] === 'line';
-    const barWidth = Math.max(10, Math.floor((CHART_WIDTH - 16) / Math.max(dataCount, 1) - 8));
-    const spacing = Math.max(4, Math.floor((CHART_WIDTH - barWidth * dataCount) / Math.max(dataCount - 1, 1)));
+    const basePointWidth = period === 'yearly' ? 46 : 38;
+    const chartContentWidth = Math.max(CHART_WIDTH, dataCount * basePointWidth);
+    const barWidth = Math.max(10, Math.floor((chartContentWidth - 16) / Math.max(dataCount, 1) - 8));
+    const spacing = Math.max(
+      4,
+      Math.floor((chartContentWidth - barWidth * dataCount) / Math.max(dataCount - 1, 1)),
+    );
 
     return (
       <View style={styles.card}>
@@ -403,56 +408,64 @@ const ReportScreen = () => {
           </View>
         </View>
 
-        {/* Chart */}
-        {isLine ? (
-          <LineChart
-            data={buildLineData(data, chartKey, color)}
-            width={CHART_WIDTH}
-            height={200}
-            maxValue={maxValue}
-            noOfSections={noOfSections}
-            hideRules
-            isAnimated
-            // Line styling
-            color={color}
-            thickness={2}
-            // Filled area under the line
-            areaChart
-            startFillColor={`${color}40`}
-            endFillColor={`${color}05`}
-            startOpacity={0.4}
-            endOpacity={0.05}
-            // Y-axis
-            yAxisLabelSuffix={chartKey === 'completion' ? '%' : ''}
-            // Data points: hollow by default, overridden per-point above
-            dataPointsColor={color}
-            dataPointsRadius={6}
-            // Press handler
-            onPress={(_item: any, index: number) =>
-              setActiveIndex(prev => ({ ...prev, [chartKey]: index }))
-            }
-            // Give enough top padding so tooltips don't clip
-            initialSpacing={20}
-            spacing={Math.max(12, CHART_WIDTH / Math.max(dataCount, 1) - 8)}
-          />
-        ) : (
-          <BarChart
-            data={buildBarData(data, chartKey, color)}
-            barWidth={barWidth}
-            spacing={spacing}
-            height={200}
-            width={CHART_WIDTH}
-            maxValue={maxValue}
-            noOfSections={noOfSections}
-            yAxisLabelSuffix={chartKey === 'completion' ? '%' : ''}
-            hideRules
-            roundedTop
-            isAnimated
-            onPress={(_item: any, index: number) =>
-              setActiveIndex(prev => ({ ...prev, [chartKey]: index }))
-            }
-          />
-        )}
+        <View style={styles.chartViewport}>
+          <ScrollView
+            horizontal
+            bounces={false}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chartScrollContent}
+          >
+            {isLine ? (
+              <LineChart
+                data={buildLineData(data, chartKey, color)}
+                width={chartContentWidth}
+                height={200}
+                maxValue={maxValue}
+                noOfSections={noOfSections}
+                hideRules
+                isAnimated
+                // Line styling
+                color={color}
+                thickness={2}
+                // Filled area under the line
+                areaChart
+                startFillColor={`${color}40`}
+                endFillColor={`${color}05`}
+                startOpacity={0.4}
+                endOpacity={0.05}
+                // Y-axis
+                yAxisLabelSuffix={chartKey === 'completion' ? '%' : ''}
+                // Data points: hollow by default, overridden per-point above
+                dataPointsColor={color}
+                dataPointsRadius={6}
+                // Press handler
+                onPress={(_item: any, index: number) =>
+                  setActiveIndex(prev => ({ ...prev, [chartKey]: index }))
+                }
+                // Give enough top padding so tooltips don't clip
+                initialSpacing={20}
+                spacing={Math.max(12, chartContentWidth / Math.max(dataCount, 1) - 8)}
+              />
+            ) : (
+              <BarChart
+                data={buildBarData(data, chartKey, color)}
+                barWidth={barWidth}
+                spacing={spacing}
+                height={200}
+                width={chartContentWidth}
+                maxValue={maxValue}
+                noOfSections={noOfSections}
+                yAxisLabelSuffix={chartKey === 'completion' ? '%' : ''}
+                hideRules
+                roundedTop
+                isAnimated
+                onPress={(_item: any, index: number) =>
+                  setActiveIndex(prev => ({ ...prev, [chartKey]: index }))
+                }
+              />
+            )}
+          </ScrollView>
+        </View>
       </View>
     );
   };
@@ -652,6 +665,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 20,
+    overflow: 'hidden',
+  },
+  chartViewport: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  chartScrollContent: {
+    minWidth: '100%',
   },
 
   headerRow: {

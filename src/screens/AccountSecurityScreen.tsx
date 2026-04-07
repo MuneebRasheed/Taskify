@@ -56,7 +56,7 @@ const AccountSecurityScreen = () => {
           {toggleRow(t('googleAuthenticator'), googleAuth, setGoogleAuth)}
           <SettingsListItem
             label={t('changePassword')}
-            onPress={() => {}}
+            onPress={() => navigation.navigate('ForgotPasswordEmail')}
             showArrow={true}
           />
           <SettingsListItem

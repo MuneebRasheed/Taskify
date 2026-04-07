@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -226,6 +227,13 @@ const PreMadeGoalDetailScreen = () => {
 
   const handleAddGoal = () => {
     if (mode !== 'preMade' || !preMadeGoal) return;
+    if (!dueDate) {
+      Alert.alert(
+        t('cannotCreateGoal'),
+        t('pleaseSetDueDateToCreateGoal')
+      );
+      return;
+    }
     const coverIndex = Math.max(0, parseInt(preMadeGoal.id, 10) - 1) % 3;
     const goalDueDateIso = dueDate ? dueDate.toISOString() : undefined;
     const goalReminderTime = reminderTimeOnly || undefined;

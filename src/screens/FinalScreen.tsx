@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -140,6 +141,13 @@ const FinalScreen = () => {
   }));
 
   const handleSaveGoals = () => {
+    if (!dueDateValue) {
+      Alert.alert(
+        t('cannotCreateGoal'),
+        t('pleaseSetDueDateToCreateGoal')
+      );
+      return;
+    }
     const items: GoalItem[] = [
       ...habits.map((h, i) => ({
         id: `final-h-${i}`,
