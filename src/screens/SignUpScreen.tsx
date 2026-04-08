@@ -31,7 +31,7 @@ import { useAuth } from "../lib/auth/AuthProvider";
 const SignUpScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle, signInWithApple } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
@@ -71,6 +71,36 @@ const SignUpScreen = () => {
       alert(error.message ?? "Sign up failed");
       return;
     }
+    if (data) {
+      navigation.navigate("MainTabs");
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    const { data, error } = await signInWithGoogle();
+    setLoading(false);
+
+    if (error) {
+      alert(error.message ?? "Google sign in failed");
+      return;
+    }
+
+    if (data) {
+      navigation.navigate("MainTabs");
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    const { data, error } = await signInWithApple();
+    setLoading(false);
+
+    if (error) {
+      alert(error.message ?? "Apple sign in failed");
+      return;
+    }
+
     if (data) {
       navigation.navigate("MainTabs");
     }
@@ -191,7 +221,7 @@ const SignUpScreen = () => {
               borderRadius={24}
               textColor={palette.black}
               leftIcon={<GoogleIcon width={24} height={24} />}
-              onPress={() => {}}
+              onPress={handleGoogleSignIn}
             />
             <Button
               style={styles.socialButton}
@@ -203,7 +233,7 @@ const SignUpScreen = () => {
               borderRadius={24}
               textColor={palette.black}
               leftIcon={<AppleIcon width={24} height={24} />}
-              onPress={() => {}}
+              onPress={handleAppleSignIn}
             />
 </View>
             {/* Primary CTA */}

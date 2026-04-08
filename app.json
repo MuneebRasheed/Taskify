@@ -14,20 +14,30 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Taskify"
+      "usesAppleSignIn": true,
+      "bundleIdentifier": "com.anonymous.Taskify",
+      "appleTeamId": "X3957LKCS9"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.Taskify"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.342469583529-mbpe3fuuqnqjfffemu7sevphs4ek51hp"
+        }
+      ]
     ]
   }
 }

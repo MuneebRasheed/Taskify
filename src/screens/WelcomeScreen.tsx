@@ -10,11 +10,35 @@ import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../navigations/RootNavigation";
 import Textt from "../components/Textt";
 import { useTranslation } from "../i18n";
+import { useAuth } from "../lib/auth/AuthProvider";
 
 const WelcomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { t } = useTranslation();
+  const { signInWithGoogle, signInWithApple } = useAuth();
+
+  const handleGoogleSignIn = async () => {
+    const { data, error } = await signInWithGoogle();
+    if (error) {
+      alert(error.message ?? "Google sign in failed");
+      return;
+    }
+    if (data) {
+      navigation.navigate("MainTabs");
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    const { data, error } = await signInWithApple();
+    if (error) {
+      alert(error.message ?? "Apple sign in failed");
+      return;
+    }
+    if (data) {
+      navigation.navigate("MainTabs");
+    }
+  };
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground }]}>
 
@@ -38,7 +62,7 @@ const WelcomeScreen = () => {
         borderRadius={1000}
         textColor={palette.black}
         leftIcon={<GoogleIcon width={24} height={24} />}
-        onPress={() => {}}
+        onPress={handleGoogleSignIn}
       />
       <Button
         style={styles.button}
@@ -50,7 +74,7 @@ const WelcomeScreen = () => {
         borderRadius={1000}
         textColor={palette.black}
         leftIcon={<AppleIcon width={24} height={24} />}
-        onPress={() => {}}
+        onPress={handleAppleSignIn}
       />
     </View>
 

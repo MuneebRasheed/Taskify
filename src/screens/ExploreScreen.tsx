@@ -16,12 +16,13 @@ import Header from '../components/Header';
 import GoalCard from '../components/GoalCard';
 import { GOAL_CATEGORIES } from '../components/CategoryModal';
 import type { GoalCategory } from '../components/CategoryModal';
-import { PREMADE_GOALS, type PreMadeGoalItem } from '../data/preMadeGoals';
+import type { PreMadeGoalItem } from '../data/preMadeGoals';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import SplashLogo from '../assets/svgs/SpashLogo';
 import SearchIcon from '../assets/svgs/SearchIcon';
 import Textt from '../components/Textt';
 import { useGoals } from '../context/GoalsContext';
+import { usePreMadeGoals } from '../hooks/usePreMadeGoals';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ExploreSearch'>;
 
@@ -31,6 +32,7 @@ const ExploreScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { goals } = useGoals();
+  const { preMadeGoals } = usePreMadeGoals();
   const [selectedCategory, setSelectedCategory] = useState<GoalCategory | 'Popular'>('Popular');
 
   const addedPreMadeTitles = useMemo(
@@ -40,10 +42,10 @@ const ExploreScreen = () => {
 
   const filteredGoals = useMemo(() => {
     if (selectedCategory === 'Popular') {
-      return PREMADE_GOALS;
+      return preMadeGoals;
     }
-    return PREMADE_GOALS.filter((g) => g.category === selectedCategory);
-  }, [selectedCategory]);
+    return preMadeGoals.filter((g) => g.category === selectedCategory);
+  }, [preMadeGoals, selectedCategory]);
 
   const rootNav = navigation.getParent() as { navigate: (name: string, params?: { goalId: string }) => void } | undefined;
 

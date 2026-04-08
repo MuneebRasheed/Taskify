@@ -26,12 +26,25 @@ import { useGoalStore } from '../../store/goalStore';
 type SelectCoverRouteProp = RouteProp<RootStackParamList, 'SelectCoverImage'>;
 type SelectCoverNavProp = NativeStackNavigationProp<RootStackParamList, 'SelectCoverImage'>;
 
-export const COVER_IMAGE_SOURCES: ImageSourcePropType[] = [
-  require('../assets/images/cover1.png'),
-  require('../assets/images/cover2.png'),
-  require('../assets/images/cover3.png'),
-  require('../assets/images/cover4.png'),
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const COVER_BUCKET = 'covers';
+const DEFAULT_COVER_FILE_NAMES = [
+  'cover1.png',
+  'cover2.png',
+  'cover3.png',
+  'cover4.png',
+  'cover5.png',
+  'cover6.png',
+  'cover7.png',
 ];
+
+// Shared sources used by SelectCoverImage + GoalPlanner + Final + MyGoalDetail
+// to keep cover indexes consistent across all screens.
+export const COVER_IMAGE_SOURCES: ImageSourcePropType[] = SUPABASE_URL
+  ? DEFAULT_COVER_FILE_NAMES.map((fileName) => ({
+      uri: `${SUPABASE_URL}/storage/v1/object/public/${COVER_BUCKET}/${encodeURIComponent(fileName)}`,
+    }))
+  : [];
 
 const SelectCoverImageScreen = () => {
   const insets = useSafeAreaInsets();
@@ -43,8 +56,7 @@ const SelectCoverImageScreen = () => {
   const { t } = useTranslation();
 
   const [selectedIndex, setSelectedIndex] = useState<number>(initialIndex);
-
-  console.log("storeCoverIndex.....",storeCoverIndex);    
+  const [coverSources] = useState<ImageSourcePropType[]>(COVER_IMAGE_SOURCES);
 
   useEffect(() => {
     setSelectedIndex(route.params?.selectedIndex ?? storeCoverIndex);
@@ -60,8 +72,7 @@ const SelectCoverImageScreen = () => {
     navigation.goBack();
   };
 
-  const numColumns = 2;
-  const list = COVER_IMAGE_SOURCES.length ? COVER_IMAGE_SOURCES : [];
+  const list = Array.isArray(coverSources) ? coverSources : [];
 
   return (
     <View
@@ -85,7 +96,9 @@ const SelectCoverImageScreen = () => {
       >
         {list.length === 0 ? (
           <View style={styles.placeholderWrap}>
-            <Text style={styles.placeholderText}>Add images to COVER_IMAGE_SOURCES in SelectCoverImageScreen.tsx (see comments in file).</Text>
+            <Text style={styles.placeholderText}>
+              No cover images found. Check EXPO_PUBLIC_SUPABASE_URL and files in Storage bucket "covers".
+            </Text>
           </View>
         ) : (
           <View style={styles.grid}>

@@ -21,10 +21,11 @@ import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import GoalCard from '../components/GoalCard';
 import { GOAL_CATEGORIES } from '../components/CategoryModal';
 import type { GoalCategory } from '../components/CategoryModal';
-import { PREMADE_GOALS, type PreMadeGoalItem } from '../data/preMadeGoals';
+import type { PreMadeGoalItem } from '../data/preMadeGoals';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import { useTranslation } from '../i18n';
 import { useGoals } from '../context/GoalsContext';
+import { usePreMadeGoals } from '../hooks/usePreMadeGoals';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ExploreSearch'>;
 type ExploreSearchRouteProp = RouteProp<RootStackParamList, 'ExploreSearch'>;
@@ -37,13 +38,12 @@ const DEFAULT_RECENT_SEARCHES = [
   'Volunteer Regularly',
 ];
 
-const POPULAR_GOALS_PREVIEW = PREMADE_GOALS.slice(0, 2);
-
 const ExploreSearchScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<ExploreSearchRouteProp>();
   const { goals } = useGoals();
+  const { preMadeGoals } = usePreMadeGoals();
   const { t } = useTranslation();
   const fromPreMade = route.params?.fromPreMade === true;
   const [query, setQuery] = useState('');
@@ -71,14 +71,16 @@ const ExploreSearchScreen = () => {
     [goals]
   );
 
+  const popularGoalsPreview = useMemo(() => preMadeGoals.slice(0, 2), [preMadeGoals]);
+
   const searchResults = useMemo(() => {
-    if (!query.trim()) return PREMADE_GOALS;
+    if (!query.trim()) return preMadeGoals;
     const q = query.trim().toLowerCase();
-    return PREMADE_GOALS.filter(
+    return preMadeGoals.filter(
       (g) =>
         g.title.toLowerCase().includes(q) || g.category.toLowerCase().includes(q)
     );
-  }, [query]);
+  }, [preMadeGoals, query]);
 
   const filteredResults = useMemo(() => {
     if (selectedCategory === 'Popular') return searchResults;
@@ -175,7 +177,7 @@ const ExploreSearchScreen = () => {
                   <Ionicons name="chevron-forward" size={18} color={lightColors.background} />
                 </TouchableOpacity>
               </View>
-              {POPULAR_GOALS_PREVIEW.map((goal) => {
+              {popularGoalsPreview.map((goal) => {
                 const alreadyAdded = addedPreMadeTitles.has(goal.title);
                 return (
                   <GoalCard

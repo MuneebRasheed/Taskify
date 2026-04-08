@@ -7,6 +7,7 @@ export interface PreMadeGoalItem {
   id: string;
   title: string;
   category: PreMadeGoalCategory;
+  coverIndex?: number;
   coverImage: ImageSourcePropType;
   habitsCount: number;
   tasksCount: number;
@@ -21,6 +22,7 @@ export const PREMADE_GOALS: PreMadeGoalItem[] = [
     id: '1',
     title: 'Learn New Skills',
     category: 'Learning',
+    coverIndex: 0,
     coverImage: require('../assets/images/cover1.png'),
     habitsCount: 5,
     tasksCount: 4,
@@ -44,6 +46,7 @@ export const PREMADE_GOALS: PreMadeGoalItem[] = [
     id: '2',
     title: 'Exercise Regularly',
     category: 'Health',
+    coverIndex: 1,
     coverImage: require('../assets/images/cover2.png'),
     habitsCount: 4,
     tasksCount: 6,
@@ -68,6 +71,7 @@ export const PREMADE_GOALS: PreMadeGoalItem[] = [
     id: '3',
     title: 'Learn a New Language',
     category: 'Learning',
+    coverIndex: 2,
     coverImage: require('../assets/images/cover3.png'),
     habitsCount: 6,
     tasksCount: 5,

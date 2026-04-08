@@ -8,6 +8,8 @@ type AuthContextValue = {
   session: Session | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<authService.AuthResult>;
+  signInWithGoogle: () => Promise<authService.AuthResult>;
+  signInWithApple: () => Promise<authService.AuthResult>;
   signUp: (email: string, password: string) => Promise<authService.AuthResult>;
   signOut: () => Promise<{ error: Error | null }>;
 };
@@ -39,6 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(authService.signIn, []);
+  const signInWithGoogle = useCallback(authService.signInWithGoogle, []);
+  const signInWithApple = useCallback(authService.signInWithApple, []);
   const signUp = useCallback(authService.signUp, []);
   const signOut = useCallback(authService.signOut, []);
 
@@ -47,6 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     isLoading,
     signIn,
+    signInWithGoogle,
+    signInWithApple,
     signUp,
     signOut,
   };

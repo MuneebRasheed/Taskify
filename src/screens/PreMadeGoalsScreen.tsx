@@ -16,11 +16,12 @@ import Header from '../components/Header';
 import GoalCard from '../components/GoalCard';
 import { GOAL_CATEGORIES } from '../components/CategoryModal';
 import type { GoalCategory } from '../components/CategoryModal';
-import { PREMADE_GOALS, type PreMadeGoalItem } from '../data/preMadeGoals';
+import type { PreMadeGoalItem } from '../data/preMadeGoals';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import Textt from '../components/Textt';
 import { useGoals } from '../context/GoalsContext';
+import { usePreMadeGoals } from '../hooks/usePreMadeGoals';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'PreMadeGoals'>;
 
@@ -31,6 +32,7 @@ const PreMadeGoalsScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { goals } = useGoals();
+  const { preMadeGoals } = usePreMadeGoals();
   const [selectedCategory, setSelectedCategory] = useState<GoalCategory | 'Popular'>('Popular');
 
   const addedPreMadeTitles = useMemo(
@@ -40,10 +42,10 @@ const PreMadeGoalsScreen = () => {
 
   const filteredGoals = useMemo(() => {
     if (selectedCategory === 'Popular') {
-      return PREMADE_GOALS;
+      return preMadeGoals;
     }
-    return PREMADE_GOALS.filter((g) => g.category === selectedCategory);
-  }, [selectedCategory]);
+    return preMadeGoals.filter((g) => g.category === selectedCategory);
+  }, [preMadeGoals, selectedCategory]);
 
   const handleGoalPress = (goal: PreMadeGoalItem) => {
     navigation.navigate('PreMadeGoalDetail', { goalId: goal.id });

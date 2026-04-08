@@ -18,7 +18,6 @@ import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Button from '../components/Button';
 import TrackerCard, { type TrackerCardItem } from '../components/TrackerCard';
-import { PREMADE_GOALS } from '../data/preMadeGoals';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import ShareIcon from '../assets/svgs/ShareIcon';
 import { useGoals } from '../context/GoalsContext';
@@ -33,6 +32,7 @@ import type { GoalCategory } from '../components/CategoryModal';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
 import TimeIcon from '../assets/svgs/TimeIcon';
 import EditIcon from '../assets/svgs/EditIcon';
+import { usePreMadeGoals } from '../hooks/usePreMadeGoals';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', {
@@ -67,6 +67,7 @@ const PreMadeGoalDetailScreen = () => {
   const navigation = useNavigation<PreMadeGoalDetailNavProp>();
   const route = useRoute<PreMadeGoalDetailRouteProp>();
   const { goals, addGoal, markAchieved, removeGoal, itemCompletions } = useGoals();
+  const { preMadeGoals } = usePreMadeGoals();
   const todayStr = new Date().toISOString().slice(0, 10);
 
   const { goalId, myGoalId, selfMadePayload } = route.params ?? {};
@@ -74,8 +75,8 @@ const PreMadeGoalDetailScreen = () => {
   const mode: Mode = myGoalId ? 'myGoal' : selfMadePayload ? 'selfMade' : 'preMade';
 
   const preMadeGoal = useMemo(
-    () => (goalId ? PREMADE_GOALS.find((g) => g.id === goalId) : null),
-    [goalId]
+    () => (goalId ? preMadeGoals.find((g) => g.id === goalId) : null),
+    [goalId, preMadeGoals]
   );
   const myGoal = useMemo(
     () => (myGoalId ? goals.find((g) => g.id === myGoalId) : null),
@@ -234,7 +235,22 @@ const PreMadeGoalDetailScreen = () => {
       );
       return;
     }
-    const coverIndex = Math.max(0, parseInt(preMadeGoal.id, 10) - 1) % 3;
+    const coverIndex = (() => {
+      if (typeof preMadeGoal.coverIndex === 'number' && preMadeGoal.coverIndex >= 0) {
+        return preMadeGoal.coverIndex;
+      }
+      const preMadeUri =
+        preMadeGoal.coverImage && typeof preMadeGoal.coverImage === 'object' && 'uri' in preMadeGoal.coverImage
+          ? preMadeGoal.coverImage.uri
+          : null;
+      if (typeof preMadeUri === 'string' && COVER_IMAGE_SOURCES.length > 0) {
+        const matchedIndex = COVER_IMAGE_SOURCES.findIndex(
+          (src) => typeof src === 'object' && src != null && 'uri' in src && src.uri === preMadeUri
+        );
+        if (matchedIndex >= 0) return matchedIndex;
+      }
+      return 0;
+    })();
     const goalDueDateIso = dueDate ? dueDate.toISOString() : undefined;
     const goalReminderTime = reminderTimeOnly || undefined;
     // Ensure goal_items IDs are unique per added instance; otherwise re-adding the same
