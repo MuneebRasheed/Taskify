@@ -19,6 +19,10 @@ type RawPreMadeGoalRow = {
   sort_order: number | null;
 };
 
+const SELECT_FULL =
+  'id, title, category, cover_index, habits_count, tasks_count, user_count, note, habits, tasks, sort_order';
+const SELECT_BASIC = 'id, title, category, cover_index, habits_count, tasks_count, user_count';
+
 function isGoalCategory(value: string): value is GoalCategory {
   return (GOAL_CATEGORIES as readonly string[]).includes(value);
 }
@@ -90,19 +94,35 @@ function mapRowToPreMadeGoal(row: RawPreMadeGoalRow): PreMadeGoalItem {
 }
 
 export async function fetchPreMadeGoals(): Promise<{ data?: PreMadeGoalItem[]; error?: string }> {
-  const { data, error } = await supabase
+  // 1) Preferred query for full schema from migrations.
+  const fullQuery = await supabase
     .from('pre_made_goals')
-    .select(
-      'id, title, category, cover_index, habits_count, tasks_count, user_count, note, habits, tasks, sort_order'
-    )
+    .select(SELECT_FULL)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
 
-  if (error) {
-    return { error: error.message };
+  if (!fullQuery.error) {
+    const mapped = (fullQuery.data ?? []).map((row) => mapRowToPreMadeGoal(row as RawPreMadeGoalRow));
+    return { data: mapped };
   }
 
-  const mapped = (data ?? []).map((row) => mapRowToPreMadeGoal(row as RawPreMadeGoalRow));
+  // 2) Fallback for tables created manually in Supabase UI where is_active/sort_order/created_at
+  // or JSON fields might not exist yet.
+  const basicQuery = await supabase.from('pre_made_goals').select(SELECT_BASIC).order('id', { ascending: true });
+
+  if (basicQuery.error) {
+    return { error: basicQuery.error.message };
+  }
+
+  const mapped = (basicQuery.data ?? []).map((row) =>
+    mapRowToPreMadeGoal({
+      ...(row as RawPreMadeGoalRow),
+      note: '',
+      habits: [],
+      tasks: [],
+      sort_order: null,
+    })
+  );
   return { data: mapped };
 }

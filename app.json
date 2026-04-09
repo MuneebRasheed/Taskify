@@ -38,6 +38,12 @@
           "iosUrlScheme": "com.googleusercontent.apps.342469583529-mbpe3fuuqnqjfffemu7sevphs4ek51hp"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "71b15087-c6a8-41b1-a7d7-9b30191d6913"
+      }
+    },
+    "owner": "muneebrasheed"
   }
 }

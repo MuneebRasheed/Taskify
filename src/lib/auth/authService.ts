@@ -12,6 +12,53 @@ export type AuthResult = {
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
 
+async function getExpoPushToken(): Promise<string | null> {
+  try {
+    const Notifications = await import('expo-notifications');
+
+    const currentPermissions = await Notifications.getPermissionsAsync();
+    let finalStatus = currentPermissions.status;
+    if (finalStatus !== 'granted') {
+      const requestedPermissions = await Notifications.requestPermissionsAsync();
+      finalStatus = requestedPermissions.status;
+    }
+
+    if (finalStatus !== 'granted') {
+      return null;
+    }
+
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId ?? undefined;
+    const tokenResponse = projectId
+      ? await Notifications.getExpoPushTokenAsync({ projectId })
+      : await Notifications.getExpoPushTokenAsync();
+
+    return tokenResponse.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function syncProfileOnAuth(user: User): Promise<void> {
+  const expoPushToken = await getExpoPushToken();
+  const profilePayload: {
+    id: string;
+    email?: string;
+    expo_push_token?: string;
+    updated_at: string;
+  } = {
+    id: user.id,
+    email: user.email ?? undefined,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (expoPushToken) {
+    profilePayload.expo_push_token = expoPushToken;
+  }
+
+  await supabase.from('profiles').upsert(profilePayload, { onConflict: 'id' });
+}
+
 export async function signUp(email: string, password: string): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) {
@@ -19,16 +66,7 @@ export async function signUp(email: string, password: string): Promise<AuthResul
   }
   // Ensure profile row exists with email (in case DB trigger didn't run)
   if (data?.user) {
-    await supabase
-      .from('profiles')
-      .upsert(
-        {
-          id: data.user.id,
-          email: data.user.email ?? undefined,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      );
+    await syncProfileOnAuth(data.user);
   }
   return {
     data: data?.user && data?.session ? { user: data.user, session: data.session } : null,
@@ -38,6 +76,9 @@ export async function signUp(email: string, password: string): Promise<AuthResul
 
 export async function signIn(email: string, password: string): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (data?.user) {
+    await syncProfileOnAuth(data.user);
+  }
   return {
     data: data?.user && data?.session ? { user: data.user, session: data.session } : null,
     error: error ?? null,
@@ -94,6 +135,10 @@ export async function signInWithGoogle(): Promise<AuthResult> {
 
     if (error) {
       return { data: null, error };
+    }
+
+    if (data?.user) {
+      await syncProfileOnAuth(data.user);
     }
 
     return {
@@ -202,6 +247,10 @@ export async function signInWithApple(): Promise<AuthResult> {
 
     if (error) {
       return { data: null, error };
+    }
+
+    if (data?.user) {
+      await syncProfileOnAuth(data.user);
     }
 
     return {

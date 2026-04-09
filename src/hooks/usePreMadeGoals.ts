@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PREMADE_GOALS, type PreMadeGoalItem } from '../data/preMadeGoals';
+import type { PreMadeGoalItem } from '../data/preMadeGoals';
 import { fetchPreMadeGoals } from '../lib/api/preMadeGoalsApi';
 
-const PREMADE_GOALS_CACHE_KEY = '@taskify/preMadeGoalsCache/v1';
+const PREMADE_GOALS_CACHE_KEY = '@taskify/preMadeGoalsCache/v2';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 let memoryCache: PreMadeGoalItem[] | null = null;
@@ -25,9 +25,7 @@ async function getSharedFetchResult(): Promise<{ data?: PreMadeGoalItem[]; error
 }
 
 export function usePreMadeGoals() {
-  const [preMadeGoals, setPreMadeGoals] = useState<PreMadeGoalItem[]>(
-    memoryCache && memoryCache.length > 0 ? memoryCache : PREMADE_GOALS
-  );
+  const [preMadeGoals, setPreMadeGoals] = useState<PreMadeGoalItem[]>(memoryCache ?? []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,12 +60,13 @@ export function usePreMadeGoals() {
       if (!alive) return;
 
       if (fetchError) {
+        console.warn('[preMadeGoals] fetch failed:', fetchError);
         setError(fetchError);
         setLoading(false);
         return;
       }
 
-      const nextGoals = data && data.length > 0 ? data : PREMADE_GOALS;
+      const nextGoals = data ?? [];
       memoryCache = nextGoals;
       lastFetchAt = Date.now();
       setPreMadeGoals(nextGoals);

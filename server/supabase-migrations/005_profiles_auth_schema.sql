@@ -30,6 +30,7 @@ execute function public.set_updated_at_timestamp();
 -- Backfill missing columns for projects that already had a minimal `profiles` table.
 alter table public.profiles
   add column if not exists email text,
+  add column if not exists expo_push_token text,
   add column if not exists password_reset_otp text,
   add column if not exists password_reset_otp_expires_at timestamptz,
   add column if not exists created_at timestamptz not null default now(),
@@ -91,3 +92,4 @@ using (auth.uid() = id)
 with check (auth.uid() = id);
 
 create index if not exists idx_profiles_email on public.profiles(email);
+create index if not exists idx_profiles_expo_push_token on public.profiles(expo_push_token);
