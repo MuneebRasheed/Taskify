@@ -42,6 +42,8 @@ import RootNavigation from './src/navigations/RootNavigation';
 import { useLanguageStore } from './store/languageStore';
 import { setI18nLocale } from './src/i18n';
 import { AuthProvider } from './src/lib/auth/AuthProvider';
+import { configureRevenueCat } from './src/lib/purchasesService';
+import { useOfferingsStore } from './store/offeringsStore';
 const fontMap = {
   Poppins_400Regular,
   Poppins_500Medium,
@@ -75,6 +77,7 @@ export default function App() {
   const [fontsLoaded, fontError] = useFonts(fontMap);
   const [languageHydrated, setLanguageHydrated] = useState(false);
   const colors = getColors(false); // light mode only
+  const refreshPurchasesData = useOfferingsStore((state) => state.refreshPurchasesData);
 
   useEffect(() => {
     const applyStoredLanguage = () => {
@@ -93,6 +96,14 @@ export default function App() {
       clearTimeout(t);
     };
   }, []);
+
+  useEffect(() => {
+    const bootstrapPurchases = async () => {
+      await configureRevenueCat();
+      await refreshPurchasesData();
+    };
+    void bootstrapPurchases();
+  }, [refreshPurchasesData]);
 
   if (!fontsLoaded && !fontError) {
     return null;
