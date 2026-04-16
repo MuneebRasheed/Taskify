@@ -16,7 +16,12 @@
       "supportsTablet": true,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.anonymous.Taskify",
-      "appleTeamId": "X3957LKCS9"
+      "appleTeamId": "X3957LKCS9",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Taskify to access your camera to take photos.",
+        "NSPhotoLibraryUsageDescription": "Allow Taskify to access your photo library to select images.",
+        "NSPhotoLibraryAddUsageDescription": "Allow Taskify to save photos to your photo library."
+      }
     },
     "android": {
       "adaptiveIcon": {
