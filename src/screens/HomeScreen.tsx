@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.BtnBackground,
   },
   emptyState: {
-    height: 550,
+    height: 650,
     alignItems: 'center',
     paddingVertical: 48,
     paddingTop: 5,

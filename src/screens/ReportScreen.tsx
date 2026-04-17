@@ -710,15 +710,19 @@ const styles = StyleSheet.create({
 
   tooltip: {
     backgroundColor: lightColors.secondaryBackground,
-    borderRadius: 20,
+    height : 55,
+    width : 55,
+    borderRadius: 1000,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   tooltipText: {
-    fontFamily: fontFamilies.urbanistBold,
-    fontSize: 14,
+    fontFamily: fontFamilies.urbanistSemiBold,
+    fontSize: 11,
     color: lightColors.text,
   },
 

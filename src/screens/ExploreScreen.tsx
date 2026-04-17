@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 20,
+    // paddingHorizontal: 20,
     paddingVertical: 6,
-    paddingRight: 40,
+    // paddingRight: 40,
   },
   categoryChip: {
     paddingHorizontal: 16,

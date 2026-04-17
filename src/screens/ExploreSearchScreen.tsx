@@ -26,17 +26,14 @@ import type { RootStackParamList } from '../navigations/RootNavigation';
 import { useTranslation } from '../i18n';
 import { useGoals } from '../context/GoalsContext';
 import { usePreMadeGoals } from '../hooks/usePreMadeGoals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ExploreSearch'>;
 type ExploreSearchRouteProp = RouteProp<RootStackParamList, 'ExploreSearch'>;
 
 const FILTER_OPTIONS: (GoalCategory | 'Popular')[] = ['Popular', ...GOAL_CATEGORIES];
-
-const DEFAULT_RECENT_SEARCHES = [
-  'Backpack Across Countries',
-  'Complete Online Courses',
-  'Volunteer Regularly',
-];
+const RECENT_SEARCHES_KEY = 'explore_recent_searches_v1';
+const MAX_RECENT_SEARCHES = 8;
 
 const ExploreSearchScreen = () => {
   const insets = useSafeAreaInsets();
@@ -47,9 +44,30 @@ const ExploreSearchScreen = () => {
   const { t } = useTranslation();
   const fromPreMade = route.params?.fromPreMade === true;
   const [query, setQuery] = useState('');
-  const [recentSearches, setRecentSearches] = useState<string[]>(DEFAULT_RECENT_SEARCHES);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<GoalCategory | 'Popular'>('Popular');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const loadRecentSearches = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
+        if (!stored) return;
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) return;
+        const cleaned = parsed
+          .filter((value): value is string => typeof value === 'string')
+          .map(value => value.trim())
+          .filter(Boolean)
+          .slice(0, MAX_RECENT_SEARCHES);
+        setRecentSearches(cleaned);
+      } catch {
+        // Ignore malformed cache or storage read failures.
+      }
+    };
+
+    void loadRecentSearches();
+  }, []);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -96,12 +114,44 @@ const ExploreSearchScreen = () => {
   const scrollBottomPadding = insets.bottom;
 
   const handleGoalPress = (goal: PreMadeGoalItem) => {
+    void addRecentSearch(query);
     navigation.navigate('PreMadeGoalDetail', { goalId: goal.id });
   };
 
   const handleAddGoal = (goal: PreMadeGoalItem, e: any) => {
     e?.stopPropagation?.();
+    void addRecentSearch(query);
     navigation.navigate('PreMadeGoalDetail', { goalId: goal.id });
+  };
+
+  const persistRecentSearches = async (nextSearches: string[]) => {
+    setRecentSearches(nextSearches);
+    try {
+      await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(nextSearches));
+    } catch {
+      // Ignore storage write failures.
+    }
+  };
+
+  const addRecentSearch = async (rawQuery: string) => {
+    const term = rawQuery.trim();
+    if (!term) return;
+    const next = [term, ...recentSearches.filter(item => item.toLowerCase() !== term.toLowerCase())]
+      .slice(0, MAX_RECENT_SEARCHES);
+    await persistRecentSearches(next);
+  };
+
+  const removeRecentSearch = async (term: string) => {
+    const next = recentSearches.filter(item => item !== term);
+    await persistRecentSearches(next);
+  };
+
+  const clearRecentSearches = async () => {
+    await persistRecentSearches([]);
+  };
+
+  const handleSearchSubmit = () => {
+    void addRecentSearch(query);
   };
 
   return (
@@ -125,6 +175,7 @@ const ExploreSearchScreen = () => {
               value={query}
               onChangeText={setQuery}
               returnKeyType="search"
+              onSubmitEditing={handleSearchSubmit}
             />
             {query.length > 0 && (
               <TouchableOpacity onPress={() => setQuery('')} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -155,15 +206,17 @@ const ExploreSearchScreen = () => {
               <View style={styles.sectionRow}>
                 <Text style={styles.sectionTitle}>{t('recentSearches')}</Text>
                 {recentSearches.length > 0 && (
-                  <TouchableOpacity onPress={() => setRecentSearches([])} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <TouchableOpacity onPress={() => void clearRecentSearches()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Ionicons name="close" size={20} color={lightColors.text} />
                   </TouchableOpacity>
                 )}
               </View>
               {recentSearches.map((item) => (
                 <View key={item} style={styles.recentItem}>
-                  <Text style={styles.recentText}>{item}</Text>
-                  <TouchableOpacity onPress={() => setRecentSearches((p) => p.filter((s) => s !== item))} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <TouchableOpacity onPress={() => setQuery(item)} activeOpacity={0.7} style={styles.recentTextButton}>
+                    <Text style={styles.recentText}>{item}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => void removeRecentSearch(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Ionicons name="close" size={18} color={lightColors.subText} />
                   </TouchableOpacity>
                 </View>
@@ -352,6 +405,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanist,
     fontSize: 16,
     color: lightColors.subText,
+  },
+  recentTextButton: {
+    flex: 1,
+    paddingRight: 12,
   },
   viewAllBtn: {
     flexDirection: 'row',

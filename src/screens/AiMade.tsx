@@ -930,7 +930,7 @@ height : 300,
     flexWrap: 'nowrap',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 24,
+    // paddingHorizontal: 24,
     paddingVertical: 4,
   },
   metadataPillCategory: {
