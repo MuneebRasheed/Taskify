@@ -12,6 +12,41 @@ function getAdminClient() {
   return createClient(supabaseUrl, supabaseServiceRoleKey);
 }
 
+function parseUserCountText(value: string): number {
+  const text = value.trim();
+  const m = text.match(/([\d.]+)\s*([KMB])?/i);
+  if (!m) return 0;
+  const base = Number(m[1]);
+  if (Number.isNaN(base)) return 0;
+  const unit = (m[2] ?? '').toUpperCase();
+  const multiplier =
+    unit === 'K' ? 1_000 : unit === 'M' ? 1_000_000 : unit === 'B' ? 1_000_000_000 : 1;
+  return Math.round(base * multiplier);
+}
+
+function formatUserCountText(count: number): string {
+  if (count >= 1_000_000_000) return `+${(count / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B users`;
+  if (count >= 1_000_000) return `+${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M users`;
+  if (count >= 1_000) return `+${(count / 1_000).toFixed(1).replace(/\.0$/, '')}K users`;
+  return `+${count} users`;
+}
+
+async function incrementPreMadeTemplateUsers(
+  admin: ReturnType<typeof getAdminClient>,
+  templateId: string
+): Promise<void> {
+  const { data, error } = await admin
+    .from('pre_made_goals')
+    .select('user_count')
+    .eq('id', templateId)
+    .maybeSingle();
+  if (error || !data) return;
+
+  const currentText = typeof data.user_count === 'string' ? data.user_count : '+0 users';
+  const nextText = formatUserCountText(parseUserCountText(currentText) + 1);
+  await admin.from('pre_made_goals').update({ user_count: nextText }).eq('id', templateId);
+}
+
 /**
  * GET /goals
  * Returns all goals for the authenticated user with their items and item_completions.
@@ -88,6 +123,7 @@ router.get('/', async (req: Request, res: Response) => {
     category: g.category ?? null,
     reminderDate: g.reminder_date ? new Date(g.reminder_date as string).getTime() : null,
     reminderTime: g.reminder_time ?? null,
+    preMadeTemplateId: g.pre_made_template_id ?? null,
     coverIndex: g.cover_index,
     source: g.source,
     habitsTotal: g.habits_total,
@@ -133,6 +169,7 @@ router.post('/', async (req: Request, res: Response) => {
     category: body.category ?? null,
     reminder_date: body.reminderDate ? new Date(body.reminderDate).toISOString() : null,
     reminder_time: body.reminderTime ?? null,
+    pre_made_template_id: body.preMadeTemplateId ?? null,
     cover_index: body.coverIndex ?? 0,
     source: body.source ?? 'selfMade',
     habits_total: body.habitsTotal ?? 0,
@@ -202,6 +239,7 @@ router.post('/', async (req: Request, res: Response) => {
     category: goalRow.category,
     reminderDate: goalRow.reminder_date ? new Date(goalRow.reminder_date).getTime() : null,
     reminderTime: goalRow.reminder_time,
+    preMadeTemplateId: goalRow.pre_made_template_id,
     dueDate: goalRow.due_date ? new Date(goalRow.due_date).getTime() : null,
     createdAt: goalRow.created_at,
     items: insertedItemRows.map((it: Record<string, unknown>) => ({
@@ -215,6 +253,15 @@ router.post('/', async (req: Request, res: Response) => {
       paused: it.paused ?? false,
     })),
   };
+
+  if (
+    goalRow.source === 'preMade' &&
+    typeof goalRow.pre_made_template_id === 'string' &&
+    goalRow.pre_made_template_id.length > 0
+  ) {
+    await incrementPreMadeTemplateUsers(admin, goalRow.pre_made_template_id);
+  }
+
   res.status(201).json(created);
 });
 
@@ -230,17 +277,31 @@ router.patch('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const body = req.body ?? {};
 
-  const { data: existing } = await admin.from('goals').select('user_id').eq('id', id).single();
+  const { data: existing } = await admin
+    .from('goals')
+    .select('user_id, source')
+    .eq('id', id)
+    .single();
   if (!existing || existing.user_id !== user!.id) {
     res.status(404).json({ error: 'Goal not found' });
     return;
   }
+  const existingSource = (existing as Record<string, unknown>).source;
 
   const updates: Record<string, unknown> = {};
   if (body.achieved !== undefined) updates.achieved = body.achieved;
   if (body.habitsDone !== undefined) updates.habits_done = body.habitsDone;
   if (body.tasksDone !== undefined) updates.tasks_done = body.tasksDone;
   if (body.title !== undefined) updates.title = body.title;
+  if (body.category !== undefined) updates.category = body.category;
+  if (body.reminderDate !== undefined) {
+    updates.reminder_date =
+      body.reminderDate != null ? new Date(body.reminderDate).toISOString() : null;
+  }
+  if (body.reminderTime !== undefined) updates.reminder_time = body.reminderTime;
+  if (body.dueDate !== undefined) {
+    updates.due_date = body.dueDate != null ? new Date(body.dueDate).toISOString() : null;
+  }
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: 'No updates provided' });
     return;
@@ -256,6 +317,51 @@ router.patch('/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * PATCH /goals/:goalId/items/:itemId
+ * Body: partial goal item fields (title, reminderTime, note, selectedDays, dueDate, paused)
+ */
+router.patch('/:goalId/items/:itemId', async (req: Request, res: Response) => {
+  const { user, error } = await getAuthenticatedUser(req, res);
+  if (error) return;
+
+  const admin = getAdminClient();
+  const { goalId, itemId } = req.params;
+  const body = req.body ?? {};
+
+  const { data: goal } = await admin.from('goals').select('user_id').eq('id', goalId).single();
+  if (!goal || goal.user_id !== user!.id) {
+    res.status(404).json({ error: 'Goal not found' });
+    return;
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (body.title !== undefined) updates.title = body.title;
+  if (body.reminderTime !== undefined) updates.reminder_time = body.reminderTime;
+  if (body.note !== undefined) updates.note = body.note;
+  if (body.selectedDays !== undefined) updates.selected_days = body.selectedDays;
+  if (body.dueDate !== undefined) updates.due_date = body.dueDate;
+  if (body.paused !== undefined) updates.paused = body.paused;
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: 'No updates provided' });
+    return;
+  }
+
+  const { error: updErr } = await admin
+    .from('goal_items')
+    .update(updates)
+    .eq('id', itemId)
+    .eq('goal_id', goalId);
+
+  if (updErr) {
+    res.status(500).json({ error: 'Failed to update goal item' });
+    return;
+  }
+
+  res.json({ success: true });
+});
+
+/**
  * DELETE /goals/:id
  */
 router.delete('/:id', async (req: Request, res: Response) => {
@@ -265,22 +371,30 @@ router.delete('/:id', async (req: Request, res: Response) => {
   const admin = getAdminClient();
   const { id } = req.params;
 
-  const { data: existing } = await admin.from('goals').select('user_id').eq('id', id).single();
+  const { data: existing } = await admin
+    .from('goals')
+    .select('user_id, source')
+    .eq('id', id)
+    .single();
   if (!existing || existing.user_id !== user!.id) {
     res.status(404).json({ error: 'Goal not found' });
     return;
   }
+  const existingSource = (existing as Record<string, unknown>).source;
 
   const { data: goalItemRows } = await admin.from('goal_items').select('id').eq('goal_id', id);
   const itemIds = (goalItemRows ?? []).map((r: { id: string }) => r.id);
   if (itemIds.length > 0) {
     await admin.from('item_completions').delete().eq('user_id', user!.id).in('item_id', itemIds);
   }
-  const { error: itemsDelErr } = await admin.from('goal_items').delete().eq('goal_id', id);
-  if (itemsDelErr) {
-    console.error('[goals] DELETE goal_items failed:', itemsDelErr.message);
-    res.status(500).json({ error: 'Failed to delete goal items' });
-    return;
+  // Pre-made goals use shared template items in goal_items; keep them for other users.
+  if (existingSource !== 'preMade') {
+    const { error: itemsDelErr } = await admin.from('goal_items').delete().eq('goal_id', id);
+    if (itemsDelErr) {
+      console.error('[goals] DELETE goal_items failed:', itemsDelErr.message);
+      res.status(500).json({ error: 'Failed to delete goal items' });
+      return;
+    }
   }
   const { error: delErr } = await admin.from('goals').delete().eq('id', id);
   if (delErr) {

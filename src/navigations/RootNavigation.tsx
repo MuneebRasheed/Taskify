@@ -73,6 +73,8 @@ export type RootStackParamList = {
     editHabitIndex?: number;
     editTaskIndex?: number;
     initialItem?: TrackerCardItem;
+    goalId?: string;
+    itemId?: string;
   };
   GoalPlanner: {
     goalTitle?: string;

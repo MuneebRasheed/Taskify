@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { PreMadeGoalItem } from '../data/preMadeGoals';
-import { fetchPreMadeGoals } from '../lib/api/preMadeGoalsApi';
+import { fetchPreMadeGoals, type PreMadeGoalItem } from '../lib/api/preMadeGoalsApi';
 
 const PREMADE_GOALS_CACHE_KEY = '@taskify/preMadeGoalsCache/v2';
 const CACHE_TTL_MS = 5 * 60 * 1000;

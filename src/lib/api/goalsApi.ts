@@ -11,6 +11,7 @@ export type GoalsPayload = {
     category?: string | null;
     reminderDate?: number | null;
     reminderTime?: string | null;
+    preMadeTemplateId?: string | null;
     coverIndex: number;
     source: string;
     habitsTotal: number;
@@ -78,6 +79,7 @@ export async function createGoal(
     reminderTime?: string | null;
     coverIndex: number;
     source: string;
+    preMadeTemplateId?: string | null;
     dueDate?: number | null;
     achieved?: boolean;
     createdAt?: number;
@@ -107,7 +109,16 @@ export async function createGoal(
 export async function updateGoal(
   accessToken: string,
   goalId: string,
-  updates: { achieved?: boolean; habitsDone?: number; tasksDone?: number; title?: string }
+  updates: {
+    achieved?: boolean;
+    habitsDone?: number;
+    tasksDone?: number;
+    title?: string;
+    category?: string | null;
+    reminderDate?: number | null;
+    reminderTime?: string | null;
+    dueDate?: number | null;
+  }
 ): Promise<{ error?: string }> {
   const { error } = await request(`/goals/${goalId}`, {
     method: 'PATCH',
@@ -131,6 +142,27 @@ export async function toggleCompletion(
     method: 'POST',
     accessToken,
     body: JSON.stringify({ itemId, date }),
+  });
+  return { error };
+}
+
+export async function updateGoalItem(
+  accessToken: string,
+  goalId: string,
+  itemId: string,
+  updates: {
+    title?: string;
+    reminderTime?: string;
+    note?: string;
+    selectedDays?: number[];
+    dueDate?: string;
+    paused?: boolean;
+  }
+): Promise<{ error?: string }> {
+  const { error } = await request(`/goals/${goalId}/items/${itemId}`, {
+    method: 'PATCH',
+    accessToken,
+    body: JSON.stringify(updates),
   });
   return { error };
 }

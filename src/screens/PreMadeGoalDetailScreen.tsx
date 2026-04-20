@@ -33,6 +33,8 @@ import CalendarIcon from '../assets/svgs/CalendarIcon';
 import TimeIcon from '../assets/svgs/TimeIcon';
 import EditIcon from '../assets/svgs/EditIcon';
 import { usePreMadeGoals } from '../hooks/usePreMadeGoals';
+import { useGoalStore } from '../../store/goalStore';
+import ImageIcon from '../assets/svgs/ImageIcon';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', {
@@ -40,6 +42,27 @@ function formatDate(d: Date): string {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+
+/** Show task due date on cards without raw ISO / Z suffix (API often stores timestamptz as ISO string). */
+function formatTaskDueDateForCard(raw: string | null | undefined, fallback?: string | null): string | undefined {
+  if (raw != null && typeof raw === 'string' && raw.trim() !== '') {
+    const s = raw.trim();
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if (ymd) {
+      const y = Number(ymd[1]);
+      const m = Number(ymd[2]);
+      const d = Number(ymd[3]);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return `${MONTHS_SHORT[m - 1]} ${d}, ${y}`;
+      }
+    }
+    return s;
+  }
+  if (fallback != null && fallback.trim() !== '') return fallback;
+  return undefined;
 }
 
 function formatTime(hours: number, minutes: number, am: boolean): string {
@@ -78,7 +101,7 @@ const PreMadeGoalDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<PreMadeGoalDetailNavProp>();
   const route = useRoute<PreMadeGoalDetailRouteProp>();
-  const { goals, addGoal, markAchieved, removeGoal, itemCompletions } = useGoals();
+  const { goals, addGoal, markAchieved, removeGoal, itemCompletions, updateGoalDetails } = useGoals();
   const { preMadeGoals } = usePreMadeGoals();
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -126,6 +149,13 @@ const PreMadeGoalDetailScreen = () => {
   const [reminderDate, setReminderDate] = useState<Date | null>(initialReminderDate);
   const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(initialReminderTime);
   const [setUpGoalsModalVisible, setSetUpGoalsModalVisible] = useState(false);
+  const [draftCoverIndex, setDraftCoverIndex] = useState<number | null>(null);
+  const [isPreMadeDraftEditing, setIsPreMadeDraftEditing] = useState(false);
+  const draftHabits = useGoalStore((s) => s.draftHabits);
+  const draftTasks = useGoalStore((s) => s.draftTasks);
+  const setDraftHabits = useGoalStore((s) => s.setDraftHabits);
+  const setDraftTasks = useGoalStore((s) => s.setDraftTasks);
+  const resetDraft = useGoalStore((s) => s.resetDraft);
 
   useEffect(() => {
     setDueDate(initialDueDate);
@@ -143,6 +173,13 @@ const PreMadeGoalDetailScreen = () => {
     setReminderTime(initialReminderTime);
   }, [initialReminderTime]);
 
+  useEffect(() => {
+    if (mode !== 'preMade') return;
+    resetDraft();
+    setIsPreMadeDraftEditing(false);
+    setDraftCoverIndex(null);
+  }, [goalId, mode, resetDraft]);
+
   const reminderDisplay = reminderDate && reminderTime
     ? `${formatDate(reminderDate)} - ${formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)}`
     : '';
@@ -156,7 +193,16 @@ const PreMadeGoalDetailScreen = () => {
     : null;
 
   const coverSource: ImageSourcePropType | null = useMemo(() => {
-    if (mode === 'preMade' && preMadeGoal) return preMadeGoal.coverImage;
+    if (mode === 'preMade' && preMadeGoal) {
+      if (
+        typeof draftCoverIndex === 'number' &&
+        draftCoverIndex >= 0 &&
+        draftCoverIndex < COVER_IMAGE_SOURCES.length
+      ) {
+        return COVER_IMAGE_SOURCES[draftCoverIndex];
+      }
+      return preMadeGoal.coverImage;
+    }
     if (mode === 'myGoal' && myGoal && COVER_IMAGE_SOURCES.length) {
       const idx = myGoal.coverIndex % COVER_IMAGE_SOURCES.length;
       return COVER_IMAGE_SOURCES[idx];
@@ -166,7 +212,21 @@ const PreMadeGoalDetailScreen = () => {
       return COVER_IMAGE_SOURCES[idx];
     }
     return null;
-  }, [mode, preMadeGoal, myGoal, selfMadePayload]);
+  }, [mode, preMadeGoal, myGoal, selfMadePayload, draftCoverIndex]);
+
+  const handleChangeCover = () => {
+    if (mode !== 'preMade') return;
+    const selectedIndex =
+      typeof draftCoverIndex === 'number'
+        ? draftCoverIndex
+        : preMadeGoal?.coverIndex ?? 0;
+    navigation.navigate('SelectCoverImage', {
+      selectedIndex,
+      onCoverSelected: (index: number) => {
+        setDraftCoverIndex(index);
+      },
+    });
+  };
 
   const title = mode === 'preMade' && preMadeGoal
     ? preMadeGoal.title
@@ -176,10 +236,15 @@ const PreMadeGoalDetailScreen = () => {
 
   const habitItems: TrackerCardItem[] = useMemo(() => {
     if (mode === 'preMade' && preMadeGoal) {
-      return preMadeGoal.habits.map((h) => ({
+      const source = isPreMadeDraftEditing ? draftHabits : preMadeGoal.habits.map((h) => ({
         title: h.title,
         selectedDays: h.selectedDays,
         reminderTime: h.reminderTime ?? undefined,
+        variant: 'habit' as const,
+      }));
+      return source.map((h) => ({
+        ...h,
+        selectedDays: h.selectedDays?.length ? h.selectedDays : [],
         variant: 'habit' as const,
       }));
     }
@@ -202,28 +267,33 @@ const PreMadeGoalDetailScreen = () => {
       }));
     }
     return [];
-  }, [mode, preMadeGoal, myGoal, selfMadePayload]);
+  }, [mode, preMadeGoal, myGoal, selfMadePayload, isPreMadeDraftEditing, draftHabits]);
 
   const taskItems: TrackerCardItem[] = useMemo(() => {
     if (mode === 'preMade' && preMadeGoal) {
-      return preMadeGoal.tasks.map((t) => ({
+      const source = isPreMadeDraftEditing ? draftTasks : preMadeGoal.tasks.map((t) => ({
         title: t.title,
         selectedDays: [],
         dueDate: t.dueDate ?? undefined,
         reminderTime: t.reminderTime ?? undefined,
         variant: 'task' as const,
       }));
+      return source.map((t) => ({
+        ...t,
+        selectedDays: [],
+        variant: 'task' as const,
+      }));
     }
     if (mode === 'myGoal' && myGoal?.items) {
       const dueStr = myGoal.dueDate
-        ? `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][myGoal.dueDate.getMonth()]} ${myGoal.dueDate.getDate()}, ${myGoal.dueDate.getFullYear()}`
+        ? `${MONTHS_SHORT[myGoal.dueDate.getMonth()]} ${myGoal.dueDate.getDate()}, ${myGoal.dueDate.getFullYear()}`
         : null;
       return myGoal.items
         .filter((i): i is GoalItem & { type: 'task' } => i.type === 'task')
         .map((t) => ({
           title: t.title,
           selectedDays: [],
-          dueDate: dueStr,
+          dueDate: formatTaskDueDateForCard(t.dueDate, dueStr),
           reminderTime: t.reminderTime ?? null,
           variant: 'task' as const,
         }));
@@ -244,7 +314,7 @@ const PreMadeGoalDetailScreen = () => {
       }));
     }
     return [];
-  }, [mode, preMadeGoal, myGoal, selfMadePayload]);
+  }, [mode, preMadeGoal, myGoal, selfMadePayload, isPreMadeDraftEditing, draftTasks]);
 
   const noteText = mode === 'preMade' && preMadeGoal
     ? preMadeGoal.note
@@ -279,7 +349,15 @@ const PreMadeGoalDetailScreen = () => {
       );
       return;
     }
+    const existingGoal = goals.find((g) => g.source === 'preMade' && g.title === preMadeGoal.title && !g.achieved);
+    if (existingGoal) {
+      navigation.navigate('MainTabs', { screen: 'My Goals' });
+      return;
+    }
     const coverIndex = (() => {
+      if (typeof draftCoverIndex === 'number' && draftCoverIndex >= 0) {
+        return draftCoverIndex;
+      }
       if (typeof preMadeGoal.coverIndex === 'number' && preMadeGoal.coverIndex >= 0) {
         return preMadeGoal.coverIndex;
       }
@@ -295,49 +373,88 @@ const PreMadeGoalDetailScreen = () => {
       }
       return 0;
     })();
-    const goalDueDateIso = dueDate ? dueDate.toISOString() : undefined;
     const goalReminderTime = reminderTimeOnly || undefined;
-    // Ensure goal_items IDs are unique per added instance; otherwise re-adding the same
-    // template can cause primary-key conflicts and prevent habits/tasks from being created.
-    const goalInstanceKey = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const items: GoalItem[] = [
-      ...preMadeGoal.habits.map((h, i) => ({
-        id: `pre-${preMadeGoal.id}-${goalInstanceKey}-habit-${i}`,
-        type: 'habit' as const,
-        title: h.title,
-        // If the user defined a reminder time for this goal, apply it to all habits;
-        // otherwise keep the habit's own reminderTime.
-        reminderTime: goalReminderTime ?? h.reminderTime,
-        selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
-      })),
-      ...preMadeGoal.tasks.map((t, i) => ({
-        id: `pre-${preMadeGoal.id}-${goalInstanceKey}-task-${i}`,
-        type: 'task' as const,
-        title: t.title,
-        // If the user defined a reminder time for this goal, apply it to all tasks;
-        // otherwise keep the task's own reminderTime.
-        reminderTime: goalReminderTime ?? t.reminderTime,
-        // Use the user-selected goal due date for all tasks so the backend
-        // receives a concrete, parseable date instead of human text like "Today".
-        dueDate: goalDueDateIso,
-      })),
-    ];
     addGoal({
       title: preMadeGoal.title,
       category: categoryValue ?? null,
       reminderDate: reminderDate != null ? new Date(reminderDate.getTime()) : null,
       reminderTime: goalReminderTime ?? null,
+      preMadeTemplateId: preMadeGoal.id,
       coverIndex,
       source: 'preMade',
-      habitsTotal: preMadeGoal.habitsCount,
+      habitsTotal: habitItems.length,
       habitsDone: 0,
-      tasksTotal: preMadeGoal.tasksCount,
+      tasksTotal: taskItems.length,
       tasksDone: 0,
       dueDate: dueDate ?? null,
       achieved: false,
-      items,
+      items: [
+        ...habitItems.map((h, i) => ({
+          id: `pre-${preMadeGoal.id}-habit-${i}`,
+          type: 'habit' as const,
+          title: h.title,
+          reminderTime: h.reminderTime ?? goalReminderTime,
+          selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
+        })),
+        ...taskItems.map((t, i) => ({
+          id: `pre-${preMadeGoal.id}-task-${i}`,
+          type: 'task' as const,
+          title: t.title,
+          reminderTime: t.reminderTime ?? goalReminderTime,
+          dueDate: t.dueDate ?? dueDate.toISOString(),
+        })),
+      ],
     });
+    resetDraft();
+    setIsPreMadeDraftEditing(false);
+    setDraftCoverIndex(null);
     navigation.navigate('MainTabs', { screen: 'My Goals' });
+  };
+
+  const openPreMadeItemEditor = (type: 'habit' | 'task', index: number) => {
+    if (mode !== 'preMade' || !preMadeGoal) return;
+    if (!isPreMadeDraftEditing) {
+      setDraftHabits(
+        preMadeGoal.habits.map((h) => ({
+          title: h.title,
+          selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
+          reminderTime: h.reminderTime ?? undefined,
+          variant: 'habit' as const,
+        }))
+      );
+      setDraftTasks(
+        preMadeGoal.tasks.map((t) => ({
+          title: t.title,
+          selectedDays: [],
+          dueDate: t.dueDate ?? undefined,
+          reminderTime: t.reminderTime ?? undefined,
+          variant: 'task' as const,
+        }))
+      );
+      setIsPreMadeDraftEditing(true);
+    }
+    navigation.navigate('AddTaskScreen', {
+      mode: type,
+      source: 'selfMade',
+      initialItem: {
+        ...(type === 'habit'
+          ? (draftHabits[index] ?? {
+              title: preMadeGoal.habits[index]?.title ?? '',
+              selectedDays: preMadeGoal.habits[index]?.selectedDays ?? [0, 1, 2, 3, 4, 5, 6],
+              reminderTime: preMadeGoal.habits[index]?.reminderTime ?? undefined,
+              variant: 'habit' as const,
+            })
+          : (draftTasks[index] ?? {
+              title: preMadeGoal.tasks[index]?.title ?? '',
+              selectedDays: [],
+              dueDate: preMadeGoal.tasks[index]?.dueDate ?? undefined,
+              reminderTime: preMadeGoal.tasks[index]?.reminderTime ?? undefined,
+              variant: 'task' as const,
+            })),
+        variant: type,
+      },
+      ...(type === 'habit' ? { editHabitIndex: index } : { editTaskIndex: index }),
+    });
   };
 
   const handleCreateGoal = () => {
@@ -447,6 +564,15 @@ const PreMadeGoalDetailScreen = () => {
               </View>
             </TouchableOpacity>
           </View>
+          {mode === 'preMade' && (
+            <TouchableOpacity
+              style={styles.changeCoverBtn}
+              onPress={handleChangeCover}
+              activeOpacity={0.8}
+            >
+              <ImageIcon width={43} height={43} />
+            </TouchableOpacity>
+          )}
         </View>
         {/* Goals title + category, due date, reminder; Edit opens Set up Goals modal */}
         <View style={styles.addGoalsSection}>
@@ -522,6 +648,18 @@ const PreMadeGoalDetailScreen = () => {
           reminderTime={reminderTime}
           onCancel={() => setSetUpGoalsModalVisible(false)}
           onConfirm={(data) => {
+            if (mode === 'myGoal' && myGoal) {
+              updateGoalDetails(myGoal.id, {
+                title: data.goalTitle.trim() || myGoal.title,
+                category: data.category,
+                dueDate: data.dueDate,
+                reminderDate: data.reminderDate,
+                reminderTime:
+                  data.reminderDate && data.reminderTime
+                    ? formatTime(data.reminderTime.hours, data.reminderTime.minutes, data.reminderTime.am)
+                    : null,
+              });
+            }
             setCategoryValue(data.category);
             setDueDate(data.dueDate);
             setReminderDate(data.reminderDate);
@@ -572,6 +710,11 @@ const PreMadeGoalDetailScreen = () => {
                   <TrackerCard
                     key={`habit-${index}`}
                     item={{ ...item, variant: 'habit' }}
+                    onPress={
+                      mode === 'preMade'
+                        ? () => openPreMadeItemEditor('habit', index)
+                        : undefined
+                    }
                   />
                 ))}
           </View>
@@ -584,7 +727,7 @@ const PreMadeGoalDetailScreen = () => {
             {mode === 'myGoal' && myGoal
               ? (() => {
                   const dueStr = myGoal.dueDate
-                    ? `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][myGoal.dueDate.getMonth()]} ${myGoal.dueDate.getDate()}, ${myGoal.dueDate.getFullYear()}`
+                    ? `${MONTHS_SHORT[myGoal.dueDate.getMonth()]} ${myGoal.dueDate.getDate()}, ${myGoal.dueDate.getFullYear()}`
                     : null;
                   return myGoal.items
                     .filter((i): i is GoalItem & { type: 'task' } => i.type === 'task')
@@ -592,7 +735,7 @@ const PreMadeGoalDetailScreen = () => {
                       const item: TrackerCardItem = {
                         title: goalItem.title,
                         selectedDays: [],
-                        dueDate: goalItem.dueDate ?? dueStr,
+                        dueDate: formatTaskDueDateForCard(goalItem.dueDate, dueStr),
                         reminderTime: goalItem.reminderTime ?? null,
                         variant: 'task',
                       };
@@ -616,6 +759,11 @@ const PreMadeGoalDetailScreen = () => {
                   <TrackerCard
                     key={`task-${index}`}
                     item={{ ...item, variant: 'task' }}
+                    onPress={
+                      mode === 'preMade'
+                        ? () => openPreMadeItemEditor('task', index)
+                        : undefined
+                    }
                   />
                 ))}
           </View>
@@ -757,6 +905,22 @@ const styles = StyleSheet.create({
   },
   coverSpacer: {
     flex: 1,
+  },
+  changeCoverBtn: {
+    position: 'absolute',
+    bottom: 12,
+    right: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: lightColors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   addGoalsSection: {
     marginHorizontal: 24,

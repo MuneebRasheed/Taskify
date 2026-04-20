@@ -28,6 +28,7 @@ import CalendarIcon from '../assets/svgs/CalendarIcon';
 import CalendarModal from '../components/CalendarModal';
 import TimePickerModal from '../components/TimePickerModal';
 import { useGoalStore } from '../../store/goalStore';
+import { useGoals } from '../context/GoalsContext';
 
 type AddTaskRouteProp = RouteProp<RootStackParamList, 'AddTaskScreen'>;
 type AddTaskNavProp = NativeStackNavigationProp<RootStackParamList, 'AddTaskScreen'>;
@@ -36,11 +37,17 @@ const AddTaskScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<AddTaskNavProp>();
   const route = useRoute<AddTaskRouteProp>();
-  const { mode, prompt, source, editHabitIndex, editTaskIndex, initialItem } = route.params;
+  const { mode, prompt, source, editHabitIndex, editTaskIndex, initialItem, goalId, itemId } = route.params;
+  const { updateGoalItem } = useGoals();
 
   const isHabit = mode === 'habit';
   const isEdit =
     (isHabit && editHabitIndex !== undefined) || (!isHabit && editTaskIndex !== undefined);
+  const isGoalItemEdit =
+    typeof goalId === 'string' &&
+    goalId.length > 0 &&
+    typeof itemId === 'string' &&
+    itemId.length > 0;
 
   const [title, setTitle] = useState('');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -147,6 +154,16 @@ const AddTaskScreen = () => {
     if (Object.keys(nextErrors).length > 0) return;
 
     const item = buildItem();
+    if (isGoalItemEdit) {
+      updateGoalItem(goalId, itemId, {
+        title: item.title,
+        reminderTime: item.reminderTime,
+        selectedDays: isHabit ? item.selectedDays : undefined,
+        dueDate: !isHabit ? item.dueDate : undefined,
+      });
+      navigation.goBack();
+      return;
+    }
     if (source === 'selfMade') {
       if (isEdit) {
         if (isHabit && editHabitIndex !== undefined) {

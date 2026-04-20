@@ -51,6 +51,17 @@ const formatTime = (hours: number, minutes: number, am: boolean): string => {
   return `${labelHours}:${labelMinutes} ${am ? 'AM' : 'PM'}`;
 };
 
+function parseYmdFromDueRaw(raw: string): { y: number; m: number; d: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw.trim());
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!Number.isInteger(y) || !Number.isInteger(mo) || !Number.isInteger(d)) return null;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return { y, m: mo, d };
+}
+
 const TaskDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<TaskDetailNavProp>();
@@ -73,11 +84,24 @@ const TaskDetailScreen = () => {
   useEffect(() => {
     if (item && goal) {
       setTitle(item.title);
-      const initialDue = item.dueDate ?? (goal.dueDate ? formatDate(goal.dueDate) : '');
+      let initialDue = '';
+      let initialDueAsDate: Date | null = null;
+      if (item.dueDate && typeof item.dueDate === 'string' && item.dueDate.trim() !== '') {
+        const ymd = parseYmdFromDueRaw(item.dueDate);
+        if (ymd) {
+          initialDueAsDate = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d, 12, 0, 0));
+          initialDue = formatDate(initialDueAsDate);
+        } else {
+          initialDue = item.dueDate.trim();
+        }
+      } else if (goal.dueDate) {
+        initialDueAsDate = goal.dueDate;
+        initialDue = formatDate(goal.dueDate);
+      }
       setDueDate(initialDue);
       setReminderTime(item.reminderTime ?? '');
       setNote(item.note ?? '');
-      setDueDateDate(goal.dueDate ?? null);
+      setDueDateDate(initialDueAsDate);
     }
   }, [item, goal]);
 
