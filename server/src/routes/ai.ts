@@ -1,15 +1,15 @@
 import { randomUUID } from 'crypto';
 import { Router, Request, Response } from 'express';
-import Groq from 'groq-sdk';
+import OpenAI from 'openai';
 import { getAuthenticatedUser } from '../lib/auth';
 
 const router = Router();
 
-// Prefer EXPO_PUBLIC_GROQ_API_KEY so you can configure it once
-// in the root .env, but also fall back to GROQ_API_KEY in server/.env.
-const groqApiKey =
-  process.env.EXPO_PUBLIC_GROQ_API_KEY ||
-  process.env.GROQ_API_KEY ||
+// Prefer EXPO_PUBLIC_OPENAI_API_KEY so you can configure it once
+// in the root .env, but also fall back to OPENAI_API_KEY in server/.env.
+const openAiApiKey =
+  process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
+  process.env.OPENAI_API_KEY ||
   '';
 
 const send = (res: Response, body: object, status: number): void => {
@@ -28,6 +28,33 @@ const logError = (msg: string, err: unknown, meta?: object): void => {
       : { detail: String(err) };
   // eslint-disable-next-line no-console
   console.error('[AI Goal Plan]', msg, { ...meta, ...base });
+};
+
+const VAGUE_GOAL_PATTERNS = [
+  /^goal$/i,
+  /^my goal$/i,
+  /^something$/i,
+  /^anything$/i,
+  /^help me$/i,
+  /^i don't know$/i,
+  /^idk$/i,
+  /^test(?:ing)?$/i,
+];
+
+const isMeaningfulGoalPrompt = (input: string): boolean => {
+  const trimmed = input.trim();
+  if (trimmed.length < 10 || trimmed.length > 300) return false;
+  if (!/[a-zA-Z]/.test(trimmed)) return false;
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length < 3) return false;
+
+  const normalized = trimmed.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  if (VAGUE_GOAL_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return false;
+  }
+
+  return true;
 };
 
 export type AiGoalHabit = {
@@ -53,8 +80,8 @@ export type AiGoalPlanResponse = {
   tasks: AiGoalTask[];
 };
 
-const SYSTEM_PROMPT = `You are a goal-planning assistant.
-Given a single user goal, you create a focused plan consisting of:
+const SYSTEM_PROMPT = `You are a high-quality goal-planning assistant.
+Given a single user goal, create a realistic, actionable plan consisting of:
 - One clear, motivating goal title
 - A short explanatory note (1–3 sentences) about the plan
 - A list of recurring habits
@@ -87,7 +114,9 @@ Rules:
 - "reminderTime" can be null or omitted if not needed. When present, use a readable 12‑hour time like "09:00 AM" or "18:30 PM".
 - "dueDate" is a short human‑readable date string or ISO "YYYY-MM-DD". Prefer short forms like "Today, Mar 11, 2026" or "20 Jan, 2025".
 - Only include a handful of high‑impact habits (3–7) and tasks (3–10), not an overwhelming list.
-- If the user's goal is too vague, still propose a reasonable, specific plan based on your best guess.
+- Make habits and tasks specific, measurable, and practical for real life.
+- Build progression from easy starter actions to stronger milestone actions.
+- Keep wording concise and motivational.
 `;
 
 router.post(
@@ -115,13 +144,13 @@ router.post(
 
       log('Auth OK', { requestId, userId: user.id, elapsedMs: Date.now() - wallStart });
 
-      if (!groqApiKey) {
-        log('Rejected: GROQ key not configured', { requestId });
+      if (!openAiApiKey) {
+        log('Rejected: OpenAI key not configured', { requestId });
         send(
           res,
           {
             error:
-              'AI goal generator is not configured. Add GROQ API key to .env (EXPO_PUBLIC_GROQ_API_KEY or GROQ_API_KEY).',
+              'AI goal generator is not configured. Add OpenAI API key to .env (EXPO_PUBLIC_OPENAI_API_KEY or OPENAI_API_KEY).',
           },
           503
         );
@@ -143,23 +172,39 @@ router.post(
         );
         return;
       }
+      if (!isMeaningfulGoalPrompt(prompt)) {
+        log('Rejected: goal prompt too vague/invalid', {
+          requestId,
+          promptLength: prompt.length,
+          promptPreview: prompt.slice(0, 80),
+        });
+        send(
+          res,
+          {
+            error:
+              'Please write a proper goal you want to make and achieve. Include what you want to accomplish.',
+          },
+          400
+        );
+        return;
+      }
 
-      log('Calling Groq', {
+      log('Calling OpenAI', {
         requestId,
-        model: 'llama-3.1-8b-instant',
+        model: 'gpt-4o-mini',
         promptLength: prompt.length,
         promptPreview:
           prompt.length > 100 ? `${prompt.slice(0, 100)}…` : prompt,
       });
 
-      const groq = new Groq({ apiKey: groqApiKey });
-      const groqStarted = Date.now();
+      const openai = new OpenAI({ apiKey: openAiApiKey });
+      const openAiStarted = Date.now();
       let completion: Awaited<
-        ReturnType<Groq['chat']['completions']['create']>
+        ReturnType<OpenAI['chat']['completions']['create']>
       >;
       try {
-        completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+        completion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             {
@@ -168,28 +213,32 @@ router.post(
             },
           ],
           max_tokens: 1024,
-          temperature: 0.3,
+          temperature: 0.4,
+          response_format: { type: 'json_object' },
         });
-      } catch (groqErr) {
-        logError('Groq API threw', groqErr, { requestId, groqMs: Date.now() - groqStarted });
+      } catch (openAiErr) {
+        logError('OpenAI API threw', openAiErr, {
+          requestId,
+          openAiMs: Date.now() - openAiStarted,
+        });
         send(
           res,
           {
             error:
-              groqErr instanceof Error
-                ? groqErr.message
-                : 'Groq request failed',
+              openAiErr instanceof Error
+                ? openAiErr.message
+                : 'OpenAI request failed',
           },
           502
         );
         return;
       }
 
-      const groqMs = Date.now() - groqStarted;
+      const openAiMs = Date.now() - openAiStarted;
       const choice0 = completion.choices[0];
-      log('Groq response', {
+      log('OpenAI response', {
         requestId,
-        groqMs,
+        openAiMs,
         totalElapsedMs: Date.now() - wallStart,
         usage: completion.usage ?? null,
         choiceCount: completion.choices?.length ?? 0,

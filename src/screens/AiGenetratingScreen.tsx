@@ -27,6 +27,31 @@ import { useAuth } from '../lib/auth/AuthProvider';
 import type { TrackerCardItem } from '../components/TrackerCard';
 import { generateGoalPlan } from '../lib/api/aiGoalPlanApi';
 
+const INVALID_GOAL_INPUT_MESSAGE =
+  'Please write a proper goal you want to make and achieve. Include what you want to accomplish.';
+
+const isMeaningfulGoalPrompt = (input: string): boolean => {
+  const trimmed = input.trim();
+  if (trimmed.length < 10 || trimmed.length > 300) return false;
+  if (!/[a-zA-Z]/.test(trimmed)) return false;
+  if (trimmed.split(/\s+/).filter(Boolean).length < 3) return false;
+
+  const normalized = trimmed.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  const vaguePrompts = new Set([
+    'goal',
+    'my goal',
+    'something',
+    'anything',
+    'help me',
+    "i don't know",
+    'idk',
+    'test',
+    'testing',
+  ]);
+
+  return !vaguePrompts.has(normalized);
+};
+
 const AiGenetratingScreen = () => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -53,6 +78,10 @@ const AiGenetratingScreen = () => {
     Keyboard.dismiss();
     const trimmed = goal.trim();
     if (!trimmed) return;
+    if (!isMeaningfulGoalPrompt(trimmed)) {
+      Alert.alert(t('error') ?? 'Error', INVALID_GOAL_INPUT_MESSAGE);
+      return;
+    }
 
     const accessToken = session?.access_token;
     if (!accessToken) {
@@ -72,9 +101,14 @@ const AiGenetratingScreen = () => {
       );
 
       if (error || !data) {
+        const errorMessage =
+          error &&
+          /proper goal you want to make and achieve/i.test(error)
+            ? INVALID_GOAL_INPUT_MESSAGE
+            : error;
         Alert.alert(
           t('somethingWentWrong') ?? 'Something went wrong',
-          error ??
+          errorMessage ??
             (t('failedToGeneratePlan') ??
               'Failed to generate a plan. Please try again.')
         );
