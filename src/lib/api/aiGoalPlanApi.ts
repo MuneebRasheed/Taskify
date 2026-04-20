@@ -15,6 +15,7 @@ export type AiGoalTask = {
 export type AiGoalPlan = {
   goalTitle: string;
   note: string;
+  suggestedGoalDueDate?: string;
   habits: AiGoalHabit[];
   tasks: AiGoalTask[];
 };

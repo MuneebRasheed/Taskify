@@ -8,6 +8,9 @@ export type GoalsPayload = {
   goals: Array<{
     id: string;
     title: string;
+    category?: string | null;
+    reminderDate?: number | null;
+    reminderTime?: string | null;
     coverIndex: number;
     source: string;
     habitsTotal: number;
@@ -70,6 +73,9 @@ export async function createGoal(
   body: {
     id?: string;
     title: string;
+    category?: string | null;
+    reminderDate?: number | null;
+    reminderTime?: string | null;
     coverIndex: number;
     source: string;
     dueDate?: number | null;

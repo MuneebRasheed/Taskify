@@ -120,6 +120,7 @@ const AiMadeScreen = () => {
   const initialTasksParam = route.params?.initialTasks;
   const initialNoteParam = route.params?.initialNote;
   const initialGoalTitleParam = route.params?.initialGoalTitle;
+  const initialDueDateParam = route.params?.initialDueDate;
 
   const prompt =
     promptParam ?? (isSelfMade ? '' : 'Become a UI/UX Designer');
@@ -250,6 +251,7 @@ const AiMadeScreen = () => {
       initialHabits: habitsList,
       initialTasks: tasksList,
       initialNote: note,
+      initialDueDate: initialDueDateParam ?? null,
     });
   };
 

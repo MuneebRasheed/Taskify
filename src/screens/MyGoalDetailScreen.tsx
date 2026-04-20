@@ -37,6 +37,25 @@ function formatDueDate(d: Date | null): string {
   return `${date} - ${time}`;
 }
 
+function formatTaskDueDate(dueDate?: string): string | null {
+  if (!dueDate) return null;
+  const trimmed = dueDate.trim();
+  if (!trimmed) return null;
+
+  // Keep already user-friendly values as-is.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const parsed = new Date(`${trimmed}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return trimmed;
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 function daysUntil(d: Date | null): number | null {
   if (!d) return null;
   const today = new Date();
@@ -70,7 +89,7 @@ const MyGoalDetailScreen = () => {
       .filter((i): i is GoalItem & { type: 'habit' } => i.type === 'habit')
       .map((h) => ({
         title: h.title,
-        selectedDays: [0, 1, 2, 3, 4, 5, 6],
+        selectedDays: h.selectedDays ?? [],
         reminderTime: h.reminderTime ?? null,
         variant: 'habit' as const,
       }));
@@ -78,13 +97,12 @@ const MyGoalDetailScreen = () => {
 
   const taskItems: TrackerCardItem[] = useMemo(() => {
     if (!goal?.items) return [];
-    const dueStr = goal.dueDate ? formatDueDate(goal.dueDate).split(' - ')[0] : null;
     return goal.items
       .filter((i): i is GoalItem & { type: 'task' } => i.type === 'task')
       .map((t) => ({
         title: t.title,
         selectedDays: [],
-        dueDate: dueStr ?? null,
+        dueDate: formatTaskDueDate(t.dueDate),
         reminderTime: t.reminderTime ?? null,
         variant: 'task' as const,
       }));

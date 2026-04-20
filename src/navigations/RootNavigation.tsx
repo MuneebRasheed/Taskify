@@ -64,6 +64,7 @@ export type RootStackParamList = {
     initialTasks?: TrackerCardItem[];
     initialNote?: string;
     initialGoalTitle?: string;
+    initialDueDate?: number | null;
   };
   AddTaskScreen: {
     mode: 'habit' | 'task';

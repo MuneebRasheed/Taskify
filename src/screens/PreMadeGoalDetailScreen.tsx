@@ -47,6 +47,18 @@ function formatTime(hours: number, minutes: number, am: boolean): string {
   return `${h.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
 }
 
+function parseReminderTime(value?: string | null): { hours: number; minutes: number; am: boolean } | null {
+  if (!value) return null;
+  const m = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return null;
+  const hours = Number(m[1]);
+  const minutes = Number(m[2]);
+  const am = m[3].toUpperCase() === 'AM';
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) return null;
+  return { hours, minutes, am };
+}
+
 function daysUntilDue(d: Date): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -89,16 +101,48 @@ const PreMadeGoalDetailScreen = () => {
     return null;
   }, [mode, myGoal?.dueDate, selfMadePayload?.dueDate]);
 
+  const initialCategory = useMemo<GoalCategory | null>(() => {
+    if (mode === 'preMade' && preMadeGoal) return preMadeGoal.category;
+    if (mode === 'myGoal') return (myGoal?.category as GoalCategory | null) ?? null;
+    return null;
+  }, [mode, preMadeGoal, myGoal?.category]);
+
+  const initialReminderDate = useMemo<Date | null>(() => {
+    if (mode === 'myGoal' && myGoal?.reminderDate) {
+      return myGoal.reminderDate instanceof Date
+        ? myGoal.reminderDate
+        : new Date(myGoal.reminderDate as unknown as number);
+    }
+    return null;
+  }, [mode, myGoal?.reminderDate]);
+
+  const initialReminderTime = useMemo(
+    () => (mode === 'myGoal' ? parseReminderTime(myGoal?.reminderTime) : null),
+    [mode, myGoal?.reminderTime]
+  );
+
   const [dueDate, setDueDate] = useState<Date | null>(() => initialDueDate);
-  const [reminderDate, setReminderDate] = useState<Date | null>(null);
-  const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(null);
+  const [categoryValue, setCategoryValue] = useState<GoalCategory | null>(initialCategory);
+  const [reminderDate, setReminderDate] = useState<Date | null>(initialReminderDate);
+  const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(initialReminderTime);
   const [setUpGoalsModalVisible, setSetUpGoalsModalVisible] = useState(false);
 
   useEffect(() => {
     setDueDate(initialDueDate);
   }, [initialDueDate]);
 
-  const category: GoalCategory | null = mode === 'preMade' && preMadeGoal ? preMadeGoal.category : null;
+  useEffect(() => {
+    setCategoryValue(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
+    setReminderDate(initialReminderDate);
+  }, [initialReminderDate]);
+
+  useEffect(() => {
+    setReminderTime(initialReminderTime);
+  }, [initialReminderTime]);
+
   const reminderDisplay = reminderDate && reminderTime
     ? `${formatDate(reminderDate)} - ${formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)}`
     : '';
@@ -280,6 +324,9 @@ const PreMadeGoalDetailScreen = () => {
     ];
     addGoal({
       title: preMadeGoal.title,
+      category: categoryValue ?? null,
+      reminderDate: reminderDate != null ? new Date(reminderDate.getTime()) : null,
+      reminderTime: goalReminderTime ?? null,
       coverIndex,
       source: 'preMade',
       habitsTotal: preMadeGoal.habitsCount,
@@ -313,6 +360,9 @@ const PreMadeGoalDetailScreen = () => {
     ];
     addGoal({
       title: selfMadePayload.title,
+      category: categoryValue ?? null,
+      reminderDate: reminderDate != null ? new Date(reminderDate.getTime()) : null,
+      reminderTime: reminderTimeOnly || null,
       coverIndex: selfMadePayload.coverIndex,
       source: 'selfMade',
       habitsTotal: selfMadePayload.habits.length,
@@ -418,14 +468,14 @@ const PreMadeGoalDetailScreen = () => {
             contentContainerStyle={styles.metadataRowPills}
             style={styles.metadataRowPillsScroll}
           >
-            {category != null && (
+            {categoryValue != null && (
               <TouchableOpacity
                 style={styles.metadataPillCategory}
                 onPress={() => setSetUpGoalsModalVisible(true)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.metadataPillTextDark} numberOfLines={1}>
-                  {category}
+                  {categoryValue}
                 </Text>
               </TouchableOpacity>
             )}
@@ -466,12 +516,13 @@ const PreMadeGoalDetailScreen = () => {
         <SetUpGoalsModal
           visible={setUpGoalsModalVisible}
           goalTitle={title}
-          category={category}
+          category={categoryValue}
           dueDate={dueDate}
           reminderDate={reminderDate}
           reminderTime={reminderTime}
           onCancel={() => setSetUpGoalsModalVisible(false)}
           onConfirm={(data) => {
+            setCategoryValue(data.category);
             setDueDate(data.dueDate);
             setReminderDate(data.reminderDate);
             setReminderTime(data.reminderTime);

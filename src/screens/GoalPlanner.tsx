@@ -159,17 +159,25 @@ const GoalPlannerScreen = () => {
         type: 'habit' as const,
         title: habit.title,
         reminderTime: habit.reminderTime ?? undefined,
+        selectedDays: habit.selectedDays ?? [],
       })),
       ...tasks.map((task, index) => ({
         id: `planner-t-${index}`,
         type: 'task' as const,
         title: task.title,
         reminderTime: task.reminderTime ?? undefined,
+        dueDate: task.dueDate ?? undefined,
       })),
     ];
 
     addGoal({
       title: goalTitleText.trim() || t('goalsTitle'),
+      category: category ?? null,
+      reminderDate: reminderDate != null ? new Date(reminderDate.getTime()) : null,
+      reminderTime:
+        reminderTime != null
+          ? formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)
+          : null,
       coverIndex,
       source: fromSelfMade ? 'selfMade' : 'aiMade',
       habitsTotal: habits.length,

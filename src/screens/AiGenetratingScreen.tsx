@@ -52,6 +52,13 @@ const isMeaningfulGoalPrompt = (input: string): boolean => {
   return !vaguePrompts.has(normalized);
 };
 
+const parseIsoDateStamp = (value?: string): number | null => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.getTime();
+};
+
 const AiGenetratingScreen = () => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -155,6 +162,9 @@ const AiGenetratingScreen = () => {
 
       const displayTitle =
         (data.goalTitle && data.goalTitle.trim()) || trimmed;
+      const suggestedGoalDueDate = parseIsoDateStamp(
+        data.suggestedGoalDueDate
+      );
 
       navigation.navigate('AiMade', {
         prompt: displayTitle,
@@ -162,6 +172,7 @@ const AiGenetratingScreen = () => {
         initialHabits: habits,
         initialTasks: tasks,
         initialNote: data.note,
+        initialDueDate: suggestedGoalDueDate,
       });
     } catch (err) {
       console.error('[AiGenetratingScreen] generate error', err);

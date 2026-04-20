@@ -23,6 +23,9 @@ export interface GoalItem {
 export interface SavedGoal {
   id: string;
   title: string;
+  category?: string | null;
+  reminderDate?: Date | null;
+  reminderTime?: string | null;
   coverIndex: number;
   source: GoalSource;
   habitsTotal: number;
@@ -143,6 +146,9 @@ function apiGoalToSavedGoal(g: goalsApi.GoalsPayload['goals'][0]): SavedGoal {
   return {
     id: g.id,
     title: g.title,
+    category: g.category ?? null,
+    reminderDate: g.reminderDate != null ? new Date(g.reminderDate) : null,
+    reminderTime: g.reminderTime ?? null,
     coverIndex: g.coverIndex,
     source: g.source as GoalSource,
     habitsTotal: g.habitsTotal,
@@ -220,6 +226,12 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
         .createGoal(token, {
           id,
           title: newGoal.title,
+          category: newGoal.category ?? null,
+          reminderDate:
+            newGoal.reminderDate instanceof Date
+              ? newGoal.reminderDate.getTime()
+              : null,
+          reminderTime: newGoal.reminderTime ?? null,
           coverIndex: newGoal.coverIndex,
           source: newGoal.source,
           habitsTotal: newGoal.habitsTotal,

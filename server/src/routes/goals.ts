@@ -85,6 +85,9 @@ router.get('/', async (req: Request, res: Response) => {
   const goalsPayload = goals.map((g: Record<string, unknown>) => ({
     id: g.id,
     title: g.title,
+    category: g.category ?? null,
+    reminderDate: g.reminder_date ? new Date(g.reminder_date as string).getTime() : null,
+    reminderTime: g.reminder_time ?? null,
     coverIndex: g.cover_index,
     source: g.source,
     habitsTotal: g.habits_total,
@@ -127,6 +130,9 @@ router.post('/', async (req: Request, res: Response) => {
     id,
     user_id: userId,
     title: body.title ?? 'Untitled',
+    category: body.category ?? null,
+    reminder_date: body.reminderDate ? new Date(body.reminderDate).toISOString() : null,
+    reminder_time: body.reminderTime ?? null,
     cover_index: body.coverIndex ?? 0,
     source: body.source ?? 'selfMade',
     habits_total: body.habitsTotal ?? 0,
@@ -193,6 +199,9 @@ router.post('/', async (req: Request, res: Response) => {
 
   const created = {
     ...goalRow,
+    category: goalRow.category,
+    reminderDate: goalRow.reminder_date ? new Date(goalRow.reminder_date).getTime() : null,
+    reminderTime: goalRow.reminder_time,
     dueDate: goalRow.due_date ? new Date(goalRow.due_date).getTime() : null,
     createdAt: goalRow.created_at,
     items: insertedItemRows.map((it: Record<string, unknown>) => ({

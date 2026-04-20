@@ -154,16 +154,31 @@ const FinalScreen = () => {
         type: 'habit' as const,
         title: h.title,
         reminderTime: h.reminderTime ?? undefined,
+        selectedDays: h.selectedDays ?? [],
       })),
       ...tasks.map((task, i) => ({
         id: `final-t-${i}`,
         type: 'task' as const,
         title: task.title,
         reminderTime: task.reminderTime ?? undefined,
+        dueDate: task.dueDate ?? undefined,
       })),
     ];
     addGoal({
       title: goalTitleText.trim() || t('goalsTitle'),
+      category: categoryValue ?? null,
+      reminderDate:
+        reminderDateValue != null
+          ? new Date(reminderDateValue.getTime())
+          : null,
+      reminderTime:
+        reminderTimeValue != null
+          ? formatTime(
+              reminderTimeValue.hours,
+              reminderTimeValue.minutes,
+              reminderTimeValue.am
+            )
+          : null,
       coverIndex: coverIndexValue,
       source: fromSelfMade ? 'selfMade' : 'aiMade',
       habitsTotal: habits.length,
