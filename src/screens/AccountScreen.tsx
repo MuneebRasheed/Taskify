@@ -83,16 +83,16 @@ const AccountScreen = () => {
       label: t('accountSecurity'),
       onPress: () => navigation.navigate('AccountSecurityScreen'),
     },
-    {
-      icon: <EyeSetting width={24} height={24} color={lightColors.smallText} />,
-      label: t('appAppearance'),
-      onPress: () => navigation.navigate('AppAppearanceScreen'),
-    },
-    {
-      icon: <ActivitySetting width={24} height={24} color={lightColors.smallText} />,
-      label: t('dataAnalytics'),
-      onPress: () => navigation.navigate('DataAnalyticsScreen'),
-    },
+    // {
+    //   icon: <EyeSetting width={24} height={24} color={lightColors.smallText} />,
+    //   label: t('appAppearance'),
+    //   onPress: () => navigation.navigate('AppAppearanceScreen'),
+    // },
+    // {
+    //   icon: <ActivitySetting width={24} height={24} color={lightColors.smallText} />,
+    //   label: t('dataAnalytics'),
+    //   onPress: () => navigation.navigate('DataAnalyticsScreen'),
+    // },
     {
       icon: <PaperSetting width={24} height={24} color={lightColors.smallText} />,
       label: t('helpSupport'),

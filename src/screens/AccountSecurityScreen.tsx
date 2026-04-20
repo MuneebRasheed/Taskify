@@ -50,16 +50,16 @@ const AccountSecurityScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          {toggleRow(t('biometricId'), biometric, setBiometric)}
+          {/* {toggleRow(t('biometricId'), biometric, setBiometric)}
           {toggleRow(t('faceId'), faceId, setFaceId)}
           {toggleRow(t('smsAuthenticator'), smsAuth, setSmsAuth)}
-          {toggleRow(t('googleAuthenticator'), googleAuth, setGoogleAuth)}
+          {toggleRow(t('googleAuthenticator'), googleAuth, setGoogleAuth)} */}
           <SettingsListItem
             label={t('changePassword')}
             onPress={() => navigation.navigate('ForgotPasswordEmail')}
             showArrow={true}
           />
-          <SettingsListItem
+          {/* <SettingsListItem
             label={t('deviceManagement')}
             subtitle={t('deviceManagementSubtitle')}
             onPress={() => {}}
@@ -70,7 +70,7 @@ const AccountSecurityScreen = () => {
             subtitle={t('deactivateAccountSubtitle')}
             onPress={() => {}}
             showArrow={true}
-          />
+          /> */}
           <SettingsListItem
             label={t('deleteAccount')}
             subtitle={t('deleteAccountSubtitle')}

@@ -21,14 +21,14 @@ const HelpSupportScreen = () => {
     { key: 'contactSupport', label: t('helpContactSupport') },
     { key: 'privacyPolicy', label: t('helpPrivacyPolicy') },
     { key: 'termsOfService', label: t('helpTermsOfService') },
-    { key: 'partner', label: t('helpPartner') },
-    { key: 'jobVacancy', label: t('helpJobVacancy') },
-    { key: 'accessibility', label: t('helpAccessibility') },
-    { key: 'feedback', label: t('helpFeedback') },
-    { key: 'aboutUs', label: t('helpAboutUs') },
-    { key: 'rateUs', label: t('helpRateUs') },
-    { key: 'visitWebsite', label: t('helpVisitWebsite') },
-    { key: 'followSocial', label: t('helpFollowSocial') },
+    // { key: 'partner', label: t('helpPartner') },
+    // { key: 'jobVacancy', label: t('helpJobVacancy') },
+    // { key: 'accessibility', label: t('helpAccessibility') },
+    // { key: 'feedback', label: t('helpFeedback') },
+    // { key: 'aboutUs', label: t('helpAboutUs') },
+    // { key: 'rateUs', label: t('helpRateUs') },
+    // { key: 'visitWebsite', label: t('helpVisitWebsite') },
+    // { key: 'followSocial', label: t('helpFollowSocial') },
   ];
 
   return (
