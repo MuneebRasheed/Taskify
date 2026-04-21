@@ -10,12 +10,9 @@ import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import { useTranslation } from '../i18n';
 
 const PICKER_HEIGHT = 280;
-const WHEEL_WIDTH_HOUR = 72;
-const WHEEL_WIDTH_MINUTE = 72;
-const WHEEL_WIDTH_AMPM = 80;
-
-/** Light purple background for selected AM/PM (matches image). */
-const AM_PM_SELECTED_BG = lightColors.background;
+const WHEEL_WIDTH_HOUR = 150;
+const WHEEL_WIDTH_MINUTE = 140;
+const WHEEL_WIDTH_AMPM = 62;
 
 const HOUR_ITEMS = Array.from({ length: 12 }, (_, i) => ({
   label: (i + 1).toString().padStart(2, '0'),
@@ -65,7 +62,12 @@ export const TimePickerContent: React.FC<TimePickerContentProps> = ({
 
   const pickerKey = `${initialTime.hours}-${initialTime.minutes}-${initialTime.am}`;
 
-  const renderWheelItem = (selectedLabel: string, selectedColor: string) => {
+  const renderWheelItem = (
+    selectedLabel: string,
+    selectedColor: string,
+    selectedFontSize: number,
+    unselectedFontSize?: number
+  ) => {
     return (props: { fontSize: number; label: string; textAlign: string }) => {
       const isSelected = props.label === selectedLabel;
       const unselectedGray = lightColors.placeholderText;
@@ -74,7 +76,9 @@ export const TimePickerContent: React.FC<TimePickerContentProps> = ({
           style={[
             styles.wheelItemText,
             {
-              fontSize: isSelected ? 48 : props.fontSize,
+              fontSize: isSelected
+                ? selectedFontSize
+                : (unselectedFontSize ?? props.fontSize),
               color: isSelected ? selectedColor : unselectedGray,
               fontFamily: isSelected
                 ? fontFamilies.urbanistBold
@@ -117,7 +121,8 @@ export const TimePickerContent: React.FC<TimePickerContentProps> = ({
               renderItem={renderWheelItem(
                 selectedHourLabel,
                 lightColors.background,
-                lightColors.placeholderText
+                56,
+                32
               )}
             />
           </View>
@@ -142,7 +147,8 @@ export const TimePickerContent: React.FC<TimePickerContentProps> = ({
               renderItem={renderWheelItem(
                 selectedMinuteLabel,
                 lightColors.background,
-                lightColors.placeholderText
+                56,
+                42
               )}
             />
           </View>
@@ -156,14 +162,15 @@ export const TimePickerContent: React.FC<TimePickerContentProps> = ({
               items={AM_PM_ITEMS}
               backgroundColor={lightColors.secondaryBackground}
               selectedStyle={{
-                borderColor: lightColors.background,
-                borderWidth: 2,
+                borderColor: 'transparent',
+                borderWidth: 0,
               }}
               onChange={({ index }) => setAm(index === 0)}
               renderItem={renderWheelItem(
                 selectedAmPmLabel,
-                lightColors.background,
-                lightColors.placeholderText
+                lightColors.accent,
+                30,
+                22
               )}
             />
           </View>
@@ -222,7 +229,12 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
 
   const pickerKey = `${initialTime.hours}-${initialTime.minutes}-${initialTime.am}`;
 
-  const renderWheelItem = (selectedLabel: string, selectedColor: string) => {
+  const renderWheelItem = (
+    selectedLabel: string,
+    selectedColor: string,
+    selectedFontSize: number,
+    unselectedFontSize?: number
+  ) => {
     return (props: { fontSize: number; label: string; textAlign: string }) => {
       const isSelected = props.label === selectedLabel;
       const unselectedGray = lightColors.placeholderText;
@@ -231,7 +243,9 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
           style={[
             styles.wheelItemText,
             {
-              fontSize: isSelected ? 48 : props.fontSize,
+              fontSize: isSelected
+                ? selectedFontSize
+                : (unselectedFontSize ?? props.fontSize),
               color: isSelected ? selectedColor : unselectedGray,
               fontFamily: isSelected
                 ? fontFamilies.urbanistBold
@@ -252,6 +266,7 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
           style={[styles.sheet, { paddingBottom: insets.bottom }]}
           onPress={() => {}}
         >
+          <View style={styles.topHandle} />
           <View style={styles.headerContainer}>
             <Header
               leftIcon={<BackArrowIcon width={24} height={24} />}
@@ -279,7 +294,8 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
                   renderItem={renderWheelItem(
                     selectedHourLabel,
                     lightColors.background,
-                    lightColors.placeholderText
+                    56,
+                    42
                   )}
                 />
               </View>
@@ -304,7 +320,8 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
                   renderItem={renderWheelItem(
                     selectedMinuteLabel,
                     lightColors.background,
-                    lightColors.placeholderText
+                    56,
+                    42
                   )}
                 />
               </View>
@@ -318,14 +335,15 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
                   items={AM_PM_ITEMS}
                   backgroundColor={lightColors.secondaryBackground}
                   selectedStyle={{
-                    borderColor: lightColors.background,
-                    borderWidth: 2,
+                    borderColor: 'transparent',
+                    borderWidth: 0,
                   }}
                   onChange={({ index }) => setAm(index === 0)}
                   renderItem={renderWheelItem(
                     selectedAmPmLabel,
-                    lightColors.background,
-                    lightColors.placeholderText
+                    lightColors.accent,
+                    30,
+                    22
                   )}
                 />
               </View>
@@ -364,65 +382,71 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: lightColors.secondaryBackground,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingTop: 8,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 10,
+  },
+  topHandle: {
+    alignSelf: 'center',
+    width: 42,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: lightColors.border,
+    marginBottom: 2,
   },
   headerContainer: {
     borderBottomWidth: 1,
     borderBottomColor: lightColors.border,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
   headerSpacer: {
     width: 40,
     height: 44,
-   
+      //  backgroundColor: 'red',
+
   },
   pickerSection: {
-    marginTop: 8,
-    marginBottom: 28,
-    
+    marginTop: 6,
+    marginBottom: 24,
+
   },
   wheelsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    // backgroundColor: 'red',
+
   },
   wheelWrap: {
     overflow: 'hidden',
-    height: 300,
+    height: 296,
     justifyContent: 'center',
-    // backgroundColor: 'blue',
+
+
   },
   colonWrap: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     height: PICKER_HEIGHT,
     justifyContent: 'center',
-    // backgroundColor: 'green',
   },
   colon: {
     fontFamily: fontFamilies.urbanistBold,
-    fontSize: 48,
+    fontSize: 56,
     color: lightColors.background,
+
   },
   wheelItemText: {
     textAlign: 'center',
-  },
-  amPmSelectedWrap: {
-    backgroundColor: AM_PM_SELECTED_BG,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignSelf: 'center',
+    lineHeight: 64,
+
   },
   buttons: {
     flexDirection: 'row',
     gap: 12,
     borderTopWidth: 1,
     borderTopColor: lightColors.border,
-    paddingTop: 24,
+    paddingTop: 18,
+    paddingBottom: 4,
   },
   cancelBtn: {
     flex: 1,
