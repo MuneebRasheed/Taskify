@@ -301,3 +301,24 @@ export async function getUser(): Promise<{ user: User | null; error: Error | nul
   const { data, error } = await supabase.auth.getUser();
   return { user: data.user ?? null, error: error ?? null };
 }
+
+export async function changePassword(
+  oldPassword: string,
+  newPassword: string
+): Promise<{ error: Error | null }> {
+  const { user, error: userError } = await getUser();
+  if (userError || !user?.email) {
+    return { error: userError ?? new Error('Unable to find current user.') };
+  }
+
+  const { error: reAuthError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: oldPassword,
+  });
+  if (reAuthError) {
+    return { error: reAuthError };
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+  return { error: updateError ?? null };
+}

@@ -67,18 +67,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!nextSession) {
-        if (cancelled) return;
-        setSession(null);
-        setUser(null);
-        return;
-      }
-
-      // Same validation as on startup: if the user was deleted, kill the local session.
-      const { user: freshUser, error: userError } = await authService.getUser();
-      if (userError || !freshUser) {
-        await supabase.auth.signOut();
         if (cancelled) return;
         setSession(null);
         setUser(null);
@@ -87,13 +77,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (cancelled) return;
       setSession(nextSession);
-      setUser(freshUser);
+
+      // Avoid awaiting Supabase calls in onAuthStateChange callback.
+      // Supabase can deadlock if auth methods are called directly inside this callback.
+      setTimeout(() => {
+        if (!cancelled) {
+          void validateCurrentSession();
+        }
+      }, 0);
     });
     return () => {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [validateCurrentSession]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {

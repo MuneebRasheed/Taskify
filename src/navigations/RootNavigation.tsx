@@ -35,6 +35,7 @@ import FAQScreen from '../screens/FAQScreen';
 import ContactSupportScreen from '../screens/ContactSupportScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 
 /** Root stack route names and params. Use this type for useNavigation<> in screens. */
 export type RootStackParamList = {
@@ -137,6 +138,7 @@ export type RootStackParamList = {
   MyGoalsScreen: undefined;
   UpgradePlanScreen: undefined;
   AccountSecurityScreen: undefined;
+  ChangePasswordScreen: undefined;
   DataAnalyticsScreen: undefined;
   AppAppearanceScreen: undefined;
   HelpSupportScreen: undefined;
@@ -286,6 +288,11 @@ function RootNavigation() {
       <Stack.Screen
         name="AccountSecurityScreen"
         component={AccountSecurityScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChangePasswordScreen"
+        component={ChangePasswordScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

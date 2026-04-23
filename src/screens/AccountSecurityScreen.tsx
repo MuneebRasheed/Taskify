@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Text, Switch } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, Switch, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,8 @@ import { useTranslation } from '../i18n';
 import BackHeader from '../components/BackHeader';
 import SettingsListItem from '../components/SettingsListItem';
 import { RootStackParamList } from '../navigations/RootNavigation';
+import { API_BASE_URL } from '../lib/api/config';
+import { useAuth } from '../lib/auth/AuthProvider';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'AccountSecurityScreen'>;
 
@@ -16,11 +18,67 @@ const AccountSecurityScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const { t } = useTranslation();
+  const { session, signOut } = useAuth();
 
   const [biometric, setBiometric] = useState(false);
   const [faceId, setFaceId] = useState(false);
   const [smsAuth, setSmsAuth] = useState(false);
   const [googleAuth, setGoogleAuth] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const deleteAccount = async () => {
+    if (isDeleting) return;
+    if (!session?.access_token) {
+      Alert.alert(t('deleteAccount'), t('deleteAccountAuthRequired'));
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      };
+      if (API_BASE_URL.includes('ngrok')) {
+        headers['ngrok-skip-browser-warning'] = '1';
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/delete-user`, {
+        method: 'POST',
+        headers,
+      });
+
+      const responseText = await response.text();
+      let parsed: { success?: boolean; error?: string } | null = null;
+      if (responseText) {
+        try {
+          parsed = JSON.parse(responseText) as { success?: boolean; error?: string };
+        } catch {
+          parsed = null;
+        }
+      }
+
+      if (!response.ok || !parsed?.success) {
+        Alert.alert(t('deleteAccount'), parsed?.error ?? t('deleteAccountFailed'));
+        return;
+      }
+
+      await signOut();
+      navigation.reset({ index: 0, routes: [{ name: 'WelcomeScreen' }] });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('deleteAccountFailed');
+      Alert.alert(t('deleteAccount'), message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(t('deleteAccountConfirmTitle'), t('deleteAccountConfirmMessage'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('delete'), style: 'destructive', onPress: () => void deleteAccount() },
+    ]);
+  };
 
   const toggleRow = (label: string, value: boolean, onValueChange: (v: boolean) => void) => (
     <View style={styles.toggleRow} key={label}>
@@ -56,7 +114,7 @@ const AccountSecurityScreen = () => {
           {toggleRow(t('googleAuthenticator'), googleAuth, setGoogleAuth)} */}
           <SettingsListItem
             label={t('changePassword')}
-            onPress={() => navigation.navigate('ForgotPasswordEmail')}
+            onPress={() => navigation.navigate('ChangePasswordScreen')}
             showArrow={true}
           />
           {/* <SettingsListItem
@@ -74,7 +132,7 @@ const AccountSecurityScreen = () => {
           <SettingsListItem
             label={t('deleteAccount')}
             subtitle={t('deleteAccountSubtitle')}
-            onPress={() => {}}
+            onPress={confirmDeleteAccount}
             accent={true}
             showArrow={true}
           />
