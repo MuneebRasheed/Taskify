@@ -20,6 +20,7 @@ import Textt from '../components/Textt';
 import SpashLogo from '../assets/svgs/SpashLogo';
 import GoalCard from '../components/GoalCard';
 import FlowButton from '../components/FlowButton';
+import Toast from '../components/Toast';
 import type { MainTabsParamList } from '../navigations/MainTabs';
 import { showOverflowMenu } from '../utils/showOverflowMenu';
 
@@ -34,17 +35,50 @@ const MyGoalsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<MyGoalsRouteProp>();
   const { t } = useTranslation();
-  const { goals } = useGoals();
+  const { goals, restoreGoal } = useGoals();
   const [filter, setFilter] = useState<'ongoing' | 'achieved'>(
     route.params?.initialFilter ?? 'ongoing'
   );
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastAction, setToastAction] = useState<'delete' | 'achieve' | null>(null);
+  const [deletedGoalData, setDeletedGoalData] = useState<{ 
+    goal: any; 
+    completions: any;
+  } | null>(null);
 
   useEffect(() => {
     const initial = route.params?.initialFilter;
     if (initial === 'achieved' || initial === 'ongoing') {
       setFilter(initial);
     }
-  }, [route.params?.initialFilter]);
+    
+    // Handle toast from navigation params
+    console.log('MyGoalsScreen useEffect triggered');
+    console.log('MyGoalsScreen params:', JSON.stringify(route.params, null, 2));
+    console.log('showToast:', route.params?.showToast);
+    console.log('toastMessage:', route.params?.toastMessage);
+    console.log('deletedGoalData exists:', !!route.params?.deletedGoalData);
+    console.log('deletedGoalCompletions exists:', !!route.params?.deletedGoalCompletions);
+    
+    if (route.params?.showToast && route.params?.toastMessage) {
+      console.log('Showing toast:', route.params.toastMessage);
+      setToastMessage(route.params.toastMessage);
+      setToastAction(route.params.toastAction || null);
+      if (route.params.deletedGoalData && route.params.deletedGoalCompletions) {
+        console.log('Setting deleted goal data for undo');
+        setDeletedGoalData({ 
+          goal: route.params.deletedGoalData,
+          completions: route.params.deletedGoalCompletions
+        });
+      }
+      setToastVisible(true);
+      console.log('Toast should now be visible');
+      console.log('toastVisible state:', true);
+      console.log('toastMessage state:', route.params.toastMessage);
+      console.log('actionLabel will be:', t('undo'));
+    }
+  }, [route.params?.showToast, route.params?.toastMessage, route.params?.initialFilter]);
 
   const filteredGoals = useMemo(() => {
     if (filter === 'ongoing') {
@@ -74,8 +108,40 @@ const MyGoalsScreen = () => {
     });
   };
 
+  const handleUndo = () => {
+    if (toastAction === 'delete' && deletedGoalData) {
+      // Restore the deleted goal with its completions
+      restoreGoal(deletedGoalData.goal, deletedGoalData.completions);
+      setDeletedGoalData(null);
+    }
+    setToastVisible(false);
+  };
+
+  const handleToastHide = () => {
+    setToastVisible(false);
+    setDeletedGoalData(null);
+    
+    // Clear navigation params after toast is hidden
+    navigation.setParams({ 
+      showToast: undefined, 
+      toastMessage: undefined, 
+      toastAction: undefined,
+      deletedGoalId: undefined,
+      deletedGoalData: undefined,
+      deletedGoalCompletions: undefined
+    } as any);
+  };
+
   const coverSource = (goal: SavedGoal) => {
+    console.log('MyGoalsScreen coverSource - goal.id:', goal.id, 'coverUrl:', goal.coverUrl, 'coverIndex:', goal.coverIndex);
+    
+    // Prioritize coverUrl from gallery over static coverIndex
+    if (goal.coverUrl) {
+      console.log('Using gallery image:', goal.coverUrl);
+      return { uri: goal.coverUrl };
+    }
     const idx = goal.coverIndex % COVER_IMAGE_SOURCES.length;
+    console.log('Using static image at index:', idx);
     return COVER_IMAGE_SOURCES[idx];
   };
 
@@ -146,6 +212,16 @@ const MyGoalsScreen = () => {
 
       
       <FlowButton />
+
+      {console.log('About to render Toast - visible:', toastVisible, 'message:', toastMessage)}
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        actionLabel={t('undo')}
+        onActionPress={handleUndo}
+        onHide={handleToastHide}
+      />
+      {console.log('Toast component rendered')}
     </View>
   );
 };

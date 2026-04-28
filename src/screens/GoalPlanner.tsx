@@ -8,6 +8,8 @@ import {
   ScrollView,
   Image,
   ImageSourcePropType,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -32,6 +34,10 @@ import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
 import type { TrackerCardItem } from '../components/TrackerCard';
 import { useGoals } from '../context/GoalsContext';
 import type { GoalItem } from '../context/GoalsContext';
+import * as ImagePicker from 'expo-image-picker';
+import CoverImageSourceModal from '../components/CoverImageSourceModal';
+import { uploadCoverImage } from '../lib/api/uploadImage';
+import { useAuth } from '../lib/auth/AuthProvider';
 
 
 
@@ -93,8 +99,12 @@ const GoalPlannerScreen = () => {
   const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
   const [reminderDateModalVisible, setReminderDateModalVisible] = useState(false);
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
+  const [coverSourceModalVisible, setCoverSourceModalVisible] = useState(false);
+  const [galleryImageUri, setGalleryImageUri] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const goalTitleInputRef = useRef<TextInput>(null);
   const { t } = useTranslation();
+  const { session } = useAuth();
 
   useEffect(() => {
     if (goalTitle) setGoalTitleText(goalTitle);
@@ -107,14 +117,42 @@ const GoalPlannerScreen = () => {
     }
   }, [route.params?.selectedCoverIndex]);
 
-  const coverSource: ImageSourcePropType | null =
-    COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
-      ? COVER_IMAGE_SOURCES[coverIndex]
-      : null;
+  const coverSource: ImageSourcePropType | null = galleryImageUri
+    ? { uri: galleryImageUri }
+    : COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
+    ? COVER_IMAGE_SOURCES[coverIndex]
+    : null;
 
-
-      
   const openSelectCover = () => {
+    setCoverSourceModalVisible(true);
+  };
+
+  const handleSelectFromGallery = async () => {
+    setCoverSourceModalVisible(false);
+    
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Permission to access gallery is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const imageUri = result.assets[0].uri;
+      setGalleryImageUri(imageUri);
+      console.log('Selected image URI:', imageUri);
+    }
+  };
+
+  const handleSelectFromStatic = () => {
+    setCoverSourceModalVisible(false);
     navigation.navigate('SelectCoverImage', {
       goalTitle: goalTitleText,
       fromSelfMade,
@@ -151,8 +189,29 @@ const GoalPlannerScreen = () => {
       ? `${formatDate(reminderDate)} - ${formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)}`
       : '';
 
-  const handleSaveGoal = () => {
+  const handleSaveGoal = async () => {
     if (!dueDate) return;
+    
+    let coverUrl: string | null = null;
+    
+    // Upload gallery image if selected
+    if (galleryImageUri && session?.user?.id) {
+      setUploadingImage(true);
+      const { url, error } = await uploadCoverImage(galleryImageUri, session.user.id);
+      setUploadingImage(false);
+      
+      if (error) {
+        Alert.alert('Upload Failed', 'Failed to upload cover image. Please try again.');
+        console.error('Upload error:', error);
+        return;
+      }
+      
+      coverUrl = url ?? null;
+      console.log('Uploaded cover URL:', coverUrl);
+    }
+    
+    console.log('About to call addGoal with coverUrl:', coverUrl, 'coverIndex:', coverIndex);
+    
     const items: GoalItem[] = [
       ...habits.map((habit, index) => ({
         id: `planner-h-${index}`,
@@ -179,6 +238,7 @@ const GoalPlannerScreen = () => {
           ? formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)
           : null,
       coverIndex,
+      coverUrl,
       source: fromSelfMade ? 'selfMade' : 'aiMade',
       habitsTotal: habits.length,
       habitsDone: 0,
@@ -357,14 +417,21 @@ const GoalPlannerScreen = () => {
       {/* Part 6: Save Goals button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          title={t("saveGoals")}
+          title={uploadingImage ? t("uploading") : t("saveGoals")}
           variant="primary"
           onPress={handleSaveGoal}
-          disabled={!dueDate}
+          disabled={!dueDate || uploadingImage}
           style={styles.saveBtn}
-          backgroundColor={dueDate ? lightColors.accent : lightColors.disabledButton}
+          backgroundColor={dueDate && !uploadingImage ? lightColors.accent : lightColors.disabledButton}
           textColor={lightColors.secondaryBackground}
         />
+        {uploadingImage && (
+          <ActivityIndicator 
+            size="small" 
+            color={lightColors.accent} 
+            style={{ position: 'absolute', right: 40, top: 36 }}
+          />
+        )}
       </View>
 
       <CategoryModal
@@ -413,6 +480,13 @@ const GoalPlannerScreen = () => {
         }
         onCancel={() => setReminderTimeModalVisible(false)}
         onConfirm={handleReminderTimeConfirm}
+      />
+
+      <CoverImageSourceModal
+        visible={coverSourceModalVisible}
+        onSelectGallery={handleSelectFromGallery}
+        onSelectStatic={handleSelectFromStatic}
+        onClose={() => setCoverSourceModalVisible(false)}
       />
     </View>
     </View>

@@ -24,7 +24,15 @@ export type MainTabsParamList = {
   Home: undefined;
   Explore: undefined;
   Report: undefined;
-  'My Goals': { initialFilter?: 'ongoing' | 'achieved' };
+  'My Goals': { 
+    initialFilter?: 'ongoing' | 'achieved';
+    showToast?: boolean;
+    toastMessage?: string;
+    toastAction?: 'delete' | 'achieve';
+    deletedGoalId?: string;
+    deletedGoalData?: any; // Full goal data for undo
+    deletedGoalCompletions?: any; // Item completions for undo
+  };
   Account: undefined;
 };
 
@@ -46,6 +54,14 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: lightColors.secondaryBackground,
           borderTopColor: lightColors.border,
+          paddingTop: 18,
+          paddingBottom: 38,
+          paddingHorizontal: 8,
+          marginBottom: 6,
+          // height: 70,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
         },
       }}
     >

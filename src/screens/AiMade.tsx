@@ -13,6 +13,7 @@ import {
   ScrollView,
   Image,
   ImageSourcePropType,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -35,10 +36,15 @@ import CategoryModal, { type GoalCategory } from '../components/CategoryModal';
 import CalendarModal from '../components/CalendarModal';
 import TimePickerModal from '../components/TimePickerModal';
 import SetUpGoalsModal from '../components/SetUpGoalsModal';
+import InfoModal from '../components/InfoModal';
 import EditIcon from '../assets/svgs/EditIcon';
 import Header from '../components/Header';
 import type { GoalItem } from '../context/GoalsContext';
 import { useGoalStore } from '../../store/goalStore';
+import * as ImagePicker from 'expo-image-picker';
+import CoverImageSourceModal from '../components/CoverImageSourceModal';
+import { uploadCoverImage } from '../lib/api/uploadImage';
+import { useAuth } from '../lib/auth/AuthProvider';
 
 type AiMadeRouteProp = RouteProp<RootStackParamList, 'AiMade'>;
 type AiMadeNavProp = NativeStackNavigationProp<RootStackParamList, 'AiMade'>;
@@ -160,6 +166,12 @@ const AiMadeScreen = () => {
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
   const [setUpGoalsModalVisible, setSetUpGoalsModalVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [coverSourceModalVisible, setCoverSourceModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoModalType, setInfoModalType] = useState<'habit' | 'task'>('habit');
+  const [galleryImageUri, setGalleryImageUri] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const { session } = useAuth();
 
   const reminderDisplay =
     reminderDate && reminderTime
@@ -277,6 +289,7 @@ const AiMadeScreen = () => {
       selfMadePayload: {
         title,
         coverIndex,
+        galleryImageUri,
         dueDate: dueDate ? dueDate.getTime() : null,
         note,
         habits: habitsList.map((h) => ({
@@ -294,6 +307,54 @@ const AiMadeScreen = () => {
   };
 
   const openSelectCover = () => {
+    setCoverSourceModalVisible(true);
+  };
+
+  const handleSelectFromGallery = async () => {
+    setCoverSourceModalVisible(false);
+    
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Permission to access gallery is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const imageUri = result.assets[0].uri;
+      
+      // Upload image immediately
+      if (!session?.user?.id) {
+        Alert.alert('Error', 'You must be logged in to upload images');
+        return;
+      }
+      
+      setUploadingImage(true);
+      const { url, error } = await uploadCoverImage(imageUri, session.user.id);
+      setUploadingImage(false);
+      
+      if (error) {
+        Alert.alert('Upload Failed', 'Failed to upload cover image. Please try again.');
+        console.error('[AiMade] Upload error:', error);
+        return;
+      }
+      
+      if (url) {
+        setGalleryImageUri(url);
+        console.log('[AiMade] Image uploaded successfully:', url);
+      }
+    }
+  };
+
+  const handleSelectFromStatic = () => {
+    setCoverSourceModalVisible(false);
     navigation.navigate('SelectCoverImage', {
       selectedIndex: coverIndex,
       returnToScreen: 'AiMade',
@@ -301,10 +362,11 @@ const AiMadeScreen = () => {
     });
   };
 
-  const coverSource: ImageSourcePropType | null =
-    COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
-      ? COVER_IMAGE_SOURCES[coverIndex]
-      : null;
+  const coverSource: ImageSourcePropType | null = galleryImageUri
+    ? { uri: galleryImageUri }
+    : COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
+    ? COVER_IMAGE_SOURCES[coverIndex]
+    : null;
 
   return (
     <View
@@ -377,8 +439,13 @@ const AiMadeScreen = () => {
                     style={styles.changeCoverBtn}
                     onPress={openSelectCover}
                     activeOpacity={0.8}
+                    disabled={uploadingImage}
                   >
-                    <ImageIcon width={43} height={43} />
+                    {uploadingImage ? (
+                      <ActivityIndicator size="small" color={lightColors.secondaryBackground} />
+                    ) : (
+                      <ImageIcon width={43} height={43} />
+                    )}
                   </TouchableOpacity>
                 </View>
 
@@ -458,11 +525,47 @@ const AiMadeScreen = () => {
                   t={t}
                 />
 
+                <CoverImageSourceModal
+                  visible={coverSourceModalVisible}
+                  onSelectGallery={handleSelectFromGallery}
+                  onSelectStatic={handleSelectFromStatic}
+                  onClose={() => setCoverSourceModalVisible(false)}
+                />
+
+                <InfoModal
+                  visible={infoModalVisible}
+                  title={infoModalType === 'habit' ? t('habitInfoTitle') : t('taskInfoTitle')}
+                  tips={
+                    infoModalType === 'habit'
+                      ? [
+                          { i18nKey: 'habitInfoTip1' },
+                          { i18nKey: 'habitInfoTip2' },
+                          { i18nKey: 'habitInfoTip3' },
+                          { i18nKey: 'habitInfoTip4' },
+                        ]
+                      : [
+                          { i18nKey: 'taskInfoTip1' },
+                          { i18nKey: 'taskInfoTip2' },
+                          { i18nKey: 'taskInfoTip3' },
+                          { i18nKey: 'taskInfoTip4' },
+                        ]
+                  }
+                  onClose={() => setInfoModalVisible(false)}
+                />
+
                 {/* Habits section – unchanged */}
                 <View style={styles.section}>
                   <View style={styles.sectionHeaderRow}>
                     <Text style={styles.sectionTitle}>{`${t("habit")} (${habitsList.length})`}</Text>
-                    <InfoIcon width={20} height={20} />
+                    <TouchableOpacity
+                      onPress={() => {
+                        setInfoModalType('habit');
+                        setInfoModalVisible(true);
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <InfoIcon width={20} height={20} />
+                    </TouchableOpacity>
                   </View>
                   {habitsList.map((item, index) => (
                     <TrackerCard
@@ -485,7 +588,15 @@ const AiMadeScreen = () => {
                 <View style={styles.section}>
                   <View style={styles.sectionHeaderRow}>
                     <Text style={styles.sectionTitle}>{`${t("task")} (${tasksList.length})`}</Text>
-                    <InfoIcon width={20} height={20} />
+                    <TouchableOpacity
+                      onPress={() => {
+                        setInfoModalType('task');
+                        setInfoModalVisible(true);
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <InfoIcon width={20} height={20} />
+                    </TouchableOpacity>
                   </View>
                   {tasksList.map((item, index) => (
                     <TrackerCard

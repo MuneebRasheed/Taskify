@@ -8,6 +8,7 @@ import {
   Image,
   ScrollView,
   ImageSourcePropType,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -29,9 +30,14 @@ import type { GoalItem } from '../context/GoalsContext';
 import ImageIcon from '../assets/svgs/ImageIcon';
 import EditIcon from '../assets/svgs/EditIcon';
 import SetUpGoalsModal from '../components/SetUpGoalsModal';
+import InfoModal from '../components/InfoModal';
 import type { GoalCategory } from '../components/CategoryModal';
 import { useTranslation } from '../i18n';
 import { useGoalStore } from '../../store/goalStore';
+import * as ImagePicker from 'expo-image-picker';
+import CoverImageSourceModal from '../components/CoverImageSourceModal';
+import { uploadCoverImage } from '../lib/api/uploadImage';
+import { useAuth } from '../lib/auth/AuthProvider';
 
 type FinalScreenRouteProp = RouteProp<RootStackParamList, 'FinalScreen'>;
 type FinalScreenNavProp = NativeStackNavigationProp<RootStackParamList, 'FinalScreen'>;
@@ -95,6 +101,12 @@ const FinalScreen = () => {
   );
   const [setupModalVisible, setSetupModalVisible] = useState(false);
   const [coverIndexValue, setCoverIndexValue] = useState<number>(coverIndex);
+  const [coverSourceModalVisible, setCoverSourceModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoModalType, setInfoModalType] = useState<'habit' | 'task'>('habit');
+  const [galleryImageUri, setGalleryImageUri] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const { session } = useAuth();
 
   // Keep goal store in sync for cover image selection UX parity
   useEffect(() => {
@@ -109,10 +121,11 @@ const FinalScreen = () => {
     }
   }, [storeCoverIndex]);
 
-  const coverSource: ImageSourcePropType | null =
-    COVER_IMAGE_SOURCES.length > 0 && coverIndexValue < COVER_IMAGE_SOURCES.length
-      ? COVER_IMAGE_SOURCES[coverIndexValue]
-      : null;
+  const coverSource: ImageSourcePropType | null = galleryImageUri
+    ? { uri: galleryImageUri }
+    : COVER_IMAGE_SOURCES.length > 0 && coverIndexValue < COVER_IMAGE_SOURCES.length
+    ? COVER_IMAGE_SOURCES[coverIndexValue]
+    : null;
 
   // const dueDateDaysLabel =
   //   dueDate != null
@@ -140,7 +153,7 @@ const FinalScreen = () => {
     variant: 'task' as const,
   }));
 
-  const handleSaveGoals = () => {
+  const handleSaveGoals = async () => {
     if (!dueDateValue) {
       Alert.alert(
         t('cannotCreateGoal'),
@@ -148,6 +161,25 @@ const FinalScreen = () => {
       );
       return;
     }
+    
+    let coverUrl: string | null = null;
+    
+    // Upload gallery image if selected
+    if (galleryImageUri && session?.user?.id) {
+      setUploadingImage(true);
+      const { url, error } = await uploadCoverImage(galleryImageUri, session.user.id);
+      setUploadingImage(false);
+      
+      if (error) {
+        Alert.alert('Upload Failed', 'Failed to upload cover image. Please try again.');
+        console.error('Upload error:', error);
+        return;
+      }
+      
+      coverUrl = url ?? null;
+      console.log('Uploaded cover URL:', coverUrl);
+    }
+    
     const items: GoalItem[] = [
       ...habits.map((h, i) => ({
         id: `final-h-${i}`,
@@ -180,6 +212,7 @@ const FinalScreen = () => {
             )
           : null,
       coverIndex: coverIndexValue,
+      coverUrl,
       source: fromSelfMade ? 'selfMade' : 'aiMade',
       habitsTotal: habits.length,
       habitsDone: 0,
@@ -193,6 +226,35 @@ const FinalScreen = () => {
   };
 
   const openSelectCover = () => {
+    setCoverSourceModalVisible(true);
+  };
+
+  const handleSelectFromGallery = async () => {
+    setCoverSourceModalVisible(false);
+    
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Permission to access gallery is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const imageUri = result.assets[0].uri;
+      setGalleryImageUri(imageUri);
+      console.log('Selected image URI:', imageUri);
+    }
+  };
+
+  const handleSelectFromStatic = () => {
+    setCoverSourceModalVisible(false);
     navigation.navigate('SelectCoverImage', {
       selectedIndex: coverIndexValue,
       onCoverSelected: (index) => {
@@ -308,7 +370,15 @@ const FinalScreen = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>{`Habit (${habitItems.length})`}</Text>
-            <InfoIcon width={20} height={20} />
+            <TouchableOpacity
+              onPress={() => {
+                setInfoModalType('habit');
+                setInfoModalVisible(true);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <InfoIcon width={20} height={20} />
+            </TouchableOpacity>
           </View>
           {habitItems.map((item, index) => (
             <TrackerCard key={`habit-${index}`} item={{ ...item, variant: 'habit' }} />
@@ -319,7 +389,15 @@ const FinalScreen = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>{`Task (${taskItems.length})`}</Text>
-            <InfoIcon width={20} height={20} />
+            <TouchableOpacity
+              onPress={() => {
+                setInfoModalType('task');
+                setInfoModalVisible(true);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <InfoIcon width={20} height={20} />
+            </TouchableOpacity>
           </View>
           {taskItems.map((item, index) => (
             <TrackerCard key={`task-${index}`} item={{ ...item, variant: 'task' }} />
@@ -336,13 +414,21 @@ const FinalScreen = () => {
       {/* Save Goals button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Button
-          title={t('saveGoals')}
+          title={uploadingImage ? t("uploading") : t('saveGoals')}
           variant="primary"
           onPress={handleSaveGoals}
+          disabled={uploadingImage}
           style={styles.saveGoalsBtn}
-          backgroundColor={lightColors.accent}
+          backgroundColor={uploadingImage ? lightColors.disabledButton : lightColors.accent}
           textColor={lightColors.secondaryBackground}
         />
+        {uploadingImage && (
+          <ActivityIndicator 
+            size="small" 
+            color={lightColors.accent} 
+            style={{ position: 'absolute', right: 40, top: 36 }}
+          />
+        )}
       </View>
 
       <SetUpGoalsModal
@@ -362,6 +448,34 @@ const FinalScreen = () => {
           setSetupModalVisible(false);
         }}
         t={t}
+      />
+
+      <CoverImageSourceModal
+        visible={coverSourceModalVisible}
+        onSelectGallery={handleSelectFromGallery}
+        onSelectStatic={handleSelectFromStatic}
+        onClose={() => setCoverSourceModalVisible(false)}
+      />
+
+      <InfoModal
+        visible={infoModalVisible}
+        title={infoModalType === 'habit' ? t('habitInfoTitle') : t('taskInfoTitle')}
+        tips={
+          infoModalType === 'habit'
+            ? [
+                { i18nKey: 'habitInfoTip1' },
+                { i18nKey: 'habitInfoTip2' },
+                { i18nKey: 'habitInfoTip3' },
+                { i18nKey: 'habitInfoTip4' },
+              ]
+            : [
+                { i18nKey: 'taskInfoTip1' },
+                { i18nKey: 'taskInfoTip2' },
+                { i18nKey: 'taskInfoTip3' },
+                { i18nKey: 'taskInfoTip4' },
+              ]
+        }
+        onClose={() => setInfoModalVisible(false)}
       />
     </View>
   );

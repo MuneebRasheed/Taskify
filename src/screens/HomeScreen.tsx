@@ -142,6 +142,7 @@ const HomeScreen = () => {
 
         {/* Task Calendar – controlled selectedDate, circles fill by completion */}
         <TaskCalendar
+          key={`calendar-${goals.length}-${Object.keys(itemCompletions).length}`}
           selectedDate={selectedDate}
           onDateSelect={setSelectedDate}
           getCompletionForDate={getCompletionForDate}

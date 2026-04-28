@@ -49,7 +49,12 @@ export type RootStackParamList = {
   ForgotPasswordEmail: undefined;
   ForgotPasswordOTP: { email: string };
   ForgotPasswordNewPassword: { email: string; otp: string };
-  MainTabs: undefined | { screen: keyof MainTabsParamList };
+  MainTabs: 
+    | undefined 
+    | { 
+        screen: keyof MainTabsParamList;
+        params?: MainTabsParamList[keyof MainTabsParamList];
+      };
   AiGenetratingScreen: undefined;
   AiMade: {
     source?: 'selfMade';
@@ -128,6 +133,7 @@ export type RootStackParamList = {
     selfMadePayload?: {
       title: string;
       coverIndex: number;
+      galleryImageUri?: string | null;
       dueDate: number | null;
       note: string;
       habits: { title: string; reminderTime?: string; selectedDays?: number[] }[];

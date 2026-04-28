@@ -93,16 +93,16 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
 
     selfMadeGoals: "Self-made Goals",
     createGoal: 'Create Goal',
-    addGoalsTitle: "Add a Goals Title",
+    addGoalsTitle: "Add a Goal Title",
     noDueDate: "No due date",
     setReminder: "Set reminder",
     setUpGoals: "Set up Goals",
-    addGoals: "Add Goals",
+    addGoals: "Add Goal",
     myGoals: "My Goals",
     current: 'Current',
-    achieveGoals: 'Achieve Goals',
+    achieveGoals: 'Achieve Goal',
     unachieveGoal: 'Unachieve Goal',
-    deleteGoals: 'Delete Goals',
+    deleteGoals: 'Delete Goal',
     deleteGoal: 'Delete Goal',
     deleteGoalConfirm: 'Are you sure you want to delete this goal? This cannot be undone.',
     deleteHabit: 'Delete Habit',
@@ -116,6 +116,10 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     deleteGoalConfirmLine2: 'This action cannot be undone.',
     achieveGoalsConfirmMessage: 'You have habits and tasks that have not been completed.',
     achieveGoalsConfirmQuestion: 'Are you sure you want to achieve this goal?',
+    goalDeleted: 'Goal deleted',
+    goalAchieved: 'Goal achieved',
+    goalUnachieved: 'Goal unachieved',
+    undo: 'Undo',
     addYourNote: "Add your note...",
     // Home screen
     home: 'Home',
@@ -125,7 +129,7 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     // AiGeneratingScreen and AiMadeScreen
     typeInYourGoalAndWeWillPrepareAPlanForYou: "Type in your goal and we'll prepare a plan for you...",
     generate: "Generate",
-    aiMadeGoals: "AI-made Goals",
+    aiMadeGoals: "AI-made Goal",
     continue: "Continue",
     regenerate: "Regenerate",
     note: "Note",
@@ -133,8 +137,9 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     task: "Task",
     addHabit: "Add Habit",
     habit: "Habit",
+    error: "Error",
     // Self Made Goals Screen
-    createGoals: "Create Goals",
+    createGoals: "Create Goal",
     cannotCreateGoal: "Cannot Create Goal",
     addAtLeastOneHabitOrTask: "Please add at least one habit or task to create the goal.",
     pleaseSetDueDateToCreateGoal: "Please set a due date to create the goal.",
@@ -144,18 +149,31 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     updateHabit: "Update Habit",
     updateTask: "Update Task",
     repeatDays: "Repeat Days",
-    goalsDueDate: "Goals Due Date",
-    habitReminder: "Habit Reminder",
-    taskReminder: "Task Reminder",
+    goalsDueDate: "Due Date",
+    habitReminder: "Reminder",
+    taskReminder: "Reminder",
+
+    // Info Tips
+    habitInfoTitle: "About Habits",
+    habitInfoTip1: "Habits are recurring activities you want to build into your routine",
+    habitInfoTip2: "Select which days of the week you want to perform this habit",
+    habitInfoTip3: "Set a reminder to help you stay consistent",
+    habitInfoTip4: "Track your progress and build streaks over time",
+    taskInfoTitle: "About Tasks",
+    taskInfoTip1: "Tasks are one-time activities with a specific due date",
+    taskInfoTip2: "Set a due date to keep yourself accountable",
+    taskInfoTip3: "Add a reminder so you don't forget important deadlines",
+    taskInfoTip4: "Mark tasks as complete when you finish them",
 
     //Tracker Card
     noReminder: "No reminder",
     formedOn: 'Formed on',
 
     // Goal Planner
-    goalsTitle: "Goals Title",
-    goalsReminder: "Goals Reminder",
-    saveGoals: "Save Goals",
+    goalsTitle: "Goal Title",
+    goalsReminder: "Goal Reminder",
+    saveGoals: "Save Goal",
+    uploading: "Uploading...",
 
     // Category Modal
     category: "Category",
@@ -179,12 +197,12 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
 
     // Report Screen
     report: 'Report',
-    goalsAchieved: 'Goals achieved',
-    formedHabits: 'Formed habits',
-    finishedTasks: 'Finished tasks',
+    goalsAchieved: 'Goal achieved',
+    formedHabits: 'Formed habit',
+    finishedTasks: 'Finished task',
     completionRate: 'Completion Rate',
-    habitsCompleted: 'Habits Completed',
-    tasksCompleted: 'Tasks Completed',
+    habitsCompleted: 'Habit Completed',
+    tasksCompleted: 'Task Completed',
 
     // My Goals Screen
     ongoing: 'Ongoing',
@@ -560,5 +578,22 @@ export const translations: Record<LocaleCode, Record<string, any>> = {
     cannotCreateGoal: 'لا يمكن إنشاء الهدف',
     addAtLeastOneHabitOrTask: 'يرجى إضافة عادة واحدة على الأقل أو مهمة واحدة لإنشاء الهدف.',
     pleaseSetDueDateToCreateGoal: 'يرجى تحديد تاريخ استحقاق لإنشاء الهدف.',
+    error: 'خطأ',
+    goalDeleted: 'تم حذف الهدف',
+    goalAchieved: 'تم تحقيق الهدف',
+    goalUnachieved: 'تم إلغاء تحقيق الهدف',
+    undo: 'تراجع',
+    
+    // Info Tips
+    habitInfoTitle: "حول العادات",
+    habitInfoTip1: "العادات هي أنشطة متكررة تريد بناءها في روتينك",
+    habitInfoTip2: "اختر أيام الأسبوع التي تريد القيام بهذه العادة فيها",
+    habitInfoTip3: "اضبط تذكيراً لمساعدتك على البقاء متسقاً",
+    habitInfoTip4: "تتبع تقدمك وابنِ سلاسل مع مرور الوقت",
+    taskInfoTitle: "حول المهام",
+    taskInfoTip1: "المهام هي أنشطة لمرة واحدة مع تاريخ استحقاق محدد",
+    taskInfoTip2: "حدد تاريخ استحقاق لتبقى مسؤولاً",
+    taskInfoTip3: "أضف تذكيراً حتى لا تنسى المواعيد النهائية المهمة",
+    taskInfoTip4: "ضع علامة على المهام كمكتملة عند الانتهاء منها",
   },
 };

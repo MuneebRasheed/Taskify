@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Alert,
   View,
@@ -8,9 +8,10 @@ import {
   Image,
   ScrollView,
   ImageSourcePropType,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
@@ -21,13 +22,15 @@ import TrackerCard, { type TrackerCardItem } from '../components/TrackerCard';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import ShareIcon from '../assets/svgs/ShareIcon';
 import { useGoals } from '../context/GoalsContext';
-import type { GoalItem } from '../context/GoalsContext';
+import type { GoalItem, ItemCompletions } from '../context/GoalsContext';
 import Textt from '../components/Textt';
 import { t } from '../i18n';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoIcon from '../assets/svgs/InfoIcon';
+import InfoModal from '../components/InfoModal';
 import SetUpGoalsModal from '../components/SetUpGoalsModal';
+import Toast from '../components/Toast';
 import type { GoalCategory } from '../components/CategoryModal';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
 import TimeIcon from '../assets/svgs/TimeIcon';
@@ -35,6 +38,8 @@ import EditIcon from '../assets/svgs/EditIcon';
 import { usePreMadeGoals } from '../hooks/usePreMadeGoals';
 import { useGoalStore } from '../../store/goalStore';
 import ImageIcon from '../assets/svgs/ImageIcon';
+import { uploadCoverImage } from '../lib/api/uploadImage';
+import { useAuth } from '../lib/auth/AuthProvider';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', {
@@ -101,7 +106,7 @@ const PreMadeGoalDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<PreMadeGoalDetailNavProp>();
   const route = useRoute<PreMadeGoalDetailRouteProp>();
-  const { goals, addGoal, markAchieved, removeGoal, itemCompletions, updateGoalDetails } = useGoals();
+  const { goals, addGoal, markAchieved, removeGoal, restoreGoal, itemCompletions, updateGoalDetails } = useGoals();
   const { preMadeGoals } = usePreMadeGoals();
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -117,6 +122,13 @@ const PreMadeGoalDetailScreen = () => {
     () => (myGoalId ? goals.find((g) => g.id === myGoalId) : null),
     [goals, myGoalId]
   );
+
+  // Toast state for undo
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastAction, setToastAction] = useState<'delete' | 'achieve' | null>(null);
+  const deletedGoalRef = useRef<{ goal: any; completions: ItemCompletions } | null>(null);
+  const previousAchievedStateRef = useRef<boolean | null>(null);
 
   const initialDueDate = useMemo(() => {
     if (mode === 'myGoal' && myGoal?.dueDate) return myGoal.dueDate instanceof Date ? myGoal.dueDate : new Date(myGoal.dueDate as unknown as number);
@@ -193,6 +205,10 @@ const PreMadeGoalDetailScreen = () => {
     : null;
 
   const coverSource: ImageSourcePropType | null = useMemo(() => {
+    // Priority 1: Gallery image from selfMadePayload
+    if (mode === 'selfMade' && selfMadePayload?.galleryImageUri) {
+      return { uri: selfMadePayload.galleryImageUri };
+    }
     if (mode === 'preMade' && preMadeGoal) {
       if (
         typeof draftCoverIndex === 'number' &&
@@ -203,9 +219,15 @@ const PreMadeGoalDetailScreen = () => {
       }
       return preMadeGoal.coverImage;
     }
-    if (mode === 'myGoal' && myGoal && COVER_IMAGE_SOURCES.length) {
-      const idx = myGoal.coverIndex % COVER_IMAGE_SOURCES.length;
-      return COVER_IMAGE_SOURCES[idx];
+    if (mode === 'myGoal' && myGoal) {
+      // Priority: coverUrl over coverIndex
+      if (myGoal.coverUrl) {
+        return { uri: myGoal.coverUrl };
+      }
+      if (COVER_IMAGE_SOURCES.length) {
+        const idx = myGoal.coverIndex % COVER_IMAGE_SOURCES.length;
+        return COVER_IMAGE_SOURCES[idx];
+      }
     }
     if (mode === 'selfMade' && selfMadePayload && COVER_IMAGE_SOURCES.length) {
       const idx = selfMadePayload.coverIndex % COVER_IMAGE_SOURCES.length;
@@ -327,7 +349,7 @@ const PreMadeGoalDetailScreen = () => {
     [mode, preMadeGoal, goals]
   );
 
-  const notFound = (mode === 'preMade' && !preMadeGoal) || (mode === 'myGoal' && !myGoal) || (mode === 'selfMade' && !selfMadePayload);
+  const notFound = (mode === 'preMade' && !preMadeGoal) || (mode === 'myGoal' && !myGoal && !deletedGoalRef.current && !toastVisible) || (mode === 'selfMade' && !selfMadePayload);
 
   if (notFound) {
     return (
@@ -457,8 +479,35 @@ const PreMadeGoalDetailScreen = () => {
     });
   };
 
-  const handleCreateGoal = () => {
+  const handleCreateGoal = async () => {
     if (mode !== 'selfMade' || !selfMadePayload) return;
+    
+    let coverUrl: string | null = null;
+    
+    // Check if galleryImageUri is already an uploaded URL or needs upload
+    if (selfMadePayload.galleryImageUri) {
+      // If it's already a Supabase URL, use it directly
+      if (selfMadePayload.galleryImageUri.includes('supabase')) {
+        coverUrl = selfMadePayload.galleryImageUri;
+        console.log('[PreMadeGoalDetail] Using pre-uploaded cover URL:', coverUrl);
+      } 
+      // Otherwise, upload the local image
+      else if (session?.user?.id) {
+        setUploadingImage(true);
+        const { url, error } = await uploadCoverImage(selfMadePayload.galleryImageUri, session.user.id);
+        setUploadingImage(false);
+        
+        if (error) {
+          Alert.alert('Upload Failed', 'Failed to upload cover image. Please try again.');
+          console.error('[PreMadeGoalDetail] Upload error:', error);
+          return;
+        }
+        
+        coverUrl = url ?? null;
+        console.log('[PreMadeGoalDetail] Uploaded cover URL:', coverUrl);
+      }
+    }
+    
     const items: GoalItem[] = [
       ...selfMadePayload.habits.map((h, i) => ({
         id: `self-habit-${Date.now()}-${i}`,
@@ -481,6 +530,7 @@ const PreMadeGoalDetailScreen = () => {
       reminderDate: reminderDate != null ? new Date(reminderDate.getTime()) : null,
       reminderTime: reminderTimeOnly || null,
       coverIndex: selfMadePayload.coverIndex,
+      coverUrl,
       source: 'selfMade',
       habitsTotal: selfMadePayload.habits.length,
       habitsDone: 0,
@@ -495,6 +545,10 @@ const PreMadeGoalDetailScreen = () => {
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [achieveModalVisible, setAchieveModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoModalType, setInfoModalType] = useState<'habit' | 'task'>('habit');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const { session } = useAuth();
 
   const handleGoToMyGoals = () => {
     navigation.navigate('MainTabs', { screen: 'My Goals' });
@@ -503,25 +557,46 @@ const PreMadeGoalDetailScreen = () => {
   const hasIncompleteItems = myGoal && (myGoal.habitsDone < myGoal.habitsTotal || myGoal.tasksDone < myGoal.tasksTotal);
 
   const handleAchieve = () => {
-    if (mode !== 'myGoal' || !myGoal) return;
-    if (myGoal.achieved) {
-      markAchieved(myGoal.id, false);
-      navigation.goBack();
+    if (mode !== 'myGoal') return;
+    const currentGoal = myGoal || deletedGoalRef.current?.goal;
+    if (!currentGoal) return;
+    
+    if (currentGoal.achieved) {
+      // Unachieve
+      previousAchievedStateRef.current = true;
+      markAchieved(currentGoal.id, false);
+      
+      setToastMessage(t('goalUnachieved'));
+      setToastAction('achieve');
+      setToastVisible(true);
+      
+      // Don't navigate immediately - let user see the undo option
       return;
     }
     if (hasIncompleteItems) {
       setAchieveModalVisible(true);
     } else {
-      markAchieved(myGoal.id, true);
-      navigation.navigate('GoalAchievedScreen', { goalId: myGoal.id });
+      previousAchievedStateRef.current = false;
+      markAchieved(currentGoal.id, true);
+      
+      setToastMessage(t('goalAchieved'));
+      setToastAction('achieve');
+      setToastVisible(true);
     }
   };
 
   const handleAchieveConfirm = () => {
-    if (mode !== 'myGoal' || !myGoal) return;
-    markAchieved(myGoal.id, true);
+    if (mode !== 'myGoal') return;
+    const currentGoal = myGoal || deletedGoalRef.current?.goal;
+    if (!currentGoal) return;
+    
+    previousAchievedStateRef.current = false;
+    markAchieved(currentGoal.id, true);
     setAchieveModalVisible(false);
-    navigation.navigate('GoalAchievedScreen', { goalId: myGoal.id });
+    
+    setToastMessage(t('goalAchieved'));
+    setToastAction('achieve');
+    setToastVisible(true);
   };
 
   const handleDeletePress = () => {
@@ -531,9 +606,89 @@ const PreMadeGoalDetailScreen = () => {
 
   const handleDeleteConfirm = () => {
     if (mode !== 'myGoal' || !myGoal) return;
-    removeGoal(myGoal.id);
+    
+    // Store goal and its completions for undo
+    const goalCompletions: ItemCompletions = {};
+    (myGoal.items ?? []).forEach((item) => {
+      if (itemCompletions[item.id]) {
+        goalCompletions[item.id] = itemCompletions[item.id];
+      }
+    });
+    
+    deletedGoalRef.current = { goal: myGoal, completions: goalCompletions };
+    const goalId = myGoal.id;
+    
+    console.log('PreMadeGoalDetailScreen - Deleting goal:', goalId);
+    
+    removeGoal(goalId);
     setDeleteModalVisible(false);
-    navigation.goBack();
+    
+    // Use CommonActions to reset navigation and pass params
+    console.log('PreMadeGoalDetailScreen - Navigating with CommonActions');
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'MainTabs',
+            state: {
+              routes: [
+                {
+                  name: 'My Goals',
+                  params: {
+                    showToast: true,
+                    toastMessage: t('goalDeleted'),
+                    toastAction: 'delete' as const,
+                    deletedGoalId: goalId,
+                    deletedGoalData: myGoal,
+                    deletedGoalCompletions: goalCompletions,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      })
+    );
+  };
+
+  const handleUndo = () => {
+    if (mode !== 'myGoal') return;
+    
+    if (toastAction === 'delete' && deletedGoalRef.current) {
+      // Restore deleted goal
+      restoreGoal(deletedGoalRef.current.goal, deletedGoalRef.current.completions);
+      deletedGoalRef.current = null;
+    } else if (toastAction === 'achieve' && previousAchievedStateRef.current !== null) {
+      const currentGoal = myGoal || deletedGoalRef.current?.goal;
+      if (currentGoal) {
+        // Revert achieved state
+        markAchieved(currentGoal.id, previousAchievedStateRef.current);
+      }
+      previousAchievedStateRef.current = null;
+    }
+    
+    setToastVisible(false);
+  };
+
+  const handleToastHide = () => {
+    setToastVisible(false);
+    
+    if (mode !== 'myGoal') return;
+    
+    // Clean up refs after toast is hidden
+    if (toastAction === 'delete' && deletedGoalRef.current !== null) {
+      // Don't navigate here - we already navigated immediately after deletion
+      deletedGoalRef.current = null;
+    } else if (toastAction === 'achieve' && previousAchievedStateRef.current === false) {
+      const currentGoal = myGoal || deletedGoalRef.current?.goal;
+      if (currentGoal) {
+        // Goal was achieved and not undone, navigate to achieved screen
+        navigation.navigate('GoalAchievedScreen', { goalId: currentGoal.id });
+      }
+    }
+    
+    previousAchievedStateRef.current = null;
   };
 
   return (
@@ -679,7 +834,15 @@ const PreMadeGoalDetailScreen = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Habit ({habitItems.length})</Text>
-              <InfoIcon width={20} height={20} />
+              <TouchableOpacity
+                onPress={() => {
+                  setInfoModalType('habit');
+                  setInfoModalVisible(true);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <InfoIcon width={20} height={20} />
+              </TouchableOpacity>
             </View>
             {mode === 'myGoal' && myGoal
               ? myGoal.items
@@ -722,7 +885,15 @@ const PreMadeGoalDetailScreen = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Task ({taskItems.length})</Text>
-              <InfoIcon width={20} height={20} />
+              <TouchableOpacity
+                onPress={() => {
+                  setInfoModalType('task');
+                  setInfoModalVisible(true);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <InfoIcon width={20} height={20} />
+              </TouchableOpacity>
             </View>
             {mode === 'myGoal' && myGoal
               ? (() => {
@@ -840,6 +1011,35 @@ const PreMadeGoalDetailScreen = () => {
         onCancel={() => setAchieveModalVisible(false)}
         onConfirm={handleAchieveConfirm}
         titleColor={lightColors.text}
+      />
+
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        actionLabel={t('undo')}
+        onActionPress={handleUndo}
+        onHide={handleToastHide}
+      />
+
+      <InfoModal
+        visible={infoModalVisible}
+        title={infoModalType === 'habit' ? t('habitInfoTitle') : t('taskInfoTitle')}
+        tips={
+          infoModalType === 'habit'
+            ? [
+                { i18nKey: 'habitInfoTip1' },
+                { i18nKey: 'habitInfoTip2' },
+                { i18nKey: 'habitInfoTip3' },
+                { i18nKey: 'habitInfoTip4' },
+              ]
+            : [
+                { i18nKey: 'taskInfoTip1' },
+                { i18nKey: 'taskInfoTip2' },
+                { i18nKey: 'taskInfoTip3' },
+                { i18nKey: 'taskInfoTip4' },
+              ]
+        }
+        onClose={() => setInfoModalVisible(false)}
       />
     </View>
   );

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,13 +16,14 @@ import { fontFamilies } from '../theme/typography';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
 import ShareIcon from '../assets/svgs/ShareIcon';
 import { useGoals } from '../context/GoalsContext';
-import type { SavedGoal, GoalItem } from '../context/GoalsContext';
+import type { SavedGoal, GoalItem, ItemCompletions } from '../context/GoalsContext';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import TrackerCard, { type TrackerCardItem } from '../components/TrackerCard';
 import Button from '../components/Button';
 import ConfirmModal from '../components/ConfirmModal';
-import { t } from '../i18n';
+import Toast from '../components/Toast';
+import { t, useTranslation } from '../i18n';
 
 type MyGoalDetailRouteProp = RouteProp<RootStackParamList, 'MyGoalDetail'>;
 type MyGoalDetailNavProp = NativeStackNavigationProp<RootStackParamList, 'MyGoalDetail'>;
@@ -69,10 +70,11 @@ const DEFAULT_NOTE =
   "To achieve this goal, it's essential to follow key steps in the journey. Begin by researching and identifying areas that align with your interests and strengths.";
 
 const MyGoalDetailScreen = () => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<MyGoalDetailNavProp>();
   const route = useRoute<MyGoalDetailRouteProp>();
-  const { goals, markAchieved, removeGoal } = useGoals();
+  const { goals, markAchieved, removeGoal, restoreGoal, itemCompletions } = useGoals();
   const goalId = route.params?.goalId;
 
   const goal = useMemo(() => goals.find((g) => g.id === goalId), [goals, goalId]);
@@ -111,8 +113,97 @@ const MyGoalDetailScreen = () => {
   const daysLeft = useMemo(() => daysUntil(goal?.dueDate ?? null), [goal?.dueDate]);
   const dueDateFormatted = useMemo(() => formatDueDate(goal?.dueDate ?? null), [goal?.dueDate]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  
+  // Toast state for undo
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastAction, setToastAction] = useState<'delete' | 'achieve' | null>(null);
+  const deletedGoalRef = useRef<{ goal: SavedGoal; completions: ItemCompletions } | null>(null);
+  const previousAchievedStateRef = useRef<boolean | null>(null);
 
-  if (!goal) {
+  const handleAchieve = () => {
+    const currentGoal = goal || deletedGoalRef.current?.goal;
+    if (!currentGoal) return;
+    const newAchievedState = !currentGoal.achieved;
+    previousAchievedStateRef.current = currentGoal.achieved;
+    
+    markAchieved(currentGoal.id, newAchievedState);
+    
+    // Show toast with undo option
+    setToastMessage(newAchievedState ? t('goalAchieved') : t('goalUnachieved'));
+    setToastAction('achieve');
+    setToastVisible(true);
+    
+    // Don't navigate immediately - let user see the undo option
+  };
+
+  const handleDeletePress = () => setDeleteModalVisible(true);
+
+  const handleDeleteConfirm = () => {
+    if (!goal) return;
+    
+    // Store goal and its completions for undo
+    const goalCompletions: ItemCompletions = {};
+    (goal.items ?? []).forEach((item) => {
+      if (itemCompletions[item.id]) {
+        goalCompletions[item.id] = itemCompletions[item.id];
+      }
+    });
+    
+    deletedGoalRef.current = { goal, completions: goalCompletions };
+    
+    removeGoal(goal.id);
+    setDeleteModalVisible(false);
+    
+    // Navigate back immediately with toast params including full goal data for undo
+    navigation.navigate('MainTabs', {
+      screen: 'My Goals',
+      params: {
+        showToast: true,
+        toastMessage: t('goalDeleted'),
+        toastAction: 'delete' as const,
+        deletedGoalId: goal.id,
+        deletedGoalData: goal,
+        deletedGoalCompletions: goalCompletions,
+      }
+    });
+  };
+
+  const handleUndo = () => {
+    if (toastAction === 'delete' && deletedGoalRef.current) {
+      // Restore deleted goal
+      restoreGoal(deletedGoalRef.current.goal, deletedGoalRef.current.completions);
+      deletedGoalRef.current = null;
+    } else if (toastAction === 'achieve' && previousAchievedStateRef.current !== null) {
+      const currentGoal = goal || deletedGoalRef.current?.goal;
+      if (currentGoal) {
+        // Revert achieved state
+        markAchieved(currentGoal.id, previousAchievedStateRef.current);
+      }
+      previousAchievedStateRef.current = null;
+    }
+    
+    setToastVisible(false);
+  };
+
+  const handleToastHide = () => {
+    setToastVisible(false);
+    
+    // Navigate after toast is hidden if action wasn't undone
+    if (toastAction === 'delete' && deletedGoalRef.current !== null) {
+      navigation.goBack();
+      deletedGoalRef.current = null;
+    }
+    
+    previousAchievedStateRef.current = null;
+  };
+
+  const handleShare = () => {
+    // Placeholder: could use Share API
+  };
+
+  // If goal is deleted and toast is not visible, show a loading state or navigate
+  if (!goal && !toastVisible && !deletedGoalRef.current) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Goal not found</Text>
@@ -123,22 +214,19 @@ const MyGoalDetailScreen = () => {
     );
   }
 
-  const handleAchieve = () => {
-    markAchieved(goal.id, !goal.achieved);
-    navigation.goBack();
-  };
-
-  const handleDeletePress = () => setDeleteModalVisible(true);
-
-  const handleDeleteConfirm = () => {
-    removeGoal(goal.id);
-    setDeleteModalVisible(false);
-    navigation.goBack();
-  };
-
-  const handleShare = () => {
-    // Placeholder: could use Share API
-  };
+  // Use deleted goal data if goal is deleted but toast is visible
+  const displayGoal = goal || deletedGoalRef.current?.goal;
+  
+  if (!displayGoal) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Goal not found</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.backLink}>Go back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -172,7 +260,7 @@ const MyGoalDetailScreen = () => {
 
         {/* Title + edit */}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{goal.title}</Text>
+          <Text style={styles.title}>{displayGoal.title}</Text>
           <TouchableOpacity hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="pencil" size={20} color={lightColors.subText} />
           </TouchableOpacity>
@@ -180,9 +268,9 @@ const MyGoalDetailScreen = () => {
 
         {/* Metadata: Current/Achieved, days, due date */}
         <View style={styles.metaRow}>
-          <View style={[styles.tag, goal.achieved && styles.tagAchieved]}>
-            <Text style={[styles.tagText, goal.achieved && styles.tagTextAchieved]}>
-              {goal.achieved ? (t('achieved') as string) : (t('current') as string)}
+          <View style={[styles.tag, displayGoal.achieved && styles.tagAchieved]}>
+            <Text style={[styles.tagText, displayGoal.achieved && styles.tagTextAchieved]}>
+              {displayGoal.achieved ? (t('achieved') as string) : (t('current') as string)}
             </Text>
           </View>
           {daysLeft != null && (
@@ -266,6 +354,14 @@ const MyGoalDetailScreen = () => {
         confirmLabel={t('yesDelete') as string}
         onCancel={() => setDeleteModalVisible(false)}
         onConfirm={handleDeleteConfirm}
+      />
+
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        actionLabel={t('undo')}
+        onActionPress={handleUndo}
+        onHide={handleToastHide}
       />
     </View>
   );

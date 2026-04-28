@@ -13,6 +13,7 @@ export type GoalsPayload = {
     reminderTime?: string | null;
     preMadeTemplateId?: string | null;
     coverIndex: number;
+    coverUrl?: string | null;
     source: string;
     habitsTotal: number;
     habitsDone: number;
@@ -78,6 +79,7 @@ export async function createGoal(
     reminderDate?: number | null;
     reminderTime?: string | null;
     coverIndex: number;
+    coverUrl?: string | null;
     source: string;
     preMadeTemplateId?: string | null;
     dueDate?: number | null;

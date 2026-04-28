@@ -24,11 +24,14 @@ import type { TrackerCardItem } from '../components/TrackerCard';
 import Textt from '../components/Textt';
 import Header from '../components/Header';
 import CrossIcon from '../assets/svgs/CrossIcon';
+import InfoIcon from '../assets/svgs/InfoIcon';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
 import CalendarModal from '../components/CalendarModal';
 import TimePickerModal from '../components/TimePickerModal';
+import InfoModal from '../components/InfoModal';
 import { useGoalStore } from '../../store/goalStore';
 import { useGoals } from '../context/GoalsContext';
+import { useTranslation } from '../i18n';
 
 type AddTaskRouteProp = RouteProp<RootStackParamList, 'AddTaskScreen'>;
 type AddTaskNavProp = NativeStackNavigationProp<RootStackParamList, 'AddTaskScreen'>;
@@ -39,6 +42,7 @@ const AddTaskScreen = () => {
   const route = useRoute<AddTaskRouteProp>();
   const { mode, prompt, source, editHabitIndex, editTaskIndex, initialItem, goalId, itemId } = route.params;
   const { updateGoalItem } = useGoals();
+  const { t } = useTranslation();
 
   const isHabit = mode === 'habit';
   const isEdit =
@@ -58,6 +62,7 @@ const AddTaskScreen = () => {
 
   const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; dueDate?: string; repeatDays?: string }>({});
 
@@ -208,6 +213,22 @@ const AddTaskScreen = () => {
       ? 'Add Habit'
       : 'Add Task';
 
+  const infoTips = isHabit
+    ? [
+        { i18nKey: 'habitInfoTip1' },
+        { i18nKey: 'habitInfoTip2' },
+        { i18nKey: 'habitInfoTip3' },
+        { i18nKey: 'habitInfoTip4' },
+      ]
+    : [
+        { i18nKey: 'taskInfoTip1' },
+        { i18nKey: 'taskInfoTip2' },
+        { i18nKey: 'taskInfoTip3' },
+        { i18nKey: 'taskInfoTip4' },
+      ];
+
+  const infoTitle = isHabit ? t('habitInfoTitle') : t('taskInfoTitle');
+
   return (
     <View
       style={[
@@ -248,7 +269,16 @@ const AddTaskScreen = () => {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Textt i18nKey={isHabit ? 'habit' : 'task'} style={styles.label} />
+            <View style={styles.labelRow}>
+              <Textt i18nKey={isHabit ? 'habit' : 'task'} style={styles.label} />
+              <TouchableOpacity
+                onPress={() => setInfoModalVisible(true)}
+                style={styles.infoButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <InfoIcon width={20} height={20} />
+              </TouchableOpacity>
+            </View>
             <View style={styles.inputRow}>
               {/* <TimeIcon width={20} height={20} /> */}
               <TextInput
@@ -338,7 +368,7 @@ const AddTaskScreen = () => {
             )}
 
             <Text style={styles.label}>
-              {isHabit ? 'habitReminder' : 'taskReminder'}
+              {isHabit ? 'Reminder' : 'Reminder'}
             </Text>
             <TouchableOpacity
               activeOpacity={0.7}
@@ -418,6 +448,14 @@ const AddTaskScreen = () => {
           setReminderModalVisible(false);
         }}
       />
+
+      {/* Info Modal */}
+      <InfoModal
+        visible={infoModalVisible}
+        title={infoTitle}
+        tips={infoTips}
+        onClose={() => setInfoModalVisible(false)}
+      />
     </View>
   );
 };
@@ -453,11 +491,19 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   label: {
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 18,
     color: lightColors.text,
-    marginBottom: 8,
+  },
+  infoButton: {
+    marginLeft: 8,
+    padding: 4,
   },
   input: {
     backgroundColor: lightColors.inputBackground,

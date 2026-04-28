@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -22,7 +20,7 @@ import LoadingModal from '../components/LoadingModal';
 import Header from '../components/Header';
 import Starts from '../assets/svgs/starts';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
-import { t, useTranslation } from '../i18n';
+import { useTranslation } from '../i18n';
 import { useAuth } from '../lib/auth/AuthProvider';
 import type { TrackerCardItem } from '../components/TrackerCard';
 import { generateGoalPlan } from '../lib/api/aiGoalPlanApi';
@@ -188,22 +186,25 @@ const AiGenetratingScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground }]}>
+      <Header
+        leftIcon={<BackArrowIcon width={28} height={28} />}
+        onLeftPress={() => navigation.goBack()}
+        title={t('aiMadeGoals')}
+        rightIcon={<View />}
+        style={styles.header}
+      />
+      
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ScrollView>
-          <View style={styles.content}>
-            <Header
-              leftIcon={<BackArrowIcon width={28} height={28} />}
-              onLeftPress={() => navigation.goBack()}
-              title={t('aiMadeGoals')}
-              rightIcon={<View />}
-              style={styles.header}
-            />
-
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.main}>
               <Starts width={80} height={80} fill={goal.trim() ? lightColors.background : lightColors.placeholderText} />
               <TextInput
@@ -215,35 +216,37 @@ const AiGenetratingScreen = () => {
                 multiline
                 maxLength={500}
                 textAlignVertical="top"
+                autoFocus
               />
             </View>
-
-            
-          </View>
           </ScrollView>
         </TouchableWithoutFeedback>
 
-        {!keyboardVisible && (
-          <View style={styles.footer}>
-            <Button
-              title={t('generate')}
-              variant="primary"
-              onPress={handleGenerate}
-              textColor={lightColors.secondaryBackground}
-              borderRadius={24}
-              disabled={!goal.trim()}
-              style={StyleSheet.flatten([
-                styles.generateBtn,
-                {
-                  backgroundColor: goal.trim()
-                    ? lightColors.accent
-                    : lightColors.disabledButton,
-                },
-              ])}
-            />
-          </View>
-        )}
+        
       </KeyboardAvoidingView>
+
+
+
+
+<View style={styles.footer}>
+          <Button
+            title={t('generate')}
+            variant="primary"
+            onPress={handleGenerate}
+            textColor={lightColors.secondaryBackground}
+            borderRadius={24}
+            disabled={!goal.trim()}
+            style={StyleSheet.flatten([
+              styles.generateBtn,
+              {
+                backgroundColor: goal.trim()
+                  ? lightColors.accent
+                  : lightColors.disabledButton,
+              },
+            ])}
+          />
+        </View>
+
 
       <LoadingModal visible={generating} variant="generating" text="Generating plan..." />
     </View>
@@ -259,20 +262,20 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    // paddingHorizontal: 24,
-  },
   header: {
     
   },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   main: {
-    marginTop: 200,
     paddingHorizontal: 15,
-    flex: 1,
+    paddingVertical: 40,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 32,
+    minHeight: 300,
   },
   input: {
     width: '100%',
@@ -281,19 +284,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 24,
     color: lightColors.text,
+    minHeight: 100,
   },
   footer: {
     paddingVertical: 24,
     paddingBottom: 32,
     paddingHorizontal: 24,
-      borderTopWidth: 1,
-      borderColor: lightColors.border,
-      backgroundColor: lightColors.BtnBackground,
+    borderTopWidth: 1,
+    borderColor: lightColors.border,
+    backgroundColor: lightColors.BtnBackground,
   },
   generateBtn: {
-
     width: "100%",
     borderRadius: 1000,
-    
   },
 });
