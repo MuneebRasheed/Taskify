@@ -7,6 +7,7 @@ import {
   Image,
   ScrollView,
   ImageSourcePropType,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -22,29 +23,13 @@ import Textt from '../components/Textt';
 import Header from '../components/Header';
 import { useTranslation } from '../i18n';
 import { useGoalStore } from '../../store/goalStore';
+import { COVER_IMAGE_SOURCES } from '../hooks/useCoverImagePreloader';
 
 type SelectCoverRouteProp = RouteProp<RootStackParamList, 'SelectCoverImage'>;
 type SelectCoverNavProp = NativeStackNavigationProp<RootStackParamList, 'SelectCoverImage'>;
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const COVER_BUCKET = 'covers';
-const DEFAULT_COVER_FILE_NAMES = [
-  'cover1.png',
-  'cover2.png',
-  'cover3.png',
-  'cover4.png',
-  'cover5.png',
-  'cover6.png',
-  'cover7.png',
-];
-
-// Shared sources used by SelectCoverImage + GoalPlanner + Final + MyGoalDetail
-// to keep cover indexes consistent across all screens.
-export const COVER_IMAGE_SOURCES: ImageSourcePropType[] = SUPABASE_URL
-  ? DEFAULT_COVER_FILE_NAMES.map((fileName) => ({
-      uri: `${SUPABASE_URL}/storage/v1/object/public/${COVER_BUCKET}/${encodeURIComponent(fileName)}`,
-    }))
-  : [];
+// Export for backward compatibility with other screens
+export { COVER_IMAGE_SOURCES };
 
 const SelectCoverImageScreen = () => {
   const insets = useSafeAreaInsets();
@@ -52,11 +37,62 @@ const SelectCoverImageScreen = () => {
   const route = useRoute<SelectCoverRouteProp>();
   const storeCoverIndex = useGoalStore((s) => s.selectedCoverIndex);
   const setSelectedCoverIndex = useGoalStore((s) => s.setSelectedCoverIndex);
+  const cachedCoverImages = useGoalStore((s) => s.cachedCoverImages);
+  const setCachedCoverImages = useGoalStore((s) => s.setCachedCoverImages);
+  const coverImagesLoading = useGoalStore((s) => s.coverImagesLoading);
+  const setCoverImagesLoading = useGoalStore((s) => s.setCoverImagesLoading);
   const initialIndex = route.params?.selectedIndex ?? storeCoverIndex;
   const { t } = useTranslation();
 
   const [selectedIndex, setSelectedIndex] = useState<number>(initialIndex);
-  const [coverSources] = useState<ImageSourcePropType[]>(COVER_IMAGE_SOURCES);
+
+  // Preload cover images if not already cached
+  useEffect(() => {
+    const loadCoverImages = async () => {
+      // If already cached, use them
+      if (cachedCoverImages.length > 0) {
+        return;
+      }
+
+      // If already loading, don't start again
+      if (coverImagesLoading) {
+        return;
+      }
+
+      setCoverImagesLoading(true);
+
+      try {
+        // Generate cover image sources
+        const sources = COVER_IMAGE_SOURCES;
+        
+        // Preload images to cache them
+        const preloadPromises = sources.map((source) => {
+          return new Promise<void>((resolve) => {
+            if (typeof source === 'object' && 'uri' in source) {
+              Image.prefetch(source.uri as string)
+                .then(() => resolve())
+                .catch(() => resolve()); // Resolve even on error to not block other images
+            } else {
+              resolve();
+            }
+          });
+        });
+
+        await Promise.all(preloadPromises);
+        
+        // Cache the sources in store
+        setCachedCoverImages(sources);
+      } catch (error) {
+        console.error('Error preloading cover images:', error);
+        // Still cache the sources even if preload fails
+        setCachedCoverImages(COVER_IMAGE_SOURCES);
+      } finally {
+        setCoverImagesLoading(false);
+      }
+    };
+
+    loadCoverImages();
+  }, [cachedCoverImages.length, coverImagesLoading, setCachedCoverImages, setCoverImagesLoading]);
 
   useEffect(() => {
     setSelectedIndex(route.params?.selectedIndex ?? storeCoverIndex);
@@ -72,6 +108,8 @@ const SelectCoverImageScreen = () => {
     navigation.goBack();
   };
 
+  // Use cached images if available, otherwise use COVER_IMAGE_SOURCES
+  const coverSources = cachedCoverImages.length > 0 ? cachedCoverImages : COVER_IMAGE_SOURCES;
   const list = Array.isArray(coverSources) ? coverSources : [];
 
   return (
@@ -94,7 +132,12 @@ const SelectCoverImageScreen = () => {
         contentContainerStyle={styles.gridWrap}
         showsVerticalScrollIndicator={false}
       >
-        {list.length === 0 ? (
+        {coverImagesLoading && list.length === 0 ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={lightColors.accent} />
+            <Text style={styles.loadingText}>Loading cover images...</Text>
+          </View>
+        ) : list.length === 0 ? (
           <View style={styles.placeholderWrap}>
             <Text style={styles.placeholderText}>
               No cover images found. Check EXPO_PUBLIC_SUPABASE_URL and files in Storage bucket "covers".
@@ -218,6 +261,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: lightColors.subText,
     textAlign: 'center',
+  },
+  loadingWrap: {
+    padding: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 14,
+    color: lightColors.subText,
   },
   footer: {
     flexDirection: 'row',

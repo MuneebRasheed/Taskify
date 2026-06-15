@@ -21,10 +21,14 @@ export interface TrackerCardItem {
   selectedDays: number[];
   /** Optional reminder time, e.g. "09:00 AM". Use "No reminder" to show label. */
   reminderTime?: string | null;
+  /** Optional note for the item */
+  note?: string | null;
   /** For task: due date string, e.g. "Today, Dec 22, 2024" or "20 Jan, 2025". */
   dueDate?: string | null;
   /** habit = orange bar + days row; task = blue bar + date + reminder */
   variant?: TrackerCardVariant;
+  /** Whether the item is paused */
+  paused?: boolean;
 }
 
 const TASK_INDICATOR_BLUE = lightColors.taskIndicator;
@@ -63,13 +67,14 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
   const isTask = item.variant === 'task';
   const barColor = indicatorColor ?? (isTask ? TASK_INDICATOR_BLUE : DEFAULT_SELECTED_COLOR);
   const hasReminder = item.reminderTime != null && item.reminderTime.trim() !== '';
+  const isPaused = item.paused ?? false;
 
   /** When completed/formed/finished: show Image 2 layout — title + "Formed on date" + green check, no days/time */
   const showFormedLayout = completed;
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isPaused && styles.cardPaused]}
       onPress={onPress}
       activeOpacity={0.7}
       disabled={!onPress}
@@ -78,12 +83,18 @@ const TrackerCard: React.FC<TrackerCardProps> = ({
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text
-            style={[styles.title, completed && styles.titleChecked]}
+            style={[styles.title, completed && styles.titleChecked, isPaused && styles.titlePaused]}
             numberOfLines={1}
           >
             {item.title}
           </Text>
-          {completed && (
+          {isPaused && (
+            <View style={styles.pausedBadge}>
+              <Ionicons name="pause-circle" size={20} color={lightColors.subText} />
+              <Text style={styles.pausedText}>Paused</Text>
+            </View>
+          )}
+          {completed && !isPaused && (
             <View style={styles.completedBadge}>
               <GreenCheckIcon width={24} height={24} />
             </View>
@@ -178,6 +189,9 @@ const styles = StyleSheet.create({
     elevation: 3,
     overflow: 'hidden',
   },
+  cardPaused: {
+    opacity: 0.6,
+  },
   indicator: {
     width: 3,
     height: 90,
@@ -203,6 +217,23 @@ const styles = StyleSheet.create({
   },
   titleChecked: {
     color: lightColors.placeholderText,
+  },
+  titlePaused: {
+    color: lightColors.placeholderText,
+  },
+  pausedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: lightColors.inputBackground,
+  },
+  pausedText: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 12,
+    color: lightColors.subText,
   },
   completedBadge: {
     //  marginTop: 10,

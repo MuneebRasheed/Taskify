@@ -13,6 +13,7 @@ import {
   ScrollView,
   Image,
   ImageSourcePropType,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -35,10 +36,15 @@ import CategoryModal, { type GoalCategory } from '../components/CategoryModal';
 import CalendarModal from '../components/CalendarModal';
 import TimePickerModal from '../components/TimePickerModal';
 import SetUpGoalsModal from '../components/SetUpGoalsModal';
+import InfoModal from '../components/InfoModal';
 import EditIcon from '../assets/svgs/EditIcon';
 import Header from '../components/Header';
 import type { GoalItem } from '../context/GoalsContext';
 import { useGoalStore } from '../../store/goalStore';
+import * as ImagePicker from 'expo-image-picker';
+import CoverImageSourceModal from '../components/CoverImageSourceModal';
+import { uploadCoverImage } from '../lib/api/uploadImage';
+import { useAuth } from '../lib/auth/AuthProvider';
 
 type AiMadeRouteProp = RouteProp<RootStackParamList, 'AiMade'>;
 type AiMadeNavProp = NativeStackNavigationProp<RootStackParamList, 'AiMade'>;
@@ -52,7 +58,8 @@ function formatDate(d: Date): string {
 }
 
 function formatTime(hours: number, minutes: number, am: boolean): string {
-  const h = am ? (hours === 12 ? 12 : hours) : hours === 12 ? 0 : hours + 12;
+  // Keep hours in 12-hour format (1-12), don't convert to 24-hour
+  const h = hours === 0 ? 12 : hours;
   return `${h.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
 }
 
@@ -102,9 +109,6 @@ const DEFAULT_TASKS: TrackerCardItem[] = [
   },
 ];
 
-const DEFAULT_NOTE =
-  "To achieve the goal of becoming a UI/UX Designer, it's essential to follow key steps in the journey. Begin by researching various career paths within the field and identifying areas of specialization that align with personal interests and strengths.";
-
 const AiMadeScreen = () => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -120,6 +124,7 @@ const AiMadeScreen = () => {
   const initialTasksParam = route.params?.initialTasks;
   const initialNoteParam = route.params?.initialNote;
   const initialGoalTitleParam = route.params?.initialGoalTitle;
+  const initialDueDateParam = route.params?.initialDueDate;
 
   const prompt =
     promptParam ?? (isSelfMade ? '' : 'Become a UI/UX Designer');
@@ -128,22 +133,54 @@ const AiMadeScreen = () => {
   const draftTasks = useGoalStore((s) => s.draftTasks);
   const setDraftHabits = useGoalStore((s) => s.setDraftHabits);
   const setDraftTasks = useGoalStore((s) => s.setDraftTasks);
+  const aiMadeHabits = useGoalStore((s) => s.aiMadeHabits);
+  const aiMadeTasks = useGoalStore((s) => s.aiMadeTasks);
+  const setAiMadeHabits = useGoalStore((s) => s.setAiMadeHabits);
+  const setAiMadeTasks = useGoalStore((s) => s.setAiMadeTasks);
+  const updateAiMadeHabit = useGoalStore((s) => s.updateAiMadeHabit);
+  const updateAiMadeTask = useGoalStore((s) => s.updateAiMadeTask);
+  const addAiMadeHabit = useGoalStore((s) => s.addAiMadeHabit);
+  const addAiMadeTask = useGoalStore((s) => s.addAiMadeTask);
+  const resetAiMade = useGoalStore((s) => s.resetAiMade);
 
-  const [habits, setHabits] = useState<TrackerCardItem[]>(() =>
+  // Use refs to track the latest habits/tasks to prevent resets
+  const habitsRef = React.useRef<TrackerCardItem[]>(
     initialHabitsParam && initialHabitsParam.length > 0
       ? initialHabitsParam
       : DEFAULT_HABITS
   );
-  const [tasks, setTasks] = useState<TrackerCardItem[]>(() =>
+  const tasksRef = React.useRef<TrackerCardItem[]>(
     initialTasksParam && initialTasksParam.length > 0
       ? initialTasksParam
       : DEFAULT_TASKS
   );
 
-  const habitsList = isSelfMade ? draftHabits : habits;
-  const tasksList = isSelfMade ? draftTasks : tasks;
+  const [habits, setHabits] = useState<TrackerCardItem[]>(() => habitsRef.current);
+  const [tasks, setTasks] = useState<TrackerCardItem[]>(() => tasksRef.current);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    habitsRef.current = habits;
+  }, [habits]);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+
+  const habitsList = isSelfMade ? draftHabits : (aiMadeHabits.length > 0 ? aiMadeHabits : habits);
+  const tasksList = isSelfMade ? draftTasks : (aiMadeTasks.length > 0 ? aiMadeTasks : tasks);
+  
+  // Debug: Log current state
+  useEffect(() => {
+    if (!isSelfMade) {
+      console.log('[AiMade] AI-made habits from store:', aiMadeHabits.map(h => h.title));
+      console.log('[AiMade] AI-made tasks from store:', aiMadeTasks.map(t => t.title));
+      console.log('[AiMade] habitsList:', habitsList.map(h => h.title));
+      console.log('[AiMade] tasksList:', tasksList.map(t => t.title));
+    }
+  }, [isSelfMade, aiMadeHabits, aiMadeTasks, habitsList, tasksList]);
   const [note, setNote] = useState(
-    isSelfMade ? '' : initialNoteParam ?? DEFAULT_NOTE
+    isSelfMade ? '' : initialNoteParam ?? ''
   );
   const [goalTitle, setGoalTitle] = useState(
     isSelfMade ? '' : initialGoalTitleParam ?? prompt
@@ -159,6 +196,12 @@ const AiMadeScreen = () => {
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
   const [setUpGoalsModalVisible, setSetUpGoalsModalVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [coverSourceModalVisible, setCoverSourceModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoModalType, setInfoModalType] = useState<'habit' | 'task'>('habit');
+  const [galleryImageUri, setGalleryImageUri] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const { session } = useAuth();
 
   const reminderDisplay =
     reminderDate && reminderTime
@@ -207,9 +250,56 @@ const AiMadeScreen = () => {
     if (isSelfMade) {
       setDraftHabits(initialHabitsParam ?? []);
       setDraftTasks(initialTasksParam ?? []);
+    } else {
+      // Initialize AI-made store if empty
+      if (aiMadeHabits.length === 0 && habits.length > 0) {
+        setAiMadeHabits(habits);
+      }
+      if (aiMadeTasks.length === 0 && tasks.length > 0) {
+        setAiMadeTasks(tasks);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Handle updates from AddTaskScreen for AI-made goals
+  useEffect(() => {
+    if (!isSelfMade && route.params?.updatedHabit) {
+      const { index, item } = route.params.updatedHabit;
+      console.log('[AiMade] Updating habit at index', index, 'with item:', item.title);
+      updateAiMadeHabit(index, item);
+      // Clear the param to avoid re-applying
+      navigation.setParams({ updatedHabit: undefined } as any);
+    }
+  }, [route.params?.updatedHabit, isSelfMade, navigation, updateAiMadeHabit]);
+
+  useEffect(() => {
+    if (!isSelfMade && route.params?.updatedTask) {
+      const { index, item } = route.params.updatedTask;
+      console.log('[AiMade] Updating task at index', index, 'with item:', item.title);
+      updateAiMadeTask(index, item);
+      // Clear the param to avoid re-applying
+      navigation.setParams({ updatedTask: undefined } as any);
+    }
+  }, [route.params?.updatedTask, isSelfMade, navigation, updateAiMadeTask]);
+
+  useEffect(() => {
+    if (!isSelfMade && route.params?.addedHabit) {
+      console.log('[AiMade] Adding new habit:', route.params.addedHabit.title);
+      addAiMadeHabit(route.params.addedHabit);
+      // Clear the param to avoid re-applying
+      navigation.setParams({ addedHabit: undefined } as any);
+    }
+  }, [route.params?.addedHabit, isSelfMade, navigation, addAiMadeHabit]);
+
+  useEffect(() => {
+    if (!isSelfMade && route.params?.addedTask) {
+      console.log('[AiMade] Adding new task:', route.params.addedTask.title);
+      addAiMadeTask(route.params.addedTask);
+      // Clear the param to avoid re-applying
+      navigation.setParams({ addedTask: undefined } as any);
+    }
+  }, [route.params?.addedTask, isSelfMade, navigation, addAiMadeTask]);
 
   const openAddHabit = (habitIndex?: number) => {
     const isEdit = habitIndex !== undefined;
@@ -237,6 +327,7 @@ const AiMadeScreen = () => {
 
   const handleRegenerate = () => {
     Keyboard.dismiss();
+    resetAiMade(); // Clear AI-made store before regenerating
     navigation.navigate('AiGenetratingScreen');
   };
 
@@ -250,6 +341,7 @@ const AiMadeScreen = () => {
       initialHabits: habitsList,
       initialTasks: tasksList,
       initialNote: note,
+      initialDueDate: initialDueDateParam ?? null,
     });
   };
 
@@ -275,16 +367,22 @@ const AiMadeScreen = () => {
       selfMadePayload: {
         title,
         coverIndex,
+        galleryImageUri,
         dueDate: dueDate ? dueDate.getTime() : null,
+        category: category ?? null,
+        reminderDate: reminderDate != null ? reminderDate.getTime() : null,
+        reminderTime: reminderTime ?? null,
         note,
         habits: habitsList.map((h) => ({
           title: h.title,
           reminderTime: h.reminderTime,
+          note: h.note,
           selectedDays: h.selectedDays ?? [],
         })),
         tasks: tasksList.map((t) => ({
           title: t.title,
           reminderTime: t.reminderTime,
+          note: t.note,
           dueDate: t.dueDate ?? null,
         })),
       },
@@ -292,6 +390,54 @@ const AiMadeScreen = () => {
   };
 
   const openSelectCover = () => {
+    setCoverSourceModalVisible(true);
+  };
+
+  const handleSelectFromGallery = async () => {
+    setCoverSourceModalVisible(false);
+    
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Permission to access gallery is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const imageUri = result.assets[0].uri;
+      
+      // Upload image immediately
+      if (!session?.user?.id) {
+        Alert.alert('Error', 'You must be logged in to upload images');
+        return;
+      }
+      
+      setUploadingImage(true);
+      const { url, error } = await uploadCoverImage(imageUri, session.user.id);
+      setUploadingImage(false);
+      
+      if (error) {
+        Alert.alert('Upload Failed', 'Failed to upload cover image. Please try again.');
+        console.error('[AiMade] Upload error:', error);
+        return;
+      }
+      
+      if (url) {
+        setGalleryImageUri(url);
+        console.log('[AiMade] Image uploaded successfully:', url);
+      }
+    }
+  };
+
+  const handleSelectFromStatic = () => {
+    setCoverSourceModalVisible(false);
     navigation.navigate('SelectCoverImage', {
       selectedIndex: coverIndex,
       returnToScreen: 'AiMade',
@@ -299,10 +445,11 @@ const AiMadeScreen = () => {
     });
   };
 
-  const coverSource: ImageSourcePropType | null =
-    COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
-      ? COVER_IMAGE_SOURCES[coverIndex]
-      : null;
+  const coverSource: ImageSourcePropType | null = galleryImageUri
+    ? { uri: galleryImageUri }
+    : COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
+    ? COVER_IMAGE_SOURCES[coverIndex]
+    : null;
 
   return (
     <View
@@ -375,8 +522,13 @@ const AiMadeScreen = () => {
                     style={styles.changeCoverBtn}
                     onPress={openSelectCover}
                     activeOpacity={0.8}
+                    disabled={uploadingImage}
                   >
-                    <ImageIcon width={43} height={43} />
+                    {uploadingImage ? (
+                      <ActivityIndicator size="small" color={lightColors.secondaryBackground} />
+                    ) : (
+                      <ImageIcon width={43} height={43} />
+                    )}
                   </TouchableOpacity>
                 </View>
 
@@ -394,12 +546,16 @@ const AiMadeScreen = () => {
                       <EditIcon width={18} height={18}/>
                     </TouchableOpacity>
                   </View>
-                  <ScrollView
+                  {/* <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.metadataRowPills}
-                    style={styles.metadataRowPillsScroll}
-                  >
+                    style={styles.metadataRowPillsScroll} */}
+                  {/* > */}
+
+
+<View style={[styles.metadataRowPills, styles.metadataRowPillsScroll]}> 
+
                     <TouchableOpacity
                       style={styles.metadataPillCategory}
                       onPress={() => setSetUpGoalsModalVisible(true)}
@@ -434,7 +590,8 @@ const AiMadeScreen = () => {
                         {reminderDisplay || reminderTimeOnly || t('setReminder')}
                       </Text>
                     </TouchableOpacity>
-                  </ScrollView>
+                    </View>
+                  {/* </ScrollView> */}
                 </View>
 
                 <SetUpGoalsModal
@@ -456,11 +613,47 @@ const AiMadeScreen = () => {
                   t={t}
                 />
 
+                <CoverImageSourceModal
+                  visible={coverSourceModalVisible}
+                  onSelectGallery={handleSelectFromGallery}
+                  onSelectStatic={handleSelectFromStatic}
+                  onClose={() => setCoverSourceModalVisible(false)}
+                />
+
+                <InfoModal
+                  visible={infoModalVisible}
+                  title={infoModalType === 'habit' ? t('habitInfoTitle') : t('taskInfoTitle')}
+                  tips={
+                    infoModalType === 'habit'
+                      ? [
+                          { i18nKey: 'habitInfoTip1' },
+                          { i18nKey: 'habitInfoTip2' },
+                          { i18nKey: 'habitInfoTip3' },
+                          { i18nKey: 'habitInfoTip4' },
+                        ]
+                      : [
+                          { i18nKey: 'taskInfoTip1' },
+                          { i18nKey: 'taskInfoTip2' },
+                          { i18nKey: 'taskInfoTip3' },
+                          { i18nKey: 'taskInfoTip4' },
+                        ]
+                  }
+                  onClose={() => setInfoModalVisible(false)}
+                />
+
                 {/* Habits section – unchanged */}
                 <View style={styles.section}>
                   <View style={styles.sectionHeaderRow}>
                     <Text style={styles.sectionTitle}>{`${t("habit")} (${habitsList.length})`}</Text>
-                    <InfoIcon width={20} height={20} />
+                    <TouchableOpacity
+                      onPress={() => {
+                        setInfoModalType('habit');
+                        setInfoModalVisible(true);
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <InfoIcon width={20} height={20} />
+                    </TouchableOpacity>
                   </View>
                   {habitsList.map((item, index) => (
                     <TrackerCard
@@ -483,7 +676,15 @@ const AiMadeScreen = () => {
                 <View style={styles.section}>
                   <View style={styles.sectionHeaderRow}>
                     <Text style={styles.sectionTitle}>{`${t("task")} (${tasksList.length})`}</Text>
-                    <InfoIcon width={20} height={20} />
+                    <TouchableOpacity
+                      onPress={() => {
+                        setInfoModalType('task');
+                        setInfoModalVisible(true);
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <InfoIcon width={20} height={20} />
+                    </TouchableOpacity>
                   </View>
                   {tasksList.map((item, index) => (
                     <TrackerCard
@@ -922,16 +1123,13 @@ height : 300,
     justifyContent: 'center',
   },
   metadataRowPillsScroll: {
-    flexGrow: 0,
     marginHorizontal: -24,
   },
   metadataRowPills: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
     alignItems: 'center',
-    gap: 6,
-    // paddingHorizontal: 24,
-    paddingVertical: 4,
+    gap: 4,
+    paddingHorizontal: 10,
   },
   metadataPillCategory: {
     paddingVertical: 6,
@@ -947,12 +1145,12 @@ height : 300,
     alignItems: 'center',
     gap: 4,
     paddingVertical: 4,
-    paddingHorizontal: 0,
+    // paddingHorizontal: 0,
     flexShrink: 0,
   },
   metadataPillTextDark: {
     fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 12,
+    fontSize: 11,
     color: lightColors.subText,
   },
   dueDateTextWrap: {

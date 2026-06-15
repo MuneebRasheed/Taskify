@@ -138,23 +138,14 @@ router.post('/delete-user', async (req: Request, res: Response) => {
     const hasServiceRole = !!supabaseServiceRoleKey;
     log('Admin client created', { hasServiceRole });
 
-    log('Deleting profile', { userId: user.id });
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .delete()
-      .eq('id', user.id);
-    if (profileError) {
-      logError('Profile delete failed', profileError);
-      return send(res, { error: profileError.message ?? 'Failed to remove profile' }, 200);
-    }
-    log('Profile deleted');
-
     log('Calling auth.admin.deleteUser', { userId: user.id });
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       logError('auth.admin.deleteUser failed', deleteError);
       return send(res, { error: deleteError.message }, 200);
     }
+    // `profiles.id` references `auth.users(id)` with ON DELETE CASCADE,
+    // so deleting auth user removes profile and linked rows automatically.
     log('User deleted successfully');
     return send(res, { success: true }, 200);
   } catch (e) {

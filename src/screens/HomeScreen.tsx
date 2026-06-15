@@ -96,7 +96,12 @@ const HomeScreen = () => {
     return list.includes(selectedDate);
   };
 
-  const handleToggleItem = (itemId: string) => {
+  const handleToggleItem = (itemId: string, isPaused: boolean, itemTitle: string) => {
+    if (isPaused) {
+      // Show alert when trying to complete a paused item
+      alert(`This ${itemTitle} is currently paused. Please unpause it first to mark as complete.`);
+      return;
+    }
     toggleItemCompletion(itemId, selectedDate);
   };
 
@@ -142,6 +147,7 @@ const HomeScreen = () => {
 
         {/* Task Calendar – controlled selectedDate, circles fill by completion */}
         <TaskCalendar
+          key={`calendar-${goals.length}-${Object.keys(itemCompletions).length}`}
           selectedDate={selectedDate}
           onDateSelect={setSelectedDate}
           getCompletionForDate={getCompletionForDate}
@@ -209,7 +215,7 @@ const HomeScreen = () => {
                       key={item.id}
                       item={item}
                       completed={isItemCompleted(item.id)}
-                      onToggle={() => handleToggleItem(item.id)}
+                      onToggle={() => handleToggleItem(item.id, item.paused ?? false, item.type === 'habit' ? 'habit' : 'task')}
                     />
                   ))}
                 </View>
@@ -235,10 +241,11 @@ function GoalItemRow({
 }) {
   const isHabit = item.type === 'habit';
   const barColor = isHabit ? lightColors.habitIndicator : lightColors.taskIndicator;
+  const isPaused = item.paused ?? false;
 
   return (
     <TouchableOpacity
-      style={styles.itemCard}
+      style={[styles.itemCard, isPaused && styles.itemCardPaused]}
       onPress={onToggle}
       activeOpacity={0.7}
     >
@@ -259,17 +266,25 @@ function GoalItemRow({
           <Ionicons
             name="ellipse-outline"
             size={24}
-            color={lightColors.placeholderText}
+            color={isPaused ? lightColors.border : lightColors.placeholderText}
           />
         )}
       </TouchableOpacity>
       <View style={styles.itemBody}>
-        <Text
-          style={[styles.itemTitle, completed && styles.itemTitleChecked]}
-          numberOfLines={2}
-        >
-          {item.title}
-        </Text>
+        <View style={styles.itemTitleRow}>
+          <Text
+            style={[styles.itemTitle, completed && styles.itemTitleChecked, isPaused && styles.itemTitlePaused]}
+            numberOfLines={2}
+          >
+            {item.title}
+          </Text>
+          {isPaused && (
+            <View style={styles.pausedBadge}>
+              <Ionicons name="pause-circle" size={16} color={lightColors.subText} />
+              <Text style={styles.pausedBadgeText}>Paused</Text>
+            </View>
+          )}
+        </View>
         {item.reminderTime ? (
           <View style={styles.itemTimeRow}>
             <Ionicons
@@ -400,6 +415,9 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     minHeight: 70,
   },
+  itemCardPaused: {
+    opacity: 0.6,
+  },
   itemBar: {
     width: 3,
     height: 70,
@@ -415,13 +433,37 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  itemTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   itemTitle: {
     fontFamily: fontFamilies.urbanistSemiBold,
     fontSize: 18,
     color: lightColors.text,
+    flex: 1,
   },
   itemTitleChecked: {
     color: lightColors.placeholderText,
+  },
+  itemTitlePaused: {
+    color: lightColors.placeholderText,
+  },
+  pausedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: lightColors.inputBackground,
+  },
+  pausedBadgeText: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 11,
+    color: lightColors.subText,
   },
   itemTimeRow: {
     flexDirection: 'row',

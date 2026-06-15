@@ -88,7 +88,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
 
       {/* Right: title, tags, user count / due, optional add button */}
       <View style={styles.bodyWrap}>
-        <Text style={styles.goalCardTitle} numberOfLines={1}>
+        <Text style={styles.goalCardTitle}>
           {title}
         </Text>
         <View style={styles.tagsRow}>
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   },
   goalCardTitle: {
     fontFamily: fontFamilies.urbanistBold,
-    fontSize: 20,
+    fontSize: 18,
     color: lightColors.text,
     marginBottom: 8,
   },

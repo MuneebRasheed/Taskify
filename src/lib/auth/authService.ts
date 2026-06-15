@@ -12,48 +12,71 @@ export type AuthResult = {
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
 
-async function getExpoPushToken(): Promise<string | null> {
-  try {
-    const Notifications = await import('expo-notifications');
-
-    const currentPermissions = await Notifications.getPermissionsAsync();
-    let finalStatus = currentPermissions.status;
-    if (finalStatus !== 'granted') {
-      const requestedPermissions = await Notifications.requestPermissionsAsync();
-      finalStatus = requestedPermissions.status;
-    }
-
-    if (finalStatus !== 'granted') {
-      return null;
-    }
-
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId ?? undefined;
-    const tokenResponse = projectId
-      ? await Notifications.getExpoPushTokenAsync({ projectId })
-      : await Notifications.getExpoPushTokenAsync();
-
-    return tokenResponse.data ?? null;
-  } catch {
-    return null;
-  }
-}
-
 async function syncProfileOnAuth(user: User): Promise<void> {
-  const expoPushToken = await getExpoPushToken();
+  // Get device timezone as default
+  let deviceTimezone = 'UTC';
+  try {
+    const Localization = await import('expo-localization');
+    
+    // Try getLocales first
+    try {
+      const locales = Localization.getLocales();
+      if (locales && locales[0] && locales[0].timeZone) {
+        deviceTimezone = locales[0].timeZone;
+        console.log('[Auth] Timezone from getLocales:', deviceTimezone);
+      }
+    } catch (e) {
+      console.warn('[Auth] getLocales failed, trying getCalendars');
+    }
+    
+    // If still UTC, try getCalendars
+    if (deviceTimezone === 'UTC') {
+      try {
+        const calendars = Localization.getCalendars();
+        if (calendars && calendars[0] && calendars[0].timeZone) {
+          deviceTimezone = calendars[0].timeZone;
+          console.log('[Auth] Timezone from getCalendars:', deviceTimezone);
+        }
+      } catch (e) {
+        console.warn('[Auth] getCalendars failed');
+      }
+    }
+    
+    // Last resort: Intl API
+    if (deviceTimezone === 'UTC') {
+      try {
+        deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        console.log('[Auth] Timezone from Intl:', deviceTimezone);
+      } catch (e) {
+        console.warn('[Auth] Intl API failed, using UTC');
+      }
+    }
+  } catch (error) {
+    console.warn('[Auth] Could not detect device timezone, using UTC');
+  }
+
   const profilePayload: {
     id: string;
     email?: string;
-    expo_push_token?: string;
+    timezone?: string;
     updated_at: string;
   } = {
     id: user.id,
     email: user.email ?? undefined,
+    timezone: deviceTimezone,
     updated_at: new Date().toISOString(),
   };
 
-  if (expoPushToken) {
-    profilePayload.expo_push_token = expoPushToken;
+  // First check if profile exists
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id, timezone')
+    .eq('id', user.id)
+    .single();
+
+  // If profile exists and already has a timezone, don't overwrite it
+  if (existingProfile?.timezone) {
+    delete profilePayload.timezone;
   }
 
   await supabase.from('profiles').upsert(profilePayload, { onConflict: 'id' });
@@ -300,4 +323,25 @@ export async function getSession(): Promise<{ session: Session | null; error: Er
 export async function getUser(): Promise<{ user: User | null; error: Error | null }> {
   const { data, error } = await supabase.auth.getUser();
   return { user: data.user ?? null, error: error ?? null };
+}
+
+export async function changePassword(
+  oldPassword: string,
+  newPassword: string
+): Promise<{ error: Error | null }> {
+  const { user, error: userError } = await getUser();
+  if (userError || !user?.email) {
+    return { error: userError ?? new Error('Unable to find current user.') };
+  }
+
+  const { error: reAuthError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: oldPassword,
+  });
+  if (reAuthError) {
+    return { error: reAuthError };
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+  return { error: updateError ?? null };
 }

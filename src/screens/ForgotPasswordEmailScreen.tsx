@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   form: {
     marginTop: 28,
-    gap: 410,
+    // gap: 410,
   },
   primaryButton: {
     marginTop: 16,
@@ -192,8 +192,8 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanist,
     fontSize: 14,
     color: '#dc3545',
-    marginTop: -8,
-    marginBottom: 4,
+    // marginTop: -8,
+    // marginBottom: 4,
   },
   buttonContainer: {
     borderTopColor: lightColors.border,

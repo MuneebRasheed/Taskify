@@ -6,6 +6,10 @@ import cors from 'cors';
 import authRoutes from './routes/auth';
 import goalsRoutes from './routes/goals';
 import aiRoutes from './routes/ai';
+import profileRoutes from './routes/profile';
+
+// Start notification cron job
+import './jobs/notificationCron';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -25,6 +29,7 @@ app.use(express.json());
 app.use('/auth', authRoutes);
 app.use('/goals', goalsRoutes);
 app.use('/ai', aiRoutes);
+app.use('/profile', profileRoutes);
 
 /** Public health checks — no auth; safe for load balancers / uptime monitors */
 const publicHealthHandler: express.RequestHandler = (_req, res) => {

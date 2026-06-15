@@ -33,16 +33,16 @@ export const useOfferingsStore = create<OfferingsState>()((set) => ({
     set({ isLoading: true, error: null });
     try {
       const offerings = await getOfferings();
-      const monthlyPlusOffering = offerings?.all?.monthly_plus;
-      const yearlyProOffering = offerings?.all?.yearly_pro;
+      const monthlyOffering = offerings?.all?.monthly;
+      const yearlyOffering = offerings?.all?.yearly;
       const selectedPackages = [
-        ...(monthlyPlusOffering?.availablePackages ?? []),
-        ...(yearlyProOffering?.availablePackages ?? []),
+        ...(monthlyOffering?.availablePackages ?? []),
+        ...(yearlyOffering?.availablePackages ?? []),
       ];
 
-      console.log('[RevenueCat] selected offerings identifiers:', ['monthly_plus', 'yearly_pro']);
-      console.log('[RevenueCat] monthly_plus found:', !!monthlyPlusOffering);
-      console.log('[RevenueCat] yearly_pro found:', !!yearlyProOffering);
+      console.log('[RevenueCat] selected offerings identifiers:', JSON.stringify(offerings));
+      console.log('[RevenueCat] monthly found:', !!monthlyOffering);
+      console.log('[RevenueCat] yearly found:', !!yearlyOffering);
       console.log(
         '[RevenueCat] selected offering packages:',
         selectedPackages.map((pkg) => ({

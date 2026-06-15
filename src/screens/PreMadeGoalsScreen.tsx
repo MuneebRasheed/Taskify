@@ -16,7 +16,7 @@ import Header from '../components/Header';
 import GoalCard from '../components/GoalCard';
 import { GOAL_CATEGORIES } from '../components/CategoryModal';
 import type { GoalCategory } from '../components/CategoryModal';
-import type { PreMadeGoalItem } from '../data/preMadeGoals';
+import type { PreMadeGoalItem } from '../lib/api/preMadeGoalsApi';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import Textt from '../components/Textt';

@@ -9,6 +9,8 @@ export type AccountSettingsItem = {
   /** Custom icon component */
   icon?: React.ReactNode;
   label: string;
+  /** Optional subtitle below the label */
+  subtitle?: string;
   onPress?: () => void;
   /** Use for Logout etc. */
   accent?: boolean;
@@ -28,6 +30,7 @@ const AccountSettingsCard: React.FC<AccountSettingsCardProps> = ({ items }) => {
             iconName={item.iconName}
             icon={item.icon}
             label={item.label}
+            subtitle={item.subtitle}
             onPress={item.onPress}
             accent={item.accent}
           />

@@ -1,4 +1,4 @@
-import { StyleSheet, View, Image } from 'react-native';
+import { StyleSheet, View, Image, ActivityIndicator } from 'react-native';
 import React, { useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { lightColors } from '../../utils/colors';
@@ -28,8 +28,12 @@ const SplashScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: lightColors.background }]}>
-      <Image source={require('../assets/images/MainLogo.png')} style={{ width: 304, height: 386 }} />
-    
+      <Image source={require('../assets/images/MainLogo.png')} style={styles.logo} />
+      <ActivityIndicator 
+        size="large" 
+        color={lightColors.accent} 
+        style={styles.spinner}
+      />
     </View>
   );
 };
@@ -41,5 +45,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  logo: {
+    width: 304,
+    height: 386,
+  },
+  spinner: {
+    marginTop: 24,
   },
 });

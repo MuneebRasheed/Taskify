@@ -8,6 +8,8 @@ import {
   ScrollView,
   Image,
   ImageSourcePropType,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -32,6 +34,10 @@ import BotttomArrowIcon from '../assets/svgs/BotttomArrowIcon';
 import type { TrackerCardItem } from '../components/TrackerCard';
 import { useGoals } from '../context/GoalsContext';
 import type { GoalItem } from '../context/GoalsContext';
+import * as ImagePicker from 'expo-image-picker';
+import CoverImageSourceModal from '../components/CoverImageSourceModal';
+import { uploadCoverImage } from '../lib/api/uploadImage';
+import { useAuth } from '../lib/auth/AuthProvider';
 
 
 
@@ -48,7 +54,8 @@ function formatDate(d: Date): string {
 }
 
 function formatTime(hours: number, minutes: number, am: boolean): string {
-  const h = am ? (hours === 12 ? 12 : hours) : hours === 12 ? 0 : hours + 12;
+  // Keep hours in 12-hour format (1-12), don't convert to 24-hour
+  const h = hours === 0 ? 12 : hours;
   return `${h.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
 }
 
@@ -87,14 +94,18 @@ const GoalPlannerScreen = () => {
   );
   const [habits] = useState<TrackerCardItem[]>(initialHabits);
   const [tasks] = useState<TrackerCardItem[]>(initialTasks);
-  const [note] = useState(initialNote);
+  const [note, setNote] = useState(initialNote);
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
   const [reminderDateModalVisible, setReminderDateModalVisible] = useState(false);
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
+  const [coverSourceModalVisible, setCoverSourceModalVisible] = useState(false);
+  const [galleryImageUri, setGalleryImageUri] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const goalTitleInputRef = useRef<TextInput>(null);
   const { t } = useTranslation();
+  const { session } = useAuth();
 
   useEffect(() => {
     if (goalTitle) setGoalTitleText(goalTitle);
@@ -107,14 +118,42 @@ const GoalPlannerScreen = () => {
     }
   }, [route.params?.selectedCoverIndex]);
 
-  const coverSource: ImageSourcePropType | null =
-    COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
-      ? COVER_IMAGE_SOURCES[coverIndex]
-      : null;
+  const coverSource: ImageSourcePropType | null = galleryImageUri
+    ? { uri: galleryImageUri }
+    : COVER_IMAGE_SOURCES.length > 0 && coverIndex < COVER_IMAGE_SOURCES.length
+    ? COVER_IMAGE_SOURCES[coverIndex]
+    : null;
 
-
-      
   const openSelectCover = () => {
+    setCoverSourceModalVisible(true);
+  };
+
+  const handleSelectFromGallery = async () => {
+    setCoverSourceModalVisible(false);
+    
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Permission to access gallery is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const imageUri = result.assets[0].uri;
+      setGalleryImageUri(imageUri);
+      console.log('Selected image URI:', imageUri);
+    }
+  };
+
+  const handleSelectFromStatic = () => {
+    setCoverSourceModalVisible(false);
     navigation.navigate('SelectCoverImage', {
       goalTitle: goalTitleText,
       fromSelfMade,
@@ -151,26 +190,58 @@ const GoalPlannerScreen = () => {
       ? `${formatDate(reminderDate)} - ${formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)}`
       : '';
 
-  const handleSaveGoal = () => {
+  const handleSaveGoal = async () => {
     if (!dueDate) return;
+    
+    let coverUrl: string | null = null;
+    
+    // Upload gallery image if selected
+    if (galleryImageUri && session?.user?.id) {
+      setUploadingImage(true);
+      const { url, error } = await uploadCoverImage(galleryImageUri, session.user.id);
+      setUploadingImage(false);
+      
+      if (error) {
+        Alert.alert('Upload Failed', 'Failed to upload cover image. Please try again.');
+        console.error('Upload error:', error);
+        return;
+      }
+      
+      coverUrl = url ?? null;
+      console.log('Uploaded cover URL:', coverUrl);
+    }
+    
+    console.log('About to call addGoal with coverUrl:', coverUrl, 'coverIndex:', coverIndex);
+    
     const items: GoalItem[] = [
       ...habits.map((habit, index) => ({
         id: `planner-h-${index}`,
         type: 'habit' as const,
         title: habit.title,
         reminderTime: habit.reminderTime ?? undefined,
+        note: habit.note ?? undefined,
+        selectedDays: habit.selectedDays ?? [],
       })),
       ...tasks.map((task, index) => ({
         id: `planner-t-${index}`,
         type: 'task' as const,
         title: task.title,
         reminderTime: task.reminderTime ?? undefined,
+        note: task.note ?? undefined,
+        dueDate: task.dueDate ?? undefined,
       })),
     ];
 
     addGoal({
       title: goalTitleText.trim() || t('goalsTitle'),
+      category: category ?? null,
+      reminderDate: reminderDate != null ? new Date(reminderDate.getTime()) : null,
+      reminderTime:
+        reminderTime != null
+          ? formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)
+          : null,
       coverIndex,
+      coverUrl,
       source: fromSelfMade ? 'selfMade' : 'aiMade',
       habitsTotal: habits.length,
       habitsDone: 0,
@@ -178,6 +249,7 @@ const GoalPlannerScreen = () => {
       tasksDone: 0,
       dueDate: new Date(dueDate.getTime()),
       achieved: false,
+      note: note.trim() || null,
       items,
     });
     navigation.navigate('MainTabs', { screen: 'My Goals' });
@@ -344,19 +416,40 @@ const GoalPlannerScreen = () => {
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Part 6: Note */}
+        <View style={styles.section}>
+          <Textt i18nKey="note" style={styles.label} />
+          <TextInput
+            style={styles.noteInput}
+            value={note}
+            onChangeText={setNote}
+            placeholder={t('addYourNote')}
+            placeholderTextColor={lightColors.placeholderText}
+            multiline
+            textAlignVertical="top"
+          />
+        </View>
       </ScrollView>
 
       {/* Part 6: Save Goals button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          title={t("saveGoals")}
+          title={uploadingImage ? t("uploading") : t("saveGoals")}
           variant="primary"
           onPress={handleSaveGoal}
-          disabled={!dueDate}
+          disabled={!dueDate || uploadingImage}
           style={styles.saveBtn}
-          backgroundColor={dueDate ? lightColors.accent : lightColors.disabledButton}
+          backgroundColor={dueDate && !uploadingImage ? lightColors.accent : lightColors.disabledButton}
           textColor={lightColors.secondaryBackground}
         />
+        {uploadingImage && (
+          <ActivityIndicator 
+            size="small" 
+            color={lightColors.accent} 
+            style={{ position: 'absolute', right: 40, top: 36 }}
+          />
+        )}
       </View>
 
       <CategoryModal
@@ -405,6 +498,13 @@ const GoalPlannerScreen = () => {
         }
         onCancel={() => setReminderTimeModalVisible(false)}
         onConfirm={handleReminderTimeConfirm}
+      />
+
+      <CoverImageSourceModal
+        visible={coverSourceModalVisible}
+        onSelectGallery={handleSelectFromGallery}
+        onSelectStatic={handleSelectFromStatic}
+        onClose={() => setCoverSourceModalVisible(false)}
       />
     </View>
     </View>
@@ -527,6 +627,17 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     padding: 4,
+  },
+  noteInput: {
+    backgroundColor: lightColors.inputBackground,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 16,
+    color: lightColors.text,
+    minHeight: 120,
+    textAlignVertical: 'top',
   },
   footer: {
     position: 'absolute',

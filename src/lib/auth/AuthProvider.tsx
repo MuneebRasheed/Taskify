@@ -8,6 +8,7 @@ import {
   syncRevenueCatUserIdentity,
 } from '../purchasesService';
 import { useOfferingsStore } from '../../../store/offeringsStore';
+import { registerPushNotifications, unregisterPushNotifications } from '../notifications/pushNotificationService';
 
 type AuthContextValue = {
   user: User | null;
@@ -67,18 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!nextSession) {
-        if (cancelled) return;
-        setSession(null);
-        setUser(null);
-        return;
-      }
-
-      // Same validation as on startup: if the user was deleted, kill the local session.
-      const { user: freshUser, error: userError } = await authService.getUser();
-      if (userError || !freshUser) {
-        await supabase.auth.signOut();
         if (cancelled) return;
         setSession(null);
         setUser(null);
@@ -87,13 +78,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (cancelled) return;
       setSession(nextSession);
-      setUser(freshUser);
+
+      // Avoid awaiting Supabase calls in onAuthStateChange callback.
+      // Supabase can deadlock if auth methods are called directly inside this callback.
+      setTimeout(() => {
+        if (!cancelled) {
+          void validateCurrentSession();
+        }
+      }, 0);
     });
     return () => {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [validateCurrentSession]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
@@ -119,15 +117,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void syncIdentity();
   }, [setCustomerInfo, user?.email, user?.id]);
 
+  // Register push notifications when user is authenticated
+  useEffect(() => {
+    const registerPushToken = async () => {
+      if (!user?.id) {
+        return;
+      }
+      // Register push notifications in the background
+      // This will request permissions and save the token to the database
+      await registerPushNotifications(user.id);
+    };
+    void registerPushToken();
+  }, [user?.id]);
+
   const signIn = useCallback(authService.signIn, []);
   const signInWithGoogle = useCallback(authService.signInWithGoogle, []);
   const signInWithApple = useCallback(authService.signInWithApple, []);
   const signUp = useCallback(authService.signUp, []);
   const signOut = useCallback(async () => {
+    // Unregister push notifications before signing out
+    if (user?.id) {
+      await unregisterPushNotifications(user.id);
+    }
     await logOutRevenueCat();
     setCustomerInfo(null);
     return authService.signOut();
-  }, [setCustomerInfo]);
+  }, [setCustomerInfo, user?.id]);
 
   const value: AuthContextValue = {
     user,

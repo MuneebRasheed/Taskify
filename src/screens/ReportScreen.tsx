@@ -282,19 +282,19 @@ const ReportScreen = () => {
         label: labels[index],
         frontColor: isActive ? color : `${color}55`,
         barBorderRadius: 10,
-        topLabelComponent: isActive
-          ? () => (
-              <View style={styles.tooltipWrapper}>
-                <View style={[styles.tooltip, { borderColor: color }]}>
-                  <Text style={styles.tooltipText}>
-                    {value}
-                    {key === 'completion' ? '%' : ''}
-                  </Text>
-                </View>
-                <View style={[styles.tooltipArrow, { borderTopColor: lightColors.secondaryBackground }]} />
-              </View>
-            )
-          : undefined,
+        // topLabelComponent: isActive
+        //   ? () => (
+        //       <View style={styles.tooltipWrapper}>
+        //         <View style={[styles.tooltip, { borderColor: color }]}>
+        //           <Text style={styles.tooltipText}>
+        //             {value}
+        //             {/* {key === 'completion' ? '%' : ''} */}
+        //           </Text>
+        //         </View>
+        //         <View style={[styles.tooltipArrow, { borderTopColor: lightColors.secondaryBackground }]} />
+        //       </View>
+        //     )
+        //   : undefined,
       };
     });
 
@@ -455,7 +455,7 @@ const ReportScreen = () => {
                 width={chartContentWidth}
                 maxValue={maxValue}
                 noOfSections={noOfSections}
-                yAxisLabelSuffix={chartKey === 'completion' ? '%' : ''}
+                // yAxisLabelSuffix={chartKey === 'completion' ? '%' : ''}
                 hideRules
                 roundedTop
                 isAnimated

@@ -32,7 +32,8 @@ function formatDate(d: Date): string {
 }
 
 function formatTime(hours: number, minutes: number, am: boolean): string {
-  const h = am ? (hours === 12 ? 12 : hours) : hours === 12 ? 0 : hours + 12;
+  // Keep hours in 12-hour format (1-12), don't convert to 24-hour
+  const h = hours === 0 ? 12 : hours;
   return `${h.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
 }
 

@@ -231,7 +231,11 @@ const HabitDetailScreen = () => {
           </ScrollView>
         </TouchableWithoutFeedback>
 
-        <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
+       
+      </KeyboardAvoidingView>
+
+
+ <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
           <TouchableOpacity
             style={styles.formHabitBtn}
             onPress={handleFormHabit}
@@ -248,7 +252,8 @@ const HabitDetailScreen = () => {
             textColor={lightColors.secondaryBackground}
           />
         </View>
-      </KeyboardAvoidingView>
+
+
 
       <TimePickerModal
         visible={reminderModalVisible}

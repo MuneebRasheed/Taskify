@@ -6,16 +6,24 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn src/index.ts"
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "backfill-notifications": "ts-node src/scripts/backfillNotifications.ts",
+    "verify-timezone-fix": "ts-node src/scripts/verifyTimezoneFix.ts",
+    "check-notifications": "ts-node src/scripts/checkNotifications.ts",
+    "test-push": "ts-node src/scripts/testPushNotification.ts"
   },
   "dependencies": {
-    "groq-sdk": "^0.7.0",
     "@supabase/supabase-js": "^2.98.0",
     "cors": "^2.8.5",
+    "date-fns": "^4.4.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.5",
+    "expo-server-sdk": "^6.1.0",
     "express": "^4.21.0",
     "express-rate-limit": "^8.3.0",
-    "nodemailer": "^6.9.16"
+    "node-cron": "^4.2.1",
+    "nodemailer": "^6.9.16",
+    "openai": "^6.5.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

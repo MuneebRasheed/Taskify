@@ -49,6 +49,7 @@ interface CalendarModalProps {
   visible: boolean;
   title: string;
   selectedDate: Date | null;
+  maxDate?: Date; // Optional max date - dates after this will be disabled
   onSelect: (date: Date) => void;
   onCancel: () => void;
   onConfirm: () => void;
@@ -57,6 +58,7 @@ interface CalendarModalProps {
 export interface CalendarContentProps {
   title: string;
   selectedDate: Date | null;
+  maxDate?: Date;
   onSelect: (date: Date) => void;
   onCancel: () => void;
   onConfirm: () => void;
@@ -66,6 +68,7 @@ export interface CalendarContentProps {
 export const CalendarContent: React.FC<CalendarContentProps> = ({
   title,
   selectedDate,
+  maxDate,
   onSelect,
   onCancel,
   onConfirm,
@@ -88,6 +91,16 @@ export const CalendarContent: React.FC<CalendarContentProps> = ({
   };
 
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
+  
+  // Helper to check if a date is after maxDate
+  const isDateDisabled = (cellYear: number, cellMonth: number, cellDay: number): boolean => {
+    if (!maxDate) return false;
+    const cellDate = new Date(cellYear, cellMonth, cellDay);
+    cellDate.setHours(0, 0, 0, 0);
+    const max = new Date(maxDate);
+    max.setHours(0, 0, 0, 0);
+    return cellDate.getTime() > max.getTime();
+  };
 
   return (
     <>
@@ -112,6 +125,10 @@ export const CalendarContent: React.FC<CalendarContentProps> = ({
         <View style={styles.grid}>
           {grid.map((row, ri) =>
             row.map((cell, ci) => {
+              const cellYear = cell.isCurrentMonth ? year : ri === 0 ? (month === 0 ? year - 1 : year) : (month === 11 ? year + 1 : year);
+              const cellMonth = cell.isCurrentMonth ? month : ri === 0 ? (month === 0 ? 11 : month - 1) : (month === 11 ? 0 : month + 1);
+              const disabled = isDateDisabled(cellYear, cellMonth, cell.day);
+              
               const sel =
                 selectedDate &&
                 cell.isCurrentMonth &&
@@ -122,6 +139,7 @@ export const CalendarContent: React.FC<CalendarContentProps> = ({
                 <TouchableOpacity
                   key={`${ri}-${ci}`}
                   style={styles.cell}
+                  disabled={disabled}
                   onPress={() => {
                     if (cell.isCurrentMonth) {
                       onSelect(new Date(year, month, cell.day));
@@ -134,12 +152,13 @@ export const CalendarContent: React.FC<CalendarContentProps> = ({
                     }
                   }}
                 >
-                  <View style={[styles.cellInner, sel && styles.cellSelected]}>
+                  <View style={[styles.cellInner, sel && styles.cellSelected, disabled && styles.cellDisabled]}>
                     <Text
                       style={[
                         styles.cellText,
                         !cell.isCurrentMonth && styles.cellTextMuted,
                         sel && styles.cellTextSelected,
+                        disabled && styles.cellTextDisabled,
                       ]}
                     >
                       {cell.day}
@@ -178,6 +197,7 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
   visible,
   title,
   selectedDate,
+  maxDate,
   onSelect,
   onCancel,
   onConfirm,
@@ -193,6 +213,7 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
           <CalendarContent
             title={title}
             selectedDate={selectedDate}
+            maxDate={maxDate}
             onSelect={onSelect}
             onCancel={onCancel}
             onConfirm={onConfirm}
@@ -302,6 +323,13 @@ const styles = StyleSheet.create({
   },
   cellTextSelected: {
     color: lightColors.secondaryBackground,
+  },
+  cellDisabled: {
+    opacity: 0.3,
+  },
+  cellTextDisabled: {
+    color: lightColors.placeholderText,
+    opacity: 0.3,
   },
   buttons: {
     borderTopWidth: 1,

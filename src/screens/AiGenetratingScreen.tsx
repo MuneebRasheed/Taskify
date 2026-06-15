@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -22,10 +20,42 @@ import LoadingModal from '../components/LoadingModal';
 import Header from '../components/Header';
 import Starts from '../assets/svgs/starts';
 import BackArrowIcon from '../assets/svgs/BackArrowIcon';
-import { t, useTranslation } from '../i18n';
+import { useTranslation } from '../i18n';
 import { useAuth } from '../lib/auth/AuthProvider';
 import type { TrackerCardItem } from '../components/TrackerCard';
 import { generateGoalPlan } from '../lib/api/aiGoalPlanApi';
+
+const INVALID_GOAL_INPUT_MESSAGE =
+  'Please write a proper goal you want to make and achieve. Include what you want to accomplish.';
+
+const isMeaningfulGoalPrompt = (input: string): boolean => {
+  const trimmed = input.trim();
+  if (trimmed.length < 10 || trimmed.length > 300) return false;
+  if (!/[a-zA-Z]/.test(trimmed)) return false;
+  if (trimmed.split(/\s+/).filter(Boolean).length < 3) return false;
+
+  const normalized = trimmed.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  const vaguePrompts = new Set([
+    'goal',
+    'my goal',
+    'something',
+    'anything',
+    'help me',
+    "i don't know",
+    'idk',
+    'test',
+    'testing',
+  ]);
+
+  return !vaguePrompts.has(normalized);
+};
+
+const parseIsoDateStamp = (value?: string): number | null => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.getTime();
+};
 
 const AiGenetratingScreen = () => {
   const { t } = useTranslation();
@@ -53,6 +83,10 @@ const AiGenetratingScreen = () => {
     Keyboard.dismiss();
     const trimmed = goal.trim();
     if (!trimmed) return;
+    if (!isMeaningfulGoalPrompt(trimmed)) {
+      Alert.alert(t('error') ?? 'Error', INVALID_GOAL_INPUT_MESSAGE);
+      return;
+    }
 
     const accessToken = session?.access_token;
     if (!accessToken) {
@@ -72,9 +106,14 @@ const AiGenetratingScreen = () => {
       );
 
       if (error || !data) {
+        const errorMessage =
+          error &&
+          /proper goal you want to make and achieve/i.test(error)
+            ? INVALID_GOAL_INPUT_MESSAGE
+            : error;
         Alert.alert(
           t('somethingWentWrong') ?? 'Something went wrong',
-          error ??
+          errorMessage ??
             (t('failedToGeneratePlan') ??
               'Failed to generate a plan. Please try again.')
         );
@@ -121,6 +160,9 @@ const AiGenetratingScreen = () => {
 
       const displayTitle =
         (data.goalTitle && data.goalTitle.trim()) || trimmed;
+      const suggestedGoalDueDate = parseIsoDateStamp(
+        data.suggestedGoalDueDate
+      );
 
       navigation.navigate('AiMade', {
         prompt: displayTitle,
@@ -128,6 +170,7 @@ const AiGenetratingScreen = () => {
         initialHabits: habits,
         initialTasks: tasks,
         initialNote: data.note,
+        initialDueDate: suggestedGoalDueDate,
       });
     } catch (err) {
       console.error('[AiGenetratingScreen] generate error', err);
@@ -143,22 +186,25 @@ const AiGenetratingScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: lightColors.secondaryBackground }]}>
+      <Header
+        leftIcon={<BackArrowIcon width={28} height={28} />}
+        onLeftPress={() => navigation.goBack()}
+        title={t('aiMadeGoals')}
+        rightIcon={<View />}
+        style={styles.header}
+      />
+      
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ScrollView>
-          <View style={styles.content}>
-            <Header
-              leftIcon={<BackArrowIcon width={28} height={28} />}
-              onLeftPress={() => navigation.goBack()}
-              title={t('aiMadeGoals')}
-              rightIcon={<View />}
-              style={styles.header}
-            />
-
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.main}>
               <Starts width={80} height={80} fill={goal.trim() ? lightColors.background : lightColors.placeholderText} />
               <TextInput
@@ -170,35 +216,37 @@ const AiGenetratingScreen = () => {
                 multiline
                 maxLength={500}
                 textAlignVertical="top"
+                autoFocus
               />
             </View>
-
-            
-          </View>
           </ScrollView>
         </TouchableWithoutFeedback>
 
-        {!keyboardVisible && (
-          <View style={styles.footer}>
-            <Button
-              title={t('generate')}
-              variant="primary"
-              onPress={handleGenerate}
-              textColor={lightColors.secondaryBackground}
-              borderRadius={24}
-              disabled={!goal.trim()}
-              style={StyleSheet.flatten([
-                styles.generateBtn,
-                {
-                  backgroundColor: goal.trim()
-                    ? lightColors.accent
-                    : lightColors.disabledButton,
-                },
-              ])}
-            />
-          </View>
-        )}
+        
       </KeyboardAvoidingView>
+
+
+
+
+<View style={styles.footer}>
+          <Button
+            title={t('generate')}
+            variant="primary"
+            onPress={handleGenerate}
+            textColor={lightColors.secondaryBackground}
+            borderRadius={24}
+            disabled={!goal.trim()}
+            style={StyleSheet.flatten([
+              styles.generateBtn,
+              {
+                backgroundColor: goal.trim()
+                  ? lightColors.accent
+                  : lightColors.disabledButton,
+              },
+            ])}
+          />
+        </View>
+
 
       <LoadingModal visible={generating} variant="generating" text="Generating plan..." />
     </View>
@@ -214,20 +262,20 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    // paddingHorizontal: 24,
-  },
   header: {
     
   },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   main: {
-    marginTop: 200,
     paddingHorizontal: 15,
-    flex: 1,
+    paddingVertical: 40,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 32,
+    minHeight: 300,
   },
   input: {
     width: '100%',
@@ -236,19 +284,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.urbanistMedium,
     fontSize: 24,
     color: lightColors.text,
+    minHeight: 100,
   },
   footer: {
     paddingVertical: 24,
     paddingBottom: 32,
     paddingHorizontal: 24,
-      borderTopWidth: 1,
-      borderColor: lightColors.border,
-      backgroundColor: lightColors.BtnBackground,
+    borderTopWidth: 1,
+    borderColor: lightColors.border,
+    backgroundColor: lightColors.BtnBackground,
   },
   generateBtn: {
-
     width: "100%",
     borderRadius: 1000,
-    
   },
 });

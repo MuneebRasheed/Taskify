@@ -16,7 +16,7 @@ import Header from '../components/Header';
 import GoalCard from '../components/GoalCard';
 import { GOAL_CATEGORIES } from '../components/CategoryModal';
 import type { GoalCategory } from '../components/CategoryModal';
-import type { PreMadeGoalItem } from '../data/preMadeGoals';
+import type { PreMadeGoalItem } from '../lib/api/preMadeGoalsApi';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import SplashLogo from '../assets/svgs/SpashLogo';
 import SearchIcon from '../assets/svgs/SearchIcon';
@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    // paddingHorizontal: 20,
+    paddingHorizontal: 20,
     paddingVertical: 6,
-    // paddingRight: 40,
+    paddingRight: 40,
   },
   categoryChip: {
     paddingHorizontal: 16,
@@ -188,11 +188,14 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   bannerImage: {
-    width: '90%',
+    width: '95%',
     height: 180,
     borderRadius: 8,
-    marginHorizontal: 16,
-    marginBottom: 24,
+    // justifyContent: 'center',
+    // alignItems: 'center',
+    marginLeft: 10,
+    paddingRight: 12,
+    marginBottom: 12,
     backgroundColor: lightColors.inputBackground,
   },
 });

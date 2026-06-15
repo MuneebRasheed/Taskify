@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Taskify",
-    "slug": "Taskify",
+    "name": "Project Blossom",
+    "slug": "project-blossom",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,13 +15,14 @@
     "ios": {
       "supportsTablet": true,
       "usesAppleSignIn": true,
-      "bundleIdentifier": "com.anonymous.Taskify",
+      "bundleIdentifier": "app.projectblossom.goalstracker",
       "appleTeamId": "X3957LKCS9",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow Taskify to access your camera to take photos.",
         "NSPhotoLibraryUsageDescription": "Allow Taskify to access your photo library to select images.",
         "NSPhotoLibraryAddUsageDescription": "Allow Taskify to save photos to your photo library."
       }
+    
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +30,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Taskify"
+      "package": "app.projectblossom.goalstracker"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -42,7 +43,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.342469583529-mbpe3fuuqnqjfffemu7sevphs4ek51hp"
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "extra": {
       "eas": {

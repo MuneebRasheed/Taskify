@@ -1,15 +1,15 @@
 import { randomUUID } from 'crypto';
 import { Router, Request, Response } from 'express';
-import Groq from 'groq-sdk';
+import OpenAI from 'openai';
 import { getAuthenticatedUser } from '../lib/auth';
 
 const router = Router();
 
-// Prefer EXPO_PUBLIC_GROQ_API_KEY so you can configure it once
-// in the root .env, but also fall back to GROQ_API_KEY in server/.env.
-const groqApiKey =
-  process.env.EXPO_PUBLIC_GROQ_API_KEY ||
-  process.env.GROQ_API_KEY ||
+// Prefer EXPO_PUBLIC_OPENAI_API_KEY so you can configure it once
+// in the root .env, but also fall back to OPENAI_API_KEY in server/.env.
+const openAiApiKey =
+  process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
+  process.env.OPENAI_API_KEY ||
   '';
 
 const send = (res: Response, body: object, status: number): void => {
@@ -28,6 +28,33 @@ const logError = (msg: string, err: unknown, meta?: object): void => {
       : { detail: String(err) };
   // eslint-disable-next-line no-console
   console.error('[AI Goal Plan]', msg, { ...meta, ...base });
+};
+
+const VAGUE_GOAL_PATTERNS = [
+  /^goal$/i,
+  /^my goal$/i,
+  /^something$/i,
+  /^anything$/i,
+  /^help me$/i,
+  /^i don't know$/i,
+  /^idk$/i,
+  /^test(?:ing)?$/i,
+];
+
+const isMeaningfulGoalPrompt = (input: string): boolean => {
+  const trimmed = input.trim();
+  if (trimmed.length < 10 || trimmed.length > 300) return false;
+  if (!/[a-zA-Z]/.test(trimmed)) return false;
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length < 3) return false;
+
+  const normalized = trimmed.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  if (VAGUE_GOAL_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return false;
+  }
+
+  return true;
 };
 
 export type AiGoalHabit = {
@@ -49,22 +76,77 @@ export type AiGoalTask = {
 export type AiGoalPlanResponse = {
   goalTitle: string;
   note: string;
+  /** Suggested goal due date in ISO format: YYYY-MM-DD. */
+  suggestedGoalDueDate?: string;
   habits: AiGoalHabit[];
   tasks: AiGoalTask[];
 };
 
-const SYSTEM_PROMPT = `You are a goal-planning assistant.
-Given a single user goal, you create a focused plan consisting of:
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const toIsoDateOnly = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const addDays = (d: Date, days: number): Date =>
+  new Date(d.getTime() + days * DAY_MS);
+
+const normalizeReminderTime = (
+  rawValue: string,
+  fallbackHour24: number
+): string => {
+  const v = rawValue.trim();
+  const match = v.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match) {
+    let hour = Number(match[1]);
+    const minute = Number(match[2]);
+    const ampm = match[3].toUpperCase();
+    if (
+      Number.isInteger(hour) &&
+      Number.isInteger(minute) &&
+      hour >= 1 &&
+      hour <= 12 &&
+      minute >= 0 &&
+      minute <= 59
+    ) {
+      return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${ampm}`;
+    }
+  }
+
+  const isPm = fallbackHour24 >= 12;
+  let hour = fallbackHour24 % 12;
+  if (hour === 0) hour = 12;
+  return `${String(hour).padStart(2, '0')}:00 ${isPm ? 'PM' : 'AM'}`;
+};
+
+const parseDateCandidate = (raw: string): Date | null => {
+  const v = raw.trim();
+  if (!v) return null;
+  const parsed = new Date(v);
+  if (!Number.isNaN(parsed.getTime())) {
+    parsed.setHours(0, 0, 0, 0);
+    return parsed;
+  }
+  return null;
+};
+
+const SYSTEM_PROMPT = `You are a high-quality goal-planning assistant.
+Given a single user goal, create a realistic, actionable plan consisting of:
 - One clear, motivating goal title
 - A short explanatory note (1–3 sentences) about the plan
+- One suggested goal due date
 - A list of recurring habits
-- A list of concrete one-time tasks
+- A detailed list of concrete one-time tasks
 
 Output ONLY valid JSON with no markdown, no code fences, and no extra text.
 Use this exact shape:
 {
   "goalTitle": "Short, specific goal title",
   "note": "1–3 sentences explaining the overall plan.",
+  "suggestedGoalDueDate": "2026-05-30",
   "habits": [
     {
       "title": "Habit title",
@@ -84,10 +166,16 @@ Use this exact shape:
 Rules:
 - "selectedDays" are weekday indices where 0 = Monday, 6 = Sunday.
 - Always provide "selectedDays" for habits; choose a realistic schedule that fits the goal.
-- "reminderTime" can be null or omitted if not needed. When present, use a readable 12‑hour time like "09:00 AM" or "18:30 PM".
-- "dueDate" is a short human‑readable date string or ISO "YYYY-MM-DD". Prefer short forms like "Today, Mar 11, 2026" or "20 Jan, 2025".
-- Only include a handful of high‑impact habits (3–7) and tasks (3–10), not an overwhelming list.
-- If the user's goal is too vague, still propose a reasonable, specific plan based on your best guess.
+- Every task must include BOTH "dueDate" and "reminderTime".
+- "dueDate" for every task must be in the future relative to today's date and use ISO format "YYYY-MM-DD".
+- "suggestedGoalDueDate" must be in the future and after all task due dates.
+- Use 12-hour reminder times with AM/PM. Example: "09:00 AM", "06:30 PM".
+- Return exactly 4-6 habits and exactly 8-12 tasks.
+- Tasks must be a true step-by-step breakdown (from beginner actions to milestone delivery).
+- Task titles must be specific and outcome-focused, not generic.
+- Make habits and tasks specific, measurable, and practical for real life.
+- Build progression from easy starter actions to stronger milestone actions.
+- Keep wording concise and motivational.
 `;
 
 router.post(
@@ -115,13 +203,13 @@ router.post(
 
       log('Auth OK', { requestId, userId: user.id, elapsedMs: Date.now() - wallStart });
 
-      if (!groqApiKey) {
-        log('Rejected: GROQ key not configured', { requestId });
+      if (!openAiApiKey) {
+        log('Rejected: OpenAI key not configured', { requestId });
         send(
           res,
           {
             error:
-              'AI goal generator is not configured. Add GROQ API key to .env (EXPO_PUBLIC_GROQ_API_KEY or GROQ_API_KEY).',
+              'AI goal generator is not configured. Add OpenAI API key to .env (EXPO_PUBLIC_OPENAI_API_KEY or OPENAI_API_KEY).',
           },
           503
         );
@@ -143,53 +231,77 @@ router.post(
         );
         return;
       }
+      if (!isMeaningfulGoalPrompt(prompt)) {
+        log('Rejected: goal prompt too vague/invalid', {
+          requestId,
+          promptLength: prompt.length,
+          promptPreview: prompt.slice(0, 80),
+        });
+        send(
+          res,
+          {
+            error:
+              'Please write a proper goal you want to make and achieve. Include what you want to accomplish.',
+          },
+          400
+        );
+        return;
+      }
 
-      log('Calling Groq', {
+      log('Calling OpenAI', {
         requestId,
-        model: 'llama-3.1-8b-instant',
+        model: 'gpt-4o-mini',
         promptLength: prompt.length,
         promptPreview:
           prompt.length > 100 ? `${prompt.slice(0, 100)}…` : prompt,
       });
 
-      const groq = new Groq({ apiKey: groqApiKey });
-      const groqStarted = Date.now();
+      const openai = new OpenAI({ apiKey: openAiApiKey });
+      const openAiStarted = Date.now();
       let completion: Awaited<
-        ReturnType<Groq['chat']['completions']['create']>
+        ReturnType<OpenAI['chat']['completions']['create']>
       >;
       try {
-        completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+        const today = new Date();
+        const todayIso = toIsoDateOnly(today);
+        completion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             {
               role: 'user',
-              content: `Create a goal plan for this user goal and output JSON only:\n\n${prompt}`,
+              content:
+                `Today's date is ${todayIso}.\n` +
+                `Create a goal plan for this user goal and output JSON only:\n\n${prompt}`,
             },
           ],
           max_tokens: 1024,
-          temperature: 0.3,
+          temperature: 0.4,
+          response_format: { type: 'json_object' },
         });
-      } catch (groqErr) {
-        logError('Groq API threw', groqErr, { requestId, groqMs: Date.now() - groqStarted });
+      } catch (openAiErr) {
+        logError('OpenAI API threw', openAiErr, {
+          requestId,
+          openAiMs: Date.now() - openAiStarted,
+        });
         send(
           res,
           {
             error:
-              groqErr instanceof Error
-                ? groqErr.message
-                : 'Groq request failed',
+              openAiErr instanceof Error
+                ? openAiErr.message
+                : 'OpenAI request failed',
           },
           502
         );
         return;
       }
 
-      const groqMs = Date.now() - groqStarted;
+      const openAiMs = Date.now() - openAiStarted;
       const choice0 = completion.choices[0];
-      log('Groq response', {
+      log('OpenAI response', {
         requestId,
-        groqMs,
+        openAiMs,
         totalElapsedMs: Date.now() - wallStart,
         usage: completion.usage ?? null,
         choiceCount: completion.choices?.length ?? 0,
@@ -266,20 +378,25 @@ router.post(
 
       const tasks: AiGoalTask[] = rawTasks
         .filter((t: unknown) => t && typeof t === 'object')
-        .map((t: any): AiGoalTask => {
+        .map((t: any, index: number): AiGoalTask => {
           const title = String(t.title ?? '').trim() || 'Task';
           const dueDateRaw =
             t.dueDate != null ? String(t.dueDate) : '';
-          const dueDate =
-            dueDateRaw.trim().length > 0
-              ? dueDateRaw.trim()
-              : null;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const fallbackDueDate = addDays(today, 3 + index * 3);
+          const parsedDueDate = parseDateCandidate(dueDateRaw);
+          const safeDueDate =
+            parsedDueDate && parsedDueDate.getTime() > today.getTime()
+              ? parsedDueDate
+              : fallbackDueDate;
+          const dueDate = toIsoDateOnly(safeDueDate);
           const reminderTimeRaw =
             t.reminderTime != null ? String(t.reminderTime) : '';
-          const reminderTime =
-            reminderTimeRaw.trim().length > 0
-              ? reminderTimeRaw.trim()
-              : null;
+          const reminderTime = normalizeReminderTime(
+            reminderTimeRaw,
+            index % 2 === 0 ? 9 : 18
+          );
 
           return {
             title,
@@ -292,16 +409,42 @@ router.post(
       const goalTitleRaw =
         root.goalTitle != null ? String(root.goalTitle) : '';
       const noteRaw = root.note != null ? String(root.note) : '';
+      const suggestedGoalDueDateRaw =
+        root.suggestedGoalDueDate != null
+          ? String(root.suggestedGoalDueDate)
+          : '';
 
       const goalTitle =
         goalTitleRaw.trim() || prompt || 'My Goal';
       const note =
         noteRaw.trim() ||
         'This plan contains suggested habits and tasks to help you make steady progress toward your goal.';
+      const suggestedGoalDueDateFromAi = parseDateCandidate(
+        suggestedGoalDueDateRaw
+      );
+      const fallbackGoalDueDate = (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (tasks.length > 0) {
+          const latestTaskDueMs = tasks.reduce((latest, t) => {
+            const taskDate = parseDateCandidate(String(t.dueDate ?? ''));
+            if (!taskDate) return latest;
+            return Math.max(latest, taskDate.getTime());
+          }, today.getTime());
+          return new Date(latestTaskDueMs + 7 * DAY_MS);
+        }
+        return addDays(today, 60);
+      })();
+      const suggestedGoalDueDate =
+        suggestedGoalDueDateFromAi &&
+        suggestedGoalDueDateFromAi.getTime() > Date.now()
+          ? suggestedGoalDueDateFromAi
+          : fallbackGoalDueDate;
 
       const payload: AiGoalPlanResponse = {
         goalTitle,
         note,
+        suggestedGoalDueDate: toIsoDateOnly(suggestedGoalDueDate),
         habits,
         tasks,
       };

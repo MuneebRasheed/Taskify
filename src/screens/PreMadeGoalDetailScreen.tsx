@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Alert,
   View,
@@ -8,9 +8,10 @@ import {
   Image,
   ScrollView,
   ImageSourcePropType,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { lightColors } from '../../utils/colors';
 import { fontFamilies } from '../theme/typography';
@@ -21,18 +22,24 @@ import TrackerCard, { type TrackerCardItem } from '../components/TrackerCard';
 import type { RootStackParamList } from '../navigations/RootNavigation';
 import ShareIcon from '../assets/svgs/ShareIcon';
 import { useGoals } from '../context/GoalsContext';
-import type { GoalItem } from '../context/GoalsContext';
+import type { GoalItem, ItemCompletions } from '../context/GoalsContext';
 import Textt from '../components/Textt';
 import { t } from '../i18n';
 import { COVER_IMAGE_SOURCES } from './SelectCoverImageScreen';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoIcon from '../assets/svgs/InfoIcon';
+import InfoModal from '../components/InfoModal';
 import SetUpGoalsModal from '../components/SetUpGoalsModal';
+import Toast from '../components/Toast';
 import type { GoalCategory } from '../components/CategoryModal';
 import CalendarIcon from '../assets/svgs/CalendarIcon';
 import TimeIcon from '../assets/svgs/TimeIcon';
 import EditIcon from '../assets/svgs/EditIcon';
 import { usePreMadeGoals } from '../hooks/usePreMadeGoals';
+import { useGoalStore } from '../../store/goalStore';
+import ImageIcon from '../assets/svgs/ImageIcon';
+import { uploadCoverImage } from '../lib/api/uploadImage';
+import { useAuth } from '../lib/auth/AuthProvider';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', {
@@ -42,9 +49,43 @@ function formatDate(d: Date): string {
   });
 }
 
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+
+/** Show task due date on cards without raw ISO / Z suffix (API often stores timestamptz as ISO string). */
+function formatTaskDueDateForCard(raw: string | null | undefined, fallback?: string | null): string | undefined {
+  if (raw != null && typeof raw === 'string' && raw.trim() !== '') {
+    const s = raw.trim();
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if (ymd) {
+      const y = Number(ymd[1]);
+      const m = Number(ymd[2]);
+      const d = Number(ymd[3]);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return `${MONTHS_SHORT[m - 1]} ${d}, ${y}`;
+      }
+    }
+    return s;
+  }
+  if (fallback != null && fallback.trim() !== '') return fallback;
+  return undefined;
+}
+
 function formatTime(hours: number, minutes: number, am: boolean): string {
-  const h = am ? (hours === 12 ? 12 : hours) : hours === 12 ? 0 : hours + 12;
+  // Keep hours in 12-hour format (1-12), don't convert to 24-hour
+  const h = hours === 0 ? 12 : hours;
   return `${h.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
+}
+
+function parseReminderTime(value?: string | null): { hours: number; minutes: number; am: boolean } | null {
+  if (!value) return null;
+  const m = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return null;
+  const hours = Number(m[1]);
+  const minutes = Number(m[2]);
+  const am = m[3].toUpperCase() === 'AM';
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) return null;
+  return { hours, minutes, am };
 }
 
 function daysUntilDue(d: Date): number {
@@ -66,7 +107,7 @@ const PreMadeGoalDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<PreMadeGoalDetailNavProp>();
   const route = useRoute<PreMadeGoalDetailRouteProp>();
-  const { goals, addGoal, markAchieved, removeGoal, itemCompletions } = useGoals();
+  const { goals, addGoal, markAchieved, removeGoal, restoreGoal, itemCompletions, updateGoalDetails } = useGoals();
   const { preMadeGoals } = usePreMadeGoals();
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -83,22 +124,82 @@ const PreMadeGoalDetailScreen = () => {
     [goals, myGoalId]
   );
 
+  // Toast state for undo
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastAction, setToastAction] = useState<'delete' | 'achieve' | null>(null);
+  const deletedGoalRef = useRef<{ goal: any; completions: ItemCompletions } | null>(null);
+  const previousAchievedStateRef = useRef<boolean | null>(null);
+
   const initialDueDate = useMemo(() => {
     if (mode === 'myGoal' && myGoal?.dueDate) return myGoal.dueDate instanceof Date ? myGoal.dueDate : new Date(myGoal.dueDate as unknown as number);
     if (mode === 'selfMade' && selfMadePayload?.dueDate != null) return new Date(selfMadePayload.dueDate);
     return null;
   }, [mode, myGoal?.dueDate, selfMadePayload?.dueDate]);
 
+  const initialCategory = useMemo<GoalCategory | null>(() => {
+    if (mode === 'preMade' && preMadeGoal) return preMadeGoal.category;
+    if (mode === 'myGoal') return (myGoal?.category as GoalCategory | null) ?? null;
+    if (mode === 'selfMade' && selfMadePayload?.category != null && String(selfMadePayload.category).trim() !== '') {
+      return selfMadePayload.category as GoalCategory;
+    }
+    return null;
+  }, [mode, preMadeGoal, myGoal?.category, selfMadePayload?.category]);
+
+  const initialReminderDate = useMemo<Date | null>(() => {
+    if (mode === 'myGoal' && myGoal?.reminderDate) {
+      return myGoal.reminderDate instanceof Date
+        ? myGoal.reminderDate
+        : new Date(myGoal.reminderDate as unknown as number);
+    }
+    if (mode === 'selfMade' && selfMadePayload?.reminderDate != null) {
+      return new Date(selfMadePayload.reminderDate);
+    }
+    return null;
+  }, [mode, myGoal?.reminderDate, selfMadePayload?.reminderDate]);
+
+  const initialReminderTime = useMemo(() => {
+    if (mode === 'myGoal') return parseReminderTime(myGoal?.reminderTime);
+    if (mode === 'selfMade' && selfMadePayload?.reminderTime != null) return selfMadePayload.reminderTime;
+    return null;
+  }, [mode, myGoal?.reminderTime, selfMadePayload?.reminderTime]);
+
   const [dueDate, setDueDate] = useState<Date | null>(() => initialDueDate);
-  const [reminderDate, setReminderDate] = useState<Date | null>(null);
-  const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(null);
+  const [categoryValue, setCategoryValue] = useState<GoalCategory | null>(initialCategory);
+  const [reminderDate, setReminderDate] = useState<Date | null>(initialReminderDate);
+  const [reminderTime, setReminderTime] = useState<{ hours: number; minutes: number; am: boolean } | null>(initialReminderTime);
   const [setUpGoalsModalVisible, setSetUpGoalsModalVisible] = useState(false);
+  const [draftCoverIndex, setDraftCoverIndex] = useState<number | null>(null);
+  const [isPreMadeDraftEditing, setIsPreMadeDraftEditing] = useState(false);
+  const draftHabits = useGoalStore((s) => s.draftHabits);
+  const draftTasks = useGoalStore((s) => s.draftTasks);
+  const setDraftHabits = useGoalStore((s) => s.setDraftHabits);
+  const setDraftTasks = useGoalStore((s) => s.setDraftTasks);
+  const resetDraft = useGoalStore((s) => s.resetDraft);
 
   useEffect(() => {
     setDueDate(initialDueDate);
   }, [initialDueDate]);
 
-  const category: GoalCategory | null = mode === 'preMade' && preMadeGoal ? preMadeGoal.category : null;
+  useEffect(() => {
+    setCategoryValue(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
+    setReminderDate(initialReminderDate);
+  }, [initialReminderDate]);
+
+  useEffect(() => {
+    setReminderTime(initialReminderTime);
+  }, [initialReminderTime]);
+
+  useEffect(() => {
+    if (mode !== 'preMade') return;
+    resetDraft();
+    setIsPreMadeDraftEditing(false);
+    setDraftCoverIndex(null);
+  }, [goalId, mode, resetDraft]);
+
   const reminderDisplay = reminderDate && reminderTime
     ? `${formatDate(reminderDate)} - ${formatTime(reminderTime.hours, reminderTime.minutes, reminderTime.am)}`
     : '';
@@ -112,17 +213,50 @@ const PreMadeGoalDetailScreen = () => {
     : null;
 
   const coverSource: ImageSourcePropType | null = useMemo(() => {
-    if (mode === 'preMade' && preMadeGoal) return preMadeGoal.coverImage;
-    if (mode === 'myGoal' && myGoal && COVER_IMAGE_SOURCES.length) {
-      const idx = myGoal.coverIndex % COVER_IMAGE_SOURCES.length;
-      return COVER_IMAGE_SOURCES[idx];
+    // Priority 1: Gallery image from selfMadePayload
+    if (mode === 'selfMade' && selfMadePayload?.galleryImageUri) {
+      return { uri: selfMadePayload.galleryImageUri };
+    }
+    if (mode === 'preMade' && preMadeGoal) {
+      if (
+        typeof draftCoverIndex === 'number' &&
+        draftCoverIndex >= 0 &&
+        draftCoverIndex < COVER_IMAGE_SOURCES.length
+      ) {
+        return COVER_IMAGE_SOURCES[draftCoverIndex];
+      }
+      return preMadeGoal.coverImage;
+    }
+    if (mode === 'myGoal' && myGoal) {
+      // Priority: coverUrl over coverIndex
+      if (myGoal.coverUrl) {
+        return { uri: myGoal.coverUrl };
+      }
+      if (COVER_IMAGE_SOURCES.length) {
+        const idx = myGoal.coverIndex % COVER_IMAGE_SOURCES.length;
+        return COVER_IMAGE_SOURCES[idx];
+      }
     }
     if (mode === 'selfMade' && selfMadePayload && COVER_IMAGE_SOURCES.length) {
       const idx = selfMadePayload.coverIndex % COVER_IMAGE_SOURCES.length;
       return COVER_IMAGE_SOURCES[idx];
     }
     return null;
-  }, [mode, preMadeGoal, myGoal, selfMadePayload]);
+  }, [mode, preMadeGoal, myGoal, selfMadePayload, draftCoverIndex]);
+
+  const handleChangeCover = () => {
+    if (mode !== 'preMade') return;
+    const selectedIndex =
+      typeof draftCoverIndex === 'number'
+        ? draftCoverIndex
+        : preMadeGoal?.coverIndex ?? 0;
+    navigation.navigate('SelectCoverImage', {
+      selectedIndex,
+      onCoverSelected: (index: number) => {
+        setDraftCoverIndex(index);
+      },
+    });
+  };
 
   const title = mode === 'preMade' && preMadeGoal
     ? preMadeGoal.title
@@ -132,10 +266,15 @@ const PreMadeGoalDetailScreen = () => {
 
   const habitItems: TrackerCardItem[] = useMemo(() => {
     if (mode === 'preMade' && preMadeGoal) {
-      return preMadeGoal.habits.map((h) => ({
+      const source = isPreMadeDraftEditing ? draftHabits : preMadeGoal.habits.map((h) => ({
         title: h.title,
         selectedDays: h.selectedDays,
         reminderTime: h.reminderTime ?? undefined,
+        variant: 'habit' as const,
+      }));
+      return source.map((h) => ({
+        ...h,
+        selectedDays: h.selectedDays?.length ? h.selectedDays : [],
         variant: 'habit' as const,
       }));
     }
@@ -158,28 +297,33 @@ const PreMadeGoalDetailScreen = () => {
       }));
     }
     return [];
-  }, [mode, preMadeGoal, myGoal, selfMadePayload]);
+  }, [mode, preMadeGoal, myGoal, selfMadePayload, isPreMadeDraftEditing, draftHabits]);
 
   const taskItems: TrackerCardItem[] = useMemo(() => {
     if (mode === 'preMade' && preMadeGoal) {
-      return preMadeGoal.tasks.map((t) => ({
+      const source = isPreMadeDraftEditing ? draftTasks : preMadeGoal.tasks.map((t) => ({
         title: t.title,
         selectedDays: [],
         dueDate: t.dueDate ?? undefined,
         reminderTime: t.reminderTime ?? undefined,
         variant: 'task' as const,
       }));
+      return source.map((t) => ({
+        ...t,
+        selectedDays: [],
+        variant: 'task' as const,
+      }));
     }
     if (mode === 'myGoal' && myGoal?.items) {
       const dueStr = myGoal.dueDate
-        ? `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][myGoal.dueDate.getMonth()]} ${myGoal.dueDate.getDate()}, ${myGoal.dueDate.getFullYear()}`
+        ? `${MONTHS_SHORT[myGoal.dueDate.getMonth()]} ${myGoal.dueDate.getDate()}, ${myGoal.dueDate.getFullYear()}`
         : null;
       return myGoal.items
         .filter((i): i is GoalItem & { type: 'task' } => i.type === 'task')
         .map((t) => ({
           title: t.title,
           selectedDays: [],
-          dueDate: dueStr,
+          dueDate: formatTaskDueDateForCard(t.dueDate, dueStr),
           reminderTime: t.reminderTime ?? null,
           variant: 'task' as const,
         }));
@@ -200,20 +344,23 @@ const PreMadeGoalDetailScreen = () => {
       }));
     }
     return [];
-  }, [mode, preMadeGoal, myGoal, selfMadePayload]);
+  }, [mode, preMadeGoal, myGoal, selfMadePayload, isPreMadeDraftEditing, draftTasks]);
 
-  const noteText = mode === 'preMade' && preMadeGoal
-    ? preMadeGoal.note
-    : mode === 'selfMade' && selfMadePayload
-      ? selfMadePayload.note || ''
-      : "To achieve this goal, it's essential to follow key steps in the journey. Begin by researching and identifying areas that align with your interests and strengths.";
+  const noteText =
+    mode === 'preMade' && preMadeGoal
+      ? preMadeGoal.note ?? ''
+      : mode === 'selfMade' && selfMadePayload
+        ? selfMadePayload.note || ''
+        : mode === 'myGoal' && myGoal
+          ? myGoal.note ?? ''
+          : '';
 
   const preMadeAlreadyAdded = useMemo(
     () => mode === 'preMade' && preMadeGoal && goals.some((g) => g.source === 'preMade' && g.title === preMadeGoal.title && !g.achieved),
     [mode, preMadeGoal, goals]
   );
 
-  const notFound = (mode === 'preMade' && !preMadeGoal) || (mode === 'myGoal' && !myGoal) || (mode === 'selfMade' && !selfMadePayload);
+  const notFound = (mode === 'preMade' && !preMadeGoal) || (mode === 'myGoal' && !myGoal && !deletedGoalRef.current && !toastVisible) || (mode === 'selfMade' && !selfMadePayload);
 
   if (notFound) {
     return (
@@ -235,7 +382,15 @@ const PreMadeGoalDetailScreen = () => {
       );
       return;
     }
+    const existingGoal = goals.find((g) => g.source === 'preMade' && g.title === preMadeGoal.title && !g.achieved);
+    if (existingGoal) {
+      navigation.navigate('MainTabs', { screen: 'My Goals' });
+      return;
+    }
     const coverIndex = (() => {
+      if (typeof draftCoverIndex === 'number' && draftCoverIndex >= 0) {
+        return draftCoverIndex;
+      }
       if (typeof preMadeGoal.coverIndex === 'number' && preMadeGoal.coverIndex >= 0) {
         return preMadeGoal.coverIndex;
       }
@@ -251,56 +406,141 @@ const PreMadeGoalDetailScreen = () => {
       }
       return 0;
     })();
-    const goalDueDateIso = dueDate ? dueDate.toISOString() : undefined;
     const goalReminderTime = reminderTimeOnly || undefined;
-    // Ensure goal_items IDs are unique per added instance; otherwise re-adding the same
-    // template can cause primary-key conflicts and prevent habits/tasks from being created.
-    const goalInstanceKey = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const items: GoalItem[] = [
-      ...preMadeGoal.habits.map((h, i) => ({
-        id: `pre-${preMadeGoal.id}-${goalInstanceKey}-habit-${i}`,
-        type: 'habit' as const,
-        title: h.title,
-        // If the user defined a reminder time for this goal, apply it to all habits;
-        // otherwise keep the habit's own reminderTime.
-        reminderTime: goalReminderTime ?? h.reminderTime,
-        selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
-      })),
-      ...preMadeGoal.tasks.map((t, i) => ({
-        id: `pre-${preMadeGoal.id}-${goalInstanceKey}-task-${i}`,
-        type: 'task' as const,
-        title: t.title,
-        // If the user defined a reminder time for this goal, apply it to all tasks;
-        // otherwise keep the task's own reminderTime.
-        reminderTime: goalReminderTime ?? t.reminderTime,
-        // Use the user-selected goal due date for all tasks so the backend
-        // receives a concrete, parseable date instead of human text like "Today".
-        dueDate: goalDueDateIso,
-      })),
-    ];
     addGoal({
       title: preMadeGoal.title,
+      category: categoryValue ?? null,
+      reminderDate: reminderDate != null ? new Date(reminderDate.getTime()) : null,
+      reminderTime: goalReminderTime ?? null,
+      preMadeTemplateId: preMadeGoal.id,
       coverIndex,
       source: 'preMade',
-      habitsTotal: preMadeGoal.habitsCount,
+      habitsTotal: habitItems.length,
       habitsDone: 0,
-      tasksTotal: preMadeGoal.tasksCount,
+      tasksTotal: taskItems.length,
       tasksDone: 0,
       dueDate: dueDate ?? null,
       achieved: false,
-      items,
+      note: preMadeGoal.note ?? null,
+      items: [
+        ...habitItems.map((h, i) => ({
+          id: `pre-${preMadeGoal.id}-habit-${i}`,
+          type: 'habit' as const,
+          title: h.title,
+          reminderTime: h.reminderTime ?? goalReminderTime,
+          note: h.note ?? undefined,
+          selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
+        })),
+        ...taskItems.map((t, i) => {
+          // Format due date as YYYY-MM-DD to avoid timezone issues
+          let taskDueDate: string | undefined;
+          if (t.dueDate) {
+            taskDueDate = t.dueDate;
+          } else if (dueDate) {
+            const year = dueDate.getFullYear();
+            const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+            const day = String(dueDate.getDate()).padStart(2, '0');
+            taskDueDate = `${year}-${month}-${day}`;
+          }
+          return {
+            id: `pre-${preMadeGoal.id}-task-${i}`,
+            type: 'task' as const,
+            title: t.title,
+            reminderTime: t.reminderTime ?? goalReminderTime,
+            note: t.note ?? undefined,
+            dueDate: taskDueDate,
+          };
+        }),
+      ],
     });
+    resetDraft();
+    setIsPreMadeDraftEditing(false);
+    setDraftCoverIndex(null);
     navigation.navigate('MainTabs', { screen: 'My Goals' });
   };
 
-  const handleCreateGoal = () => {
+  const openPreMadeItemEditor = (type: 'habit' | 'task', index: number) => {
+    if (mode !== 'preMade' || !preMadeGoal) return;
+    if (!isPreMadeDraftEditing) {
+      setDraftHabits(
+        preMadeGoal.habits.map((h) => ({
+          title: h.title,
+          selectedDays: h.selectedDays?.length ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
+          reminderTime: h.reminderTime ?? undefined,
+          variant: 'habit' as const,
+        }))
+      );
+      setDraftTasks(
+        preMadeGoal.tasks.map((t) => ({
+          title: t.title,
+          selectedDays: [],
+          dueDate: t.dueDate ?? undefined,
+          reminderTime: t.reminderTime ?? undefined,
+          variant: 'task' as const,
+        }))
+      );
+      setIsPreMadeDraftEditing(true);
+    }
+    navigation.navigate('AddTaskScreen', {
+      mode: type,
+      source: 'selfMade',
+      initialItem: {
+        ...(type === 'habit'
+          ? (draftHabits[index] ?? {
+              title: preMadeGoal.habits[index]?.title ?? '',
+              selectedDays: preMadeGoal.habits[index]?.selectedDays ?? [0, 1, 2, 3, 4, 5, 6],
+              reminderTime: preMadeGoal.habits[index]?.reminderTime ?? undefined,
+              variant: 'habit' as const,
+            })
+          : (draftTasks[index] ?? {
+              title: preMadeGoal.tasks[index]?.title ?? '',
+              selectedDays: [],
+              dueDate: preMadeGoal.tasks[index]?.dueDate ?? undefined,
+              reminderTime: preMadeGoal.tasks[index]?.reminderTime ?? undefined,
+              variant: 'task' as const,
+            })),
+        variant: type,
+      },
+      ...(type === 'habit' ? { editHabitIndex: index } : { editTaskIndex: index }),
+    });
+  };
+
+  const handleCreateGoal = async () => {
     if (mode !== 'selfMade' || !selfMadePayload) return;
+    
+    let coverUrl: string | null = null;
+    
+    // Check if galleryImageUri is already an uploaded URL or needs upload
+    if (selfMadePayload.galleryImageUri) {
+      // If it's already a Supabase URL, use it directly
+      if (selfMadePayload.galleryImageUri.includes('supabase')) {
+        coverUrl = selfMadePayload.galleryImageUri;
+        console.log('[PreMadeGoalDetail] Using pre-uploaded cover URL:', coverUrl);
+      } 
+      // Otherwise, upload the local image
+      else if (session?.user?.id) {
+        setUploadingImage(true);
+        const { url, error } = await uploadCoverImage(selfMadePayload.galleryImageUri, session.user.id);
+        setUploadingImage(false);
+        
+        if (error) {
+          Alert.alert('Upload Failed', 'Failed to upload cover image. Please try again.');
+          console.error('[PreMadeGoalDetail] Upload error:', error);
+          return;
+        }
+        
+        coverUrl = url ?? null;
+        console.log('[PreMadeGoalDetail] Uploaded cover URL:', coverUrl);
+      }
+    }
+    
     const items: GoalItem[] = [
       ...selfMadePayload.habits.map((h, i) => ({
         id: `self-habit-${Date.now()}-${i}`,
         type: 'habit' as const,
         title: h.title,
         reminderTime: h.reminderTime,
+        note: h.note ?? undefined,
         selectedDays: h.selectedDays && h.selectedDays.length > 0 ? h.selectedDays : [0, 1, 2, 3, 4, 5, 6],
       })),
       ...selfMadePayload.tasks.map((t, i) => ({
@@ -308,12 +548,17 @@ const PreMadeGoalDetailScreen = () => {
         type: 'task' as const,
         title: t.title,
         reminderTime: t.reminderTime,
+        note: t.note ?? undefined,
         dueDate: t.dueDate ?? undefined,
       })),
     ];
     addGoal({
       title: selfMadePayload.title,
+      category: categoryValue ?? null,
+      reminderDate: reminderDate != null ? new Date(reminderDate.getTime()) : null,
+      reminderTime: reminderTimeOnly || null,
       coverIndex: selfMadePayload.coverIndex,
+      coverUrl,
       source: 'selfMade',
       habitsTotal: selfMadePayload.habits.length,
       habitsDone: 0,
@@ -321,40 +566,79 @@ const PreMadeGoalDetailScreen = () => {
       tasksDone: 0,
       dueDate: selfMadePayload.dueDate ? new Date(selfMadePayload.dueDate) : null,
       achieved: false,
+      note: selfMadePayload.note && selfMadePayload.note.trim() ? selfMadePayload.note.trim() : null,
       items,
     });
     navigation.navigate('MainTabs', { screen: 'My Goals' });
   };
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [achieveModalVisible, setAchieveModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoModalType, setInfoModalType] = useState<'habit' | 'task'>('habit');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const { session } = useAuth();
 
   const handleGoToMyGoals = () => {
     navigation.navigate('MainTabs', { screen: 'My Goals' });
   };
 
-  const hasIncompleteItems = myGoal && (myGoal.habitsDone < myGoal.habitsTotal || myGoal.tasksDone < myGoal.tasksTotal);
-
   const handleAchieve = () => {
-    if (mode !== 'myGoal' || !myGoal) return;
-    if (myGoal.achieved) {
-      markAchieved(myGoal.id, false);
-      navigation.goBack();
+    if (mode !== 'myGoal') return;
+    const currentGoal = myGoal || deletedGoalRef.current?.goal;
+    if (!currentGoal) return;
+    
+    if (currentGoal.achieved) {
+      // Unachieve
+      previousAchievedStateRef.current = true;
+      markAchieved(currentGoal.id, false);
+      
+      setToastMessage(t('goalUnachieved'));
+      setToastAction('achieve');
+      setToastVisible(true);
+      
+      // Don't navigate immediately - let user see the undo option
       return;
     }
-    if (hasIncompleteItems) {
-      setAchieveModalVisible(true);
-    } else {
-      markAchieved(myGoal.id, true);
-      navigation.navigate('GoalAchievedScreen', { goalId: myGoal.id });
+    
+    // Check if all habits and tasks are completed
+    const incompleteHabits = currentGoal.habitsTotal - currentGoal.habitsDone;
+    const incompleteTasks = currentGoal.tasksTotal - currentGoal.tasksDone;
+    
+    if (incompleteHabits > 0 || incompleteTasks > 0) {
+      // Show alert with incomplete items count
+      let message = '';
+      if (incompleteHabits > 0 && incompleteTasks > 0) {
+        message = t('incompleteHabitsAndTasks', { 
+          habitCount: incompleteHabits, 
+          taskCount: incompleteTasks 
+        });
+      } else if (incompleteHabits > 0) {
+        message = t('incompleteItemsMessage', { 
+          count: incompleteHabits, 
+          type: incompleteHabits === 1 ? 'habit' : 'habits' 
+        });
+      } else {
+        message = t('incompleteItemsMessage', { 
+          count: incompleteTasks, 
+          type: incompleteTasks === 1 ? 'task' : 'tasks' 
+        });
+      }
+      
+      Alert.alert(
+        t('cannotAchieveGoal') as string,
+        message,
+        [{ text: t('ok') as string }]
+      );
+      return;
     }
-  };
-
-  const handleAchieveConfirm = () => {
-    if (mode !== 'myGoal' || !myGoal) return;
-    markAchieved(myGoal.id, true);
-    setAchieveModalVisible(false);
-    navigation.navigate('GoalAchievedScreen', { goalId: myGoal.id });
+    
+    // All items completed, allow achievement
+    previousAchievedStateRef.current = false;
+    markAchieved(currentGoal.id, true);
+    
+    setToastMessage(t('goalAchieved'));
+    setToastAction('achieve');
+    setToastVisible(true);
   };
 
   const handleDeletePress = () => {
@@ -364,9 +648,89 @@ const PreMadeGoalDetailScreen = () => {
 
   const handleDeleteConfirm = () => {
     if (mode !== 'myGoal' || !myGoal) return;
-    removeGoal(myGoal.id);
+    
+    // Store goal and its completions for undo
+    const goalCompletions: ItemCompletions = {};
+    (myGoal.items ?? []).forEach((item) => {
+      if (itemCompletions[item.id]) {
+        goalCompletions[item.id] = itemCompletions[item.id];
+      }
+    });
+    
+    deletedGoalRef.current = { goal: myGoal, completions: goalCompletions };
+    const goalId = myGoal.id;
+    
+    console.log('PreMadeGoalDetailScreen - Deleting goal:', goalId);
+    
+    removeGoal(goalId);
     setDeleteModalVisible(false);
-    navigation.goBack();
+    
+    // Use CommonActions to reset navigation and pass params
+    console.log('PreMadeGoalDetailScreen - Navigating with CommonActions');
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'MainTabs',
+            state: {
+              routes: [
+                {
+                  name: 'My Goals',
+                  params: {
+                    showToast: true,
+                    toastMessage: t('goalDeleted'),
+                    toastAction: 'delete' as const,
+                    deletedGoalId: goalId,
+                    deletedGoalData: myGoal,
+                    deletedGoalCompletions: goalCompletions,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      })
+    );
+  };
+
+  const handleUndo = () => {
+    if (mode !== 'myGoal') return;
+    
+    if (toastAction === 'delete' && deletedGoalRef.current) {
+      // Restore deleted goal
+      restoreGoal(deletedGoalRef.current.goal, deletedGoalRef.current.completions);
+      deletedGoalRef.current = null;
+    } else if (toastAction === 'achieve' && previousAchievedStateRef.current !== null) {
+      const currentGoal = myGoal || deletedGoalRef.current?.goal;
+      if (currentGoal) {
+        // Revert achieved state
+        markAchieved(currentGoal.id, previousAchievedStateRef.current);
+      }
+      previousAchievedStateRef.current = null;
+    }
+    
+    setToastVisible(false);
+  };
+
+  const handleToastHide = () => {
+    setToastVisible(false);
+    
+    if (mode !== 'myGoal') return;
+    
+    // Clean up refs after toast is hidden
+    if (toastAction === 'delete' && deletedGoalRef.current !== null) {
+      // Don't navigate here - we already navigated immediately after deletion
+      deletedGoalRef.current = null;
+    } else if (toastAction === 'achieve' && previousAchievedStateRef.current === false) {
+      const currentGoal = myGoal || deletedGoalRef.current?.goal;
+      if (currentGoal) {
+        // Goal was achieved and not undone, navigate to achieved screen
+        navigation.navigate('GoalAchievedScreen', { goalId: currentGoal.id });
+      }
+    }
+    
+    previousAchievedStateRef.current = null;
   };
 
   return (
@@ -397,6 +761,15 @@ const PreMadeGoalDetailScreen = () => {
               </View>
             </TouchableOpacity>
           </View>
+          {mode === 'preMade' && (
+            <TouchableOpacity
+              style={styles.changeCoverBtn}
+              onPress={handleChangeCover}
+              activeOpacity={0.8}
+            >
+              <ImageIcon width={43} height={43} />
+            </TouchableOpacity>
+          )}
         </View>
         {/* Goals title + category, due date, reminder; Edit opens Set up Goals modal */}
         <View style={styles.addGoalsSection}>
@@ -412,20 +785,25 @@ const PreMadeGoalDetailScreen = () => {
               <EditIcon width={18} height={18} />
             </TouchableOpacity>
           </View>
-          <ScrollView
+          {/* <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.metadataRowPills}
             style={styles.metadataRowPillsScroll}
-          >
-            {category != null && (
+          > */}
+
+
+<View style={[styles.metadataRowPills, styles.metadataRowPillsScroll]}> 
+
+
+            {categoryValue != null && (
               <TouchableOpacity
                 style={styles.metadataPillCategory}
                 onPress={() => setSetUpGoalsModalVisible(true)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.metadataPillTextDark} numberOfLines={1}>
-                  {category}
+                  {categoryValue}
                 </Text>
               </TouchableOpacity>
             )}
@@ -454,7 +832,8 @@ const PreMadeGoalDetailScreen = () => {
                 {reminderDisplay || reminderTimeOnly || t('setReminder')}
               </Text>
             </TouchableOpacity>
-          </ScrollView>
+            </View>
+          {/* </ScrollView> */}
           {mode === 'preMade' && preMadeGoal && (
             <View style={styles.userCountRow}>
               <Ionicons name="people-outline" size={16} color={lightColors.subText} />
@@ -466,12 +845,25 @@ const PreMadeGoalDetailScreen = () => {
         <SetUpGoalsModal
           visible={setUpGoalsModalVisible}
           goalTitle={title}
-          category={category}
+          category={categoryValue}
           dueDate={dueDate}
           reminderDate={reminderDate}
           reminderTime={reminderTime}
           onCancel={() => setSetUpGoalsModalVisible(false)}
           onConfirm={(data) => {
+            if (mode === 'myGoal' && myGoal) {
+              updateGoalDetails(myGoal.id, {
+                title: data.goalTitle.trim() || myGoal.title,
+                category: data.category,
+                dueDate: data.dueDate,
+                reminderDate: data.reminderDate,
+                reminderTime:
+                  data.reminderDate && data.reminderTime
+                    ? formatTime(data.reminderTime.hours, data.reminderTime.minutes, data.reminderTime.am)
+                    : null,
+              });
+            }
+            setCategoryValue(data.category);
             setDueDate(data.dueDate);
             setReminderDate(data.reminderDate);
             setReminderTime(data.reminderTime);
@@ -490,7 +882,15 @@ const PreMadeGoalDetailScreen = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Habit ({habitItems.length})</Text>
-              <InfoIcon width={20} height={20} />
+              <TouchableOpacity
+                onPress={() => {
+                  setInfoModalType('habit');
+                  setInfoModalVisible(true);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <InfoIcon width={20} height={20} />
+              </TouchableOpacity>
             </View>
             {mode === 'myGoal' && myGoal
               ? myGoal.items
@@ -521,6 +921,11 @@ const PreMadeGoalDetailScreen = () => {
                   <TrackerCard
                     key={`habit-${index}`}
                     item={{ ...item, variant: 'habit' }}
+                    onPress={
+                      mode === 'preMade'
+                        ? () => openPreMadeItemEditor('habit', index)
+                        : undefined
+                    }
                   />
                 ))}
           </View>
@@ -528,12 +933,20 @@ const PreMadeGoalDetailScreen = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Task ({taskItems.length})</Text>
-              <InfoIcon width={20} height={20} />
+              <TouchableOpacity
+                onPress={() => {
+                  setInfoModalType('task');
+                  setInfoModalVisible(true);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <InfoIcon width={20} height={20} />
+              </TouchableOpacity>
             </View>
             {mode === 'myGoal' && myGoal
               ? (() => {
                   const dueStr = myGoal.dueDate
-                    ? `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][myGoal.dueDate.getMonth()]} ${myGoal.dueDate.getDate()}, ${myGoal.dueDate.getFullYear()}`
+                    ? `${MONTHS_SHORT[myGoal.dueDate.getMonth()]} ${myGoal.dueDate.getDate()}, ${myGoal.dueDate.getFullYear()}`
                     : null;
                   return myGoal.items
                     .filter((i): i is GoalItem & { type: 'task' } => i.type === 'task')
@@ -541,7 +954,7 @@ const PreMadeGoalDetailScreen = () => {
                       const item: TrackerCardItem = {
                         title: goalItem.title,
                         selectedDays: [],
-                        dueDate: goalItem.dueDate ?? dueStr,
+                        dueDate: formatTaskDueDateForCard(goalItem.dueDate, dueStr),
                         reminderTime: goalItem.reminderTime ?? null,
                         variant: 'task',
                       };
@@ -565,13 +978,22 @@ const PreMadeGoalDetailScreen = () => {
                   <TrackerCard
                     key={`task-${index}`}
                     item={{ ...item, variant: 'task' }}
+                    onPress={
+                      mode === 'preMade'
+                        ? () => openPreMadeItemEditor('task', index)
+                        : undefined
+                    }
                   />
                 ))}
           </View>
 
           <View style={styles.section}>
             <Textt i18nKey="note" style={styles.sectionTitle} />
-            <Text style={styles.noteText}>{noteText || '—'}</Text>
+            {noteText && noteText.trim() ? (
+              <Text style={styles.noteText}>{noteText}</Text>
+            ) : (
+              <Text style={styles.noteEmptyText}>No note added</Text>
+            )}
           </View>
         </View>
 
@@ -631,16 +1053,33 @@ const PreMadeGoalDetailScreen = () => {
         onConfirm={handleDeleteConfirm}
       />
 
-      <ConfirmModal
-        visible={achieveModalVisible}
-        title={t('achieveGoals') as string}
-        message={t('achieveGoalsConfirmMessage') as string}
-        messageLine2={t('achieveGoalsConfirmQuestion') as string}
-        cancelLabel={t('cancel') as string}
-        confirmLabel={t('yesAchieve') as string}
-        onCancel={() => setAchieveModalVisible(false)}
-        onConfirm={handleAchieveConfirm}
-        titleColor={lightColors.text}
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        actionLabel={t('undo')}
+        onActionPress={handleUndo}
+        onHide={handleToastHide}
+      />
+
+      <InfoModal
+        visible={infoModalVisible}
+        title={infoModalType === 'habit' ? t('habitInfoTitle') : t('taskInfoTitle')}
+        tips={
+          infoModalType === 'habit'
+            ? [
+                { i18nKey: 'habitInfoTip1' },
+                { i18nKey: 'habitInfoTip2' },
+                { i18nKey: 'habitInfoTip3' },
+                { i18nKey: 'habitInfoTip4' },
+              ]
+            : [
+                { i18nKey: 'taskInfoTip1' },
+                { i18nKey: 'taskInfoTip2' },
+                { i18nKey: 'taskInfoTip3' },
+                { i18nKey: 'taskInfoTip4' },
+              ]
+        }
+        onClose={() => setInfoModalVisible(false)}
       />
     </View>
   );
@@ -707,10 +1146,26 @@ const styles = StyleSheet.create({
   coverSpacer: {
     flex: 1,
   },
+  changeCoverBtn: {
+    position: 'absolute',
+    bottom: 12,
+    right: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: lightColors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
   addGoalsSection: {
     marginHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: 20,
+    paddingBottom: 10,
     backgroundColor: lightColors.secondaryBackground,
     borderBottomWidth: 1,
     borderBottomColor: lightColors.border,
@@ -740,16 +1195,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   metadataRowPillsScroll: {
-    flexGrow: 0,
-    marginHorizontal: -24,
+   marginHorizontal: -24,
   },
   metadataRowPills: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 24,
-    paddingVertical: 4,
+    gap: 4,
+    paddingHorizontal: 10,
   },
   metadataPillCategory: {
     paddingVertical: 6,
@@ -761,7 +1213,7 @@ const styles = StyleSheet.create({
   },
   metadataPillTextDark: {
     fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 12,
+    fontSize: 11,
     color: lightColors.subText,
   },
   metadataPillWithIcon: {
@@ -813,11 +1265,12 @@ const styles = StyleSheet.create({
   },
   userCount: {
     fontFamily: fontFamilies.urbanistMedium,
-    fontSize: 14,
+    fontSize: 12,
     color: lightColors.subText,
   },
   contentSection: {
     paddingHorizontal: 20,
+    marginTop: 24,
   },
   section: {
     marginBottom: 24,
@@ -845,6 +1298,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: lightColors.subText,
     lineHeight: 22,
+    marginTop: 4,
+  },
+  noteEmptyText: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 14,
+    color: lightColors.placeholderText,
+    fontStyle: 'italic',
     marginTop: 4,
   },
   footer: {

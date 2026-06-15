@@ -28,6 +28,7 @@ import UpgradePlanScreen from '../screens/UpgradePlanScreen';
 
 import type { TrackerCardItem } from '../components/TrackerCard';
 import AccountSecurityScreen from '../screens/AccountSecurityScreen';
+import TimeZoneScreen from '../screens/TimeZoneScreen';
 import DataAnalyticsScreen from '../screens/DataAnalyticsScreen';
 import AppAppearanceScreen from '../screens/AppAppearanceScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
@@ -35,6 +36,7 @@ import FAQScreen from '../screens/FAQScreen';
 import ContactSupportScreen from '../screens/ContactSupportScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 
 /** Root stack route names and params. Use this type for useNavigation<> in screens. */
 export type RootStackParamList = {
@@ -48,7 +50,12 @@ export type RootStackParamList = {
   ForgotPasswordEmail: undefined;
   ForgotPasswordOTP: { email: string };
   ForgotPasswordNewPassword: { email: string; otp: string };
-  MainTabs: undefined | { screen: keyof MainTabsParamList };
+  MainTabs: 
+    | undefined 
+    | { 
+        screen: keyof MainTabsParamList;
+        params?: MainTabsParamList[keyof MainTabsParamList];
+      };
   AiGenetratingScreen: undefined;
   AiMade: {
     source?: 'selfMade';
@@ -64,6 +71,7 @@ export type RootStackParamList = {
     initialTasks?: TrackerCardItem[];
     initialNote?: string;
     initialGoalTitle?: string;
+    initialDueDate?: number | null;
   };
   AddTaskScreen: {
     mode: 'habit' | 'task';
@@ -72,6 +80,8 @@ export type RootStackParamList = {
     editHabitIndex?: number;
     editTaskIndex?: number;
     initialItem?: TrackerCardItem;
+    goalId?: string;
+    itemId?: string;
   };
   GoalPlanner: {
     goalTitle?: string;
@@ -124,16 +134,25 @@ export type RootStackParamList = {
     selfMadePayload?: {
       title: string;
       coverIndex: number;
+      galleryImageUri?: string | null;
       dueDate: number | null;
+      /** Goal-level category from self-made flow (same as pre-made / saved goals). */
+      category?: string | null;
+      /** Goal-level reminder date (epoch ms). */
+      reminderDate?: number | null;
+      /** Goal-level reminder clock (12h); paired with reminderDate for full display. */
+      reminderTime?: { hours: number; minutes: number; am: boolean } | null;
       note: string;
-      habits: { title: string; reminderTime?: string; selectedDays?: number[] }[];
-      tasks: { title: string; reminderTime?: string; dueDate?: string | null }[];
+      habits: { title: string; reminderTime?: string; note?: string; selectedDays?: number[] }[];
+      tasks: { title: string; reminderTime?: string; note?: string; dueDate?: string | null }[];
     };
   };
   ExploreSearch: { fromPreMade?: boolean } | undefined;
   MyGoalsScreen: undefined;
   UpgradePlanScreen: undefined;
   AccountSecurityScreen: undefined;
+  TimeZoneScreen: undefined;
+  ChangePasswordScreen: undefined;
   DataAnalyticsScreen: undefined;
   AppAppearanceScreen: undefined;
   HelpSupportScreen: undefined;
@@ -283,6 +302,16 @@ function RootNavigation() {
       <Stack.Screen
         name="AccountSecurityScreen"
         component={AccountSecurityScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TimeZoneScreen"
+        component={TimeZoneScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChangePasswordScreen"
+        component={ChangePasswordScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

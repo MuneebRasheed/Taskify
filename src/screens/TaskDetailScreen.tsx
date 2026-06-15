@@ -10,6 +10,7 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -51,6 +52,17 @@ const formatTime = (hours: number, minutes: number, am: boolean): string => {
   return `${labelHours}:${labelMinutes} ${am ? 'AM' : 'PM'}`;
 };
 
+function parseYmdFromDueRaw(raw: string): { y: number; m: number; d: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw.trim());
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!Number.isInteger(y) || !Number.isInteger(mo) || !Number.isInteger(d)) return null;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return { y, m: mo, d };
+}
+
 const TaskDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<TaskDetailNavProp>();
@@ -66,6 +78,7 @@ const TaskDetailScreen = () => {
   const [dueDateDate, setDueDateDate] = useState<Date | null>(null);
   const [reminderTime, setReminderTime] = useState('');
   const [note, setNote] = useState('');
+  const [paused, setPaused] = useState(false);
   const [dueDateModalVisible, setDueDateModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -73,11 +86,25 @@ const TaskDetailScreen = () => {
   useEffect(() => {
     if (item && goal) {
       setTitle(item.title);
-      const initialDue = item.dueDate ?? (goal.dueDate ? formatDate(goal.dueDate) : '');
+      let initialDue = '';
+      let initialDueAsDate: Date | null = null;
+      if (item.dueDate && typeof item.dueDate === 'string' && item.dueDate.trim() !== '') {
+        const ymd = parseYmdFromDueRaw(item.dueDate);
+        if (ymd) {
+          initialDueAsDate = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d, 12, 0, 0));
+          initialDue = formatDate(initialDueAsDate);
+        } else {
+          initialDue = item.dueDate.trim();
+        }
+      } else if (goal.dueDate) {
+        initialDueAsDate = goal.dueDate;
+        initialDue = formatDate(goal.dueDate);
+      }
       setDueDate(initialDue);
       setReminderTime(item.reminderTime ?? '');
       setNote(item.note ?? '');
-      setDueDateDate(goal.dueDate ?? null);
+      setPaused(item.paused ?? false);
+      setDueDateDate(initialDueAsDate);
     }
   }, [item, goal]);
 
@@ -95,11 +122,21 @@ const TaskDetailScreen = () => {
   };
 
   const handleSave = () => {
+    // Convert dueDateDate (Date object) to YYYY-MM-DD format for backend
+    let dueDateFormatted: string | undefined = undefined;
+    if (dueDateDate) {
+      const year = dueDateDate.getFullYear();
+      const month = String(dueDateDate.getMonth() + 1).padStart(2, '0');
+      const day = String(dueDateDate.getDate()).padStart(2, '0');
+      dueDateFormatted = `${year}-${month}-${day}`;
+    }
+    
     updateGoalItem(goalId, itemId, {
       title: title.trim() || item?.title,
       reminderTime: reminderTime.trim() || undefined,
       note: note.trim() || undefined,
-      dueDate: dueDate.trim() || undefined,
+      dueDate: dueDateFormatted,
+      paused,
     });
     navigation.goBack();
   };
@@ -223,6 +260,21 @@ const TaskDetailScreen = () => {
               multiline
               textAlignVertical="top"
             />
+
+            <View style={styles.pauseRow}>
+              <View style={styles.pauseLabelWrap}>
+                <Text style={styles.label}>Pause Task</Text>
+                <Text style={styles.pauseDesc}>
+                  Short breaks task, start when you're ready
+                </Text>
+              </View>
+              <Switch
+                value={paused}
+                onValueChange={setPaused}
+                trackColor={{ false: lightColors.border, true: `${lightColors.accent}80` }}
+                thumbColor={lightColors.secondaryBackground}
+              />
+            </View>
           </ScrollView>
         </TouchableWithoutFeedback>
 
@@ -249,7 +301,20 @@ const TaskDetailScreen = () => {
         visible={dueDateModalVisible}
         title="Task Due Date"
         selectedDate={dueDateDate}
+        maxDate={goal?.dueDate || undefined}
         onSelect={(date) => {
+          // Validate: task due date cannot be after goal's due date
+          if (goal?.dueDate) {
+            const goalDueTime = new Date(goal.dueDate).setHours(0, 0, 0, 0);
+            const selectedTime = new Date(date).setHours(0, 0, 0, 0);
+            
+            if (selectedTime > goalDueTime) {
+              // Show alert - date is after goal due date
+              alert('Task due date cannot be after the goal due date');
+              return;
+            }
+          }
+          
           setDueDateDate(date);
           setDueDate(formatDate(date));
         }}
@@ -347,6 +412,21 @@ const styles = StyleSheet.create({
   },
   noteInput: {
     minHeight: 80,
+  },
+  pauseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  pauseLabelWrap: {
+    flex: 1,
+  },
+  pauseDesc: {
+    fontFamily: fontFamilies.urbanistMedium,
+    fontSize: 16,
+    color: lightColors.subText,
+    marginTop: 4,
   },
   footer: {
     paddingHorizontal: 20,

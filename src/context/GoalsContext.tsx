@@ -23,7 +23,12 @@ export interface GoalItem {
 export interface SavedGoal {
   id: string;
   title: string;
+  category?: string | null;
+  reminderDate?: Date | null;
+  reminderTime?: string | null;
+  preMadeTemplateId?: string | null;
   coverIndex: number;
+  coverUrl?: string | null;
   source: GoalSource;
   habitsTotal: number;
   habitsDone: number;
@@ -32,6 +37,7 @@ export interface SavedGoal {
   dueDate: Date | null;
   achieved: boolean;
   createdAt: number;
+  note?: string | null;
   /** Habits and tasks for this goal; used on Home to show checklist per date */
   items?: GoalItem[];
 }
@@ -115,8 +121,20 @@ interface GoalsContextValue {
   addGoal: (goal: Omit<SavedGoal, 'id' | 'createdAt'>) => string;
   markAchieved: (id: string, achieved: boolean) => void;
   updateProgress: (id: string, habitsDone: number, tasksDone: number) => void;
+  updateGoalDetails: (
+    id: string,
+    updates: {
+      title?: string;
+      category?: string | null;
+      reminderDate?: Date | null;
+      reminderTime?: string | null;
+      dueDate?: Date | null;
+    }
+  ) => void;
   /** Remove a goal by id (and clear its item completions). */
   removeGoal: (id: string) => void;
+  /** Restore a previously removed goal. */
+  restoreGoal: (goal: SavedGoal, completions: ItemCompletions) => void;
   /** Toggle completion of an item for a given date (YYYY-MM-DD). If goalId is provided, updates that goal's habitsDone/tasksDone. */
   toggleItemCompletion: (itemId: string, dateStr: string, goalId?: string) => void;
   /** Remove a single habit or task from a goal. */
@@ -140,10 +158,15 @@ function generateItemId() {
 }
 
 function apiGoalToSavedGoal(g: goalsApi.GoalsPayload['goals'][0]): SavedGoal {
-  return {
+  const savedGoal = {
     id: g.id,
     title: g.title,
+    category: g.category ?? null,
+    reminderDate: g.reminderDate != null ? new Date(g.reminderDate) : null,
+    reminderTime: g.reminderTime ?? null,
+    preMadeTemplateId: g.preMadeTemplateId ?? null,
     coverIndex: g.coverIndex,
+    coverUrl: g.coverUrl ?? null,
     source: g.source as GoalSource,
     habitsTotal: g.habitsTotal,
     habitsDone: g.habitsDone,
@@ -152,6 +175,7 @@ function apiGoalToSavedGoal(g: goalsApi.GoalsPayload['goals'][0]): SavedGoal {
     dueDate: g.dueDate != null ? new Date(g.dueDate) : null,
     achieved: g.achieved,
     createdAt: g.createdAt,
+    note: g.note ?? null,
     items: (g.items ?? []).map((it) => ({
       id: it.id,
       type: it.type as GoalItemType,
@@ -163,6 +187,8 @@ function apiGoalToSavedGoal(g: goalsApi.GoalsPayload['goals'][0]): SavedGoal {
       paused: it.paused ?? false,
     })),
   };
+  console.log('[GoalsContext] apiGoalToSavedGoal - Goal:', savedGoal.id, 'Title:', savedGoal.title, 'Note:', savedGoal.note, 'Source:', savedGoal.source);
+  return savedGoal;
 }
 
 export function GoalsProvider({ children }: { children: React.ReactNode }) {
@@ -193,6 +219,16 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
   }, [session?.access_token]);
 
   const addGoal = useCallback((goal: Omit<SavedGoal, 'id' | 'createdAt'>): string => {
+    console.log('[GoalsContext] addGoal called with:', {
+      title: goal.title,
+      source: goal.source,
+      note: goal.note,
+      noteType: typeof goal.note,
+      noteLength: goal.note?.length,
+      coverUrl: goal.coverUrl,
+      coverIndex: goal.coverIndex,
+    });
+    
     const id = generateId();
     const items = goal.items?.map((it) => ({
       ...it,
@@ -205,6 +241,16 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       items: items ?? [],
     };
+    
+    console.log('[GoalsContext] Created newGoal:', {
+      id: newGoal.id,
+      title: newGoal.title,
+      note: newGoal.note,
+      noteType: typeof newGoal.note,
+      coverUrl: newGoal.coverUrl,
+      coverIndex: newGoal.coverIndex,
+    });
+    
     // Insert newest goal at the front so it appears at the top of My Goals.
     setGoals((prev) => [newGoal, ...prev]);
 
@@ -220,7 +266,15 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
         .createGoal(token, {
           id,
           title: newGoal.title,
+          category: newGoal.category ?? null,
+          reminderDate:
+            newGoal.reminderDate instanceof Date
+              ? newGoal.reminderDate.getTime()
+              : null,
+          reminderTime: newGoal.reminderTime ?? null,
+          preMadeTemplateId: newGoal.preMadeTemplateId ?? null,
           coverIndex: newGoal.coverIndex,
+          coverUrl: newGoal.coverUrl ?? null,
           source: newGoal.source,
           habitsTotal: newGoal.habitsTotal,
           habitsDone: newGoal.habitsDone,
@@ -229,6 +283,7 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
           dueDate,
           achieved: newGoal.achieved,
           createdAt: newGoal.createdAt,
+          note: newGoal.note ?? null,
           items: (newGoal.items ?? []).map((it) => ({
             id: it.id,
             type: it.type,
@@ -301,6 +356,62 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
     [session?.access_token]
   );
 
+  const updateGoalDetails = useCallback(
+    (
+      id: string,
+      updates: {
+        title?: string;
+        category?: string | null;
+        reminderDate?: Date | null;
+        reminderTime?: string | null;
+        dueDate?: Date | null;
+      }
+    ) => {
+      const previousGoal = goals.find((g) => g.id === id);
+      setGoals((prev) =>
+        prev.map((g) => {
+          if (g.id !== id) return g;
+          return {
+            ...g,
+            ...(updates.title !== undefined ? { title: updates.title } : {}),
+            ...(updates.category !== undefined ? { category: updates.category } : {}),
+            ...(updates.reminderDate !== undefined ? { reminderDate: updates.reminderDate } : {}),
+            ...(updates.reminderTime !== undefined ? { reminderTime: updates.reminderTime } : {}),
+            ...(updates.dueDate !== undefined ? { dueDate: updates.dueDate } : {}),
+          };
+        })
+      );
+
+      const token = session?.access_token;
+      if (!token) return;
+      goalsApi
+        .updateGoal(token, id, {
+          title: updates.title,
+          category: updates.category,
+          reminderDate:
+            updates.reminderDate instanceof Date
+              ? updates.reminderDate.getTime()
+              : updates.reminderDate === null
+                ? null
+                : undefined,
+          reminderTime: updates.reminderTime,
+          dueDate:
+            updates.dueDate instanceof Date
+              ? updates.dueDate.getTime()
+              : updates.dueDate === null
+                ? null
+                : undefined,
+        })
+        .then(({ error }) => {
+          if (error && previousGoal) {
+            console.warn('[GoalsContext] updateGoalDetails failed:', error);
+            setGoals((prev) => prev.map((g) => (g.id === id ? previousGoal : g)));
+          }
+        });
+    },
+    [goals, session?.access_token]
+  );
+
   const removeGoal = useCallback(
     (id: string) => {
       const goalToRemove = goals.find((g) => g.id === id);
@@ -328,6 +439,69 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [goals, itemCompletions, session?.access_token]
+  );
+
+  const restoreGoal = useCallback(
+    (goal: SavedGoal, completions: ItemCompletions) => {
+      setGoals((prev) => [...prev, goal]);
+      setItemCompletions((prev) => ({ ...prev, ...completions }));
+      
+      const token = session?.access_token;
+      if (token) {
+        const dueDate =
+          goal.dueDate != null
+            ? goal.dueDate instanceof Date
+              ? goal.dueDate.getTime()
+              : (goal.dueDate as unknown as number)
+            : null;
+        goalsApi
+          .createGoal(token, {
+            id: goal.id,
+            title: goal.title,
+            category: goal.category ?? null,
+            reminderDate:
+              goal.reminderDate instanceof Date
+                ? goal.reminderDate.getTime()
+                : null,
+            reminderTime: goal.reminderTime ?? null,
+            preMadeTemplateId: goal.preMadeTemplateId ?? null,
+            coverIndex: goal.coverIndex,
+            coverUrl: goal.coverUrl ?? null,
+            source: goal.source,
+            habitsTotal: goal.habitsTotal,
+            habitsDone: goal.habitsDone,
+            tasksTotal: goal.tasksTotal,
+            tasksDone: goal.tasksDone,
+            dueDate,
+            achieved: goal.achieved,
+            createdAt: goal.createdAt,
+            note: goal.note ?? null,
+            items: (goal.items ?? []).map((it) => ({
+              id: it.id,
+              type: it.type,
+              title: it.title,
+              reminderTime: it.reminderTime,
+              note: it.note,
+              selectedDays: it.selectedDays,
+              dueDate: it.dueDate,
+              paused: it.paused,
+            })),
+          })
+          .then(({ error }) => {
+            if (error) {
+              console.warn('[GoalsContext] restoreGoal failed:', error);
+              setGoals((prev) => prev.filter((g) => g.id !== goal.id));
+              const itemIds = new Set((goal.items ?? []).map((it) => it.id));
+              setItemCompletions((prev) => {
+                const next = { ...prev };
+                itemIds.forEach((itemId) => delete next[itemId]);
+                return next;
+              });
+            }
+          });
+      }
+    },
+    [session?.access_token]
   );
 
   const toggleItemCompletion = useCallback(
@@ -420,6 +594,12 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
   }, [goals, itemCompletions]);
 
   const updateGoalItem = useCallback((goalId: string, itemId: string, updates: Partial<Pick<GoalItem, 'title' | 'reminderTime' | 'note' | 'selectedDays' | 'dueDate' | 'paused'>>) => {
+    console.log('[GoalsContext] updateGoalItem called:', { goalId, itemId, updates });
+    const token = session?.access_token;
+    const previousGoal = goals.find((g) => g.id === goalId);
+    const previousItem = previousGoal?.items?.find((i) => i.id === itemId);
+    console.log('[GoalsContext] Previous item:', previousItem);
+    
     setGoals((prev) =>
       prev.map((g) => {
         if (g.id !== goalId || !g.items) return g;
@@ -429,13 +609,46 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
         };
       })
     );
-  }, []);
+    
+    if (token) {
+      console.log('[GoalsContext] Calling API to update goal item...');
+      goalsApi.updateGoalItem(token, goalId, itemId, {
+        title: updates.title,
+        reminderTime: updates.reminderTime,
+        note: updates.note,
+        selectedDays: updates.selectedDays,
+        dueDate: updates.dueDate,
+        paused: updates.paused,
+      }).then(({ error }) => {
+        if (error) {
+          console.error('[GoalsContext] updateGoalItem API failed:', error);
+          if (previousItem) {
+            console.log('[GoalsContext] Rolling back changes...');
+            setGoals((prev) =>
+              prev.map((g) => {
+                if (g.id !== goalId || !g.items) return g;
+                return {
+                  ...g,
+                  items: g.items.map((i) => (i.id === itemId ? { ...i, ...previousItem } : i)),
+                };
+              })
+            );
+          }
+        } else {
+          console.log('[GoalsContext] updateGoalItem API succeeded');
+        }
+      });
+    } else {
+      console.warn('[GoalsContext] No access token available, changes will not be persisted');
+    }
+  }, [goals, session?.access_token]);
 
   const getCompletionForDate = useCallback(
     (dateStr: string) => {
       let total = 0;
       let completed = 0;
-      goals.forEach((g) => {
+      // Only count items from non-achieved goals (include paused items in total count)
+      goals.filter(g => !g.achieved).forEach((g) => {
         (g.items ?? []).forEach((it) => {
           if (!isItemScheduledForDateWithGoal(g, it, dateStr)) return;
           total += 1;
@@ -456,7 +669,9 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
         addGoal,
         markAchieved,
         updateProgress,
+        updateGoalDetails,
         removeGoal,
+        restoreGoal,
         toggleItemCompletion,
         removeGoalItem,
         updateGoalItem,
