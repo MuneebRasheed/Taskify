@@ -100,17 +100,30 @@ export function getGoalDueDateStr(goal: SavedGoal): string | null {
 }
 
 /**
+ * Format a Date to YYYY-MM-DD using LOCAL date parts (not UTC).
+ * This prevents the deployed server (UTC) from shifting the date back by one day
+ * when it receives a midnight-local timestamp and reads it as UTC.
+ */
+function formatDateToISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * True if this item should appear on the given date.
- * When the goal has a due date: item shows only on that exact date.
- * When the goal has no due date: use item-level schedule (habit weekdays, task due date).
+ * Each item uses its own schedule (habit weekdays, task due date).
+ * Items never appear after the goal's due date.
  */
 export function isItemScheduledForDateWithGoal(
   goal: SavedGoal,
   item: GoalItem,
   dateStr: string
 ): boolean {
+  // Never show items past the goal's due date
   const goalDueStr = getGoalDueDateStr(goal);
-  if (goalDueStr != null) return dateStr === goalDueStr;
+  if (goalDueStr != null && dateStr > goalDueStr) return false;
   return isItemScheduledForDate(item, dateStr);
 }
 
@@ -259,8 +272,8 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       const dueDate =
         goal.dueDate != null
           ? goal.dueDate instanceof Date
-            ? goal.dueDate.getTime()
-            : (goal.dueDate as unknown as number)
+            ? formatDateToISO(goal.dueDate)
+            : formatDateToISO(new Date(goal.dueDate as unknown as number))
           : null;
       goalsApi
         .createGoal(token, {
@@ -269,7 +282,7 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
           category: newGoal.category ?? null,
           reminderDate:
             newGoal.reminderDate instanceof Date
-              ? newGoal.reminderDate.getTime()
+              ? formatDateToISO(newGoal.reminderDate)
               : null,
           reminderTime: newGoal.reminderTime ?? null,
           preMadeTemplateId: newGoal.preMadeTemplateId ?? null,
@@ -390,14 +403,14 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
           category: updates.category,
           reminderDate:
             updates.reminderDate instanceof Date
-              ? updates.reminderDate.getTime()
+              ? formatDateToISO(updates.reminderDate)
               : updates.reminderDate === null
                 ? null
                 : undefined,
           reminderTime: updates.reminderTime,
           dueDate:
             updates.dueDate instanceof Date
-              ? updates.dueDate.getTime()
+              ? formatDateToISO(updates.dueDate)
               : updates.dueDate === null
                 ? null
                 : undefined,

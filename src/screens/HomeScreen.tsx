@@ -53,23 +53,19 @@ const HomeScreen = () => {
     [goals]
   );
 
-  /** Goals that should appear on the selected date (no due date, or due date = selected date) */
+  /** Goals that have at least one item scheduled for the selected date */
   const goalsVisibleOnSelectedDate = useMemo(
     () =>
-      goalsWithItems.filter((g) => {
-        const goalDue = getGoalDueDateStr(g);
-        return goalDue === null || goalDue === selectedDate;
-      }),
+      goalsWithItems.filter((g) =>
+        (g.items ?? []).some((item) => isItemScheduledForDate(item, selectedDate))
+      ),
     [goalsWithItems, selectedDate]
   );
 
-  /** Items to show for a goal on the selected date: if goal has due date and it matches, all items; else item-level schedule */
+  /** Items to show for a goal on the selected date: each item uses its own schedule */
   const itemsForSelectedDate = useMemo(
-    () => (goal: SavedGoal) => {
-      const goalDue = getGoalDueDateStr(goal);
-      if (goalDue != null && goalDue === selectedDate) return goal.items ?? [];
-      return (goal.items ?? []).filter((item) => isItemScheduledForDate(item, selectedDate));
-    },
+    () => (goal: SavedGoal) =>
+      (goal.items ?? []).filter((item) => isItemScheduledForDate(item, selectedDate)),
     [selectedDate]
   );
 
